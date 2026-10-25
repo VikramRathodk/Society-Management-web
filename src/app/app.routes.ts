@@ -71,6 +71,18 @@ export const routes: Routes = [
         loadComponent: () => import('./features/visitors/visitor-list').then((m) => m.VisitorList),
       },
       {
+        path: 'roles/:code',
+        canMatch: [permissionGuard],
+        data: { permission: 'SYSTEM.ROLE.VIEW', platform: true },
+        loadComponent: () => import('./features/roles/role-detail').then((m) => m.RoleDetail),
+      },
+      {
+        path: 'roles',
+        canMatch: [permissionGuard],
+        data: { permission: 'SYSTEM.ROLE.VIEW', platform: true },
+        loadComponent: () => import('./features/roles/role-list').then((m) => m.RoleList),
+      },
+      {
         path: 'forbidden',
         loadComponent: () => import('./features/forbidden/forbidden').then((m) => m.Forbidden),
       },

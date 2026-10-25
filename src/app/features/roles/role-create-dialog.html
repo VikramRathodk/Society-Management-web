@@ -1,0 +1,71 @@
+<h2 mat-dialog-title>New role</h2>
+<form [formGroup]="form" (ngSubmit)="submit()">
+  <mat-dialog-content>
+    <div class="row">
+      <mat-form-field appearance="outline">
+        <mat-label>Code</mat-label>
+        <input matInput formControlName="code" (input)="normalizeCode()" cdkFocusInitial />
+        <mat-hint>e.g. TREASURER</mat-hint>
+        @if (form.controls.code.hasError('required')) {
+          <mat-error>Code is required</mat-error>
+        } @else if (form.controls.code.hasError('pattern')) {
+          <mat-error>Letters, digits and underscores; start with a letter</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Name</mat-label>
+        <input matInput formControlName="name" />
+        @if (form.controls.name.invalid) {
+          <mat-error>Name is required</mat-error>
+        }
+      </mat-form-field>
+    </div>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Description (optional)</mat-label>
+      <input matInput formControlName="description" />
+    </mat-form-field>
+
+    <div class="row">
+      <mat-form-field appearance="outline">
+        <mat-label>Scope</mat-label>
+        <mat-select formControlName="scopeLevel">
+          <mat-option value="SOCIETY">Society</mat-option>
+          <mat-option value="PLATFORM">Platform</mat-option>
+        </mat-select>
+      </mat-form-field>
+      @if (scope() === 'SOCIETY') {
+        <mat-checkbox formControlName="requiresFlat">Tied to a flat (like Resident)</mat-checkbox>
+      }
+    </div>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Inherits permissions from</mat-label>
+      <mat-select formControlName="inherits" multiple>
+        @for (role of data.roles; track role.code) {
+          <mat-option [value]="role.code">{{ role.name }}</mat-option>
+        }
+      </mat-select>
+      <mat-hint>The new role gets everything these roles can do</mat-hint>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Included in</mat-label>
+      <mat-select formControlName="includedIn" multiple>
+        @for (role of data.roles; track role.code) {
+          <mat-option [value]="role.code">{{ role.name }}</mat-option>
+        }
+      </mat-select>
+      <mat-hint>These roles will inherit the new role (places it below them)</mat-hint>
+    </mat-form-field>
+
+    @if (error(); as message) {
+      <p class="dialog-error" role="alert">{{ message }}</p>
+    }
+  </mat-dialog-content>
+  <mat-dialog-actions align="end">
+    <button mat-button type="button" mat-dialog-close>Cancel</button>
+    <button mat-flat-button type="submit" [disabled]="saving()">Create</button>
+  </mat-dialog-actions>
+</form>

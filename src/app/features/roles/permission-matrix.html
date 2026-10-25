@@ -1,0 +1,40 @@
+<div class="groups">
+  @for (group of groups(); track group.module) {
+    <section class="group">
+      <h3>{{ label(group.module) }}</h3>
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th scope="col"><span class="cdk-visually-hidden">Resource</span></th>
+              @for (act of group.actions; track act) {
+                <th scope="col">{{ label(act) }}</th>
+              }
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of group.rows; track row.resource) {
+              <tr>
+                <th scope="row">{{ label(row.resource) }}</th>
+                @for (cell of row.cells; track $index) {
+                  <td>
+                    @if (cell) {
+                      <mat-checkbox
+                        [checked]="selected().has(cell.code) || inherited().has(cell.code)"
+                        [disabled]="readonly() || isInherited(cell.code)"
+                        [class.inherited]="isInherited(cell.code)"
+                        (change)="toggled.emit(cell.code)"
+                        [matTooltip]="tooltip(cell)"
+                        [aria-label]="cell.code"
+                      />
+                    }
+                  </td>
+                }
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+  }
+</div>

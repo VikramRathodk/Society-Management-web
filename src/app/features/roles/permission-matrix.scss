@@ -1,0 +1,46 @@
+.groups {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr));
+  gap: 16px;
+}
+
+.group {
+  padding: 12px;
+  border: 1px solid var(--mat-sys-outline-variant);
+  border-radius: 12px;
+}
+
+h3 {
+  margin: 0 0 4px;
+  font: var(--mat-sys-title-small);
+}
+
+.table-scroll {
+  overflow-x: auto;
+}
+
+table {
+  border-collapse: collapse;
+}
+
+th {
+  padding: 4px 8px;
+  font: var(--mat-sys-label-medium);
+  color: var(--mat-sys-on-surface-variant);
+  text-align: center;
+  white-space: nowrap;
+}
+
+th[scope='row'] {
+  text-align: left;
+  color: var(--mat-sys-on-surface);
+}
+
+td {
+  text-align: center;
+}
+
+// Inherited: ticked but locked, slightly faded so own permissions stand out.
+.inherited {
+  opacity: 0.6;
+}

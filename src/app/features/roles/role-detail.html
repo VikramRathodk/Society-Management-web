@@ -1,0 +1,148 @@
+<div class="page-header">
+  <a mat-icon-button routerLink="/roles" aria-label="Back to roles">
+    <mat-icon>arrow_back</mat-icon>
+  </a>
+  <h1>{{ role()?.name ?? 'Role' }}</h1>
+  @if (canDelete()) {
+    <button mat-button class="danger" (click)="remove()">
+      <mat-icon>delete</mat-icon>
+      Delete role
+    </button>
+  }
+</div>
+
+@if (loading()) {
+  <mat-progress-bar mode="indeterminate" />
+} @else if (role(); as r) {
+  <p class="role-meta">
+    {{ r.code }} · {{ r.scopeLevel === 'PLATFORM' ? 'Platform' : 'Society' }} role
+    @if (r.isSystem) {
+      · Built-in
+    }
+    @if (r.requiresFlat) {
+      · Tied to a flat
+    }
+  </p>
+
+  <div class="cards">
+    <mat-card appearance="outlined">
+      <mat-card-header>
+        <mat-card-title>Details</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <form [formGroup]="detailsForm" (ngSubmit)="saveDetails()">
+          <mat-form-field appearance="outline">
+            <mat-label>Name</mat-label>
+            <input matInput formControlName="name" />
+            @if (detailsForm.controls.name.invalid) {
+              <mat-error>Name is required</mat-error>
+            }
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Description</mat-label>
+            <textarea matInput formControlName="description" rows="2"></textarea>
+          </mat-form-field>
+          @if (canUpdateRole) {
+            <div class="card-actions">
+              <button
+                mat-flat-button
+                type="submit"
+                [disabled]="detailsForm.pristine || savingDetails()"
+              >
+                Save
+              </button>
+            </div>
+          }
+        </form>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card appearance="outlined">
+      <mat-card-header>
+        <mat-card-title>Hierarchy</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <mat-form-field appearance="outline">
+          <mat-label>Inherits permissions from</mat-label>
+          <mat-select
+            multiple
+            [value]="inheritsDraft()"
+            (selectionChange)="inheritsDraft.set($event.value)"
+            [disabled]="!canUpdateRole"
+          >
+            @for (option of inheritOptions(); track option.code) {
+              <mat-option [value]="option.code">{{ option.name }}</mat-option>
+            }
+          </mat-select>
+          <mat-hint>Roles below this one are left out, so the hierarchy can't loop</mat-hint>
+        </mat-form-field>
+
+        <div class="included-in">
+          <span class="muted">Included in:</span>
+          @if (includedIn().length) {
+            <mat-chip-set aria-label="Roles that inherit this one">
+              @for (parent of includedIn(); track parent.code) {
+                <mat-chip>{{ parent.name }}</mat-chip>
+              }
+            </mat-chip-set>
+          } @else {
+            <span class="muted">no other role</span>
+          }
+        </div>
+
+        @if (canUpdateRole && inheritsDirty()) {
+          <div class="card-actions">
+            <button mat-button (click)="resetInherits()">Discard</button>
+            <button mat-flat-button (click)="saveInherits()" [disabled]="savingInherits()">
+              Save
+            </button>
+          </div>
+        }
+      </mat-card-content>
+    </mat-card>
+  </div>
+
+  <section class="permissions">
+    <div class="permissions-header">
+      <h2>Permissions</h2>
+      @if (!r.allPermissions) {
+        <span class="muted">
+          {{ effectiveCount() }} in effect · {{ selected().size }} own ·
+          {{ effectiveCount() - selected().size }} inherited
+        </span>
+      }
+    </div>
+
+    @if (r.allPermissions) {
+      <p class="muted">This role has every permission, including ones added in future.</p>
+    } @else if (!canViewPermissions) {
+      <p class="muted">You don't have permission to view role-permission mappings.</p>
+    } @else {
+      <p class="legend muted">
+        Ticked boxes are permissions this role has. Faded, locked ones come from the roles it
+        inherits; change those on the parent role.
+      </p>
+      <app-permission-matrix
+        [permissions]="permissions()"
+        [selected]="selected()"
+        [inherited]="inherited()"
+        [readonly]="!canEditPermissions"
+        (toggled)="togglePermission($event)"
+      />
+    }
+  </section>
+
+  @if (canEditPermissions && permissionsDirty()) {
+    <div class="save-bar" role="region" aria-label="Unsaved permission changes">
+      <span>You have unsaved permission changes</span>
+      <button mat-button (click)="resetPermissions()">Discard</button>
+      <button mat-flat-button (click)="savePermissions()" [disabled]="savingPermissions()">
+        Save permissions
+      </button>
+    </div>
+  }
+} @else {
+  <app-empty-state icon="search_off" message="This role could not be found.">
+    <a mat-button routerLink="/roles">Back to roles</a>
+  </app-empty-state>
+}

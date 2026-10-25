@@ -35,6 +35,13 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Structure', icon: 'domain', link: '/structure', permission: 'FLAT.DIRECTORY.VIEW' },
   { label: 'Users', icon: 'group', link: '/users', permission: 'USER.ACCOUNT.VIEW' },
   { label: 'Visitors', icon: 'badge', link: '/visitors', permission: 'VISITOR.ENTRY.VIEW' },
+  {
+    label: 'Roles',
+    icon: 'admin_panel_settings',
+    link: '/roles',
+    permission: 'SYSTEM.ROLE.VIEW',
+    platform: true,
+  },
 ];
 
 /** Frame for signed-in pages: top bar with society switcher, side nav and content. */
