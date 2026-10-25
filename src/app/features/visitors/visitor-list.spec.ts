@@ -2,7 +2,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { MATERIAL_ANIMATIONS } from '@angular/material/core';
-import { provideRouter } from '@angular/router';
+import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
 
 import { AuthStore } from '../../core/auth/auth.store';
 import { Visitor } from '../../core/models';
@@ -131,5 +131,42 @@ describe('VisitorList', () => {
 
     expect(el().querySelectorAll('mat-card').length).toBe(21);
     expect(button('Load more')).toBeUndefined();
+  });
+
+  it('keeps the list when a background refresh fails', async () => {
+    // RxJS timers use setInterval; Angular's scheduler needs the real setTimeout.
+    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] });
+    try {
+      await setup([visitor()]);
+      vi.advanceTimersByTime(15_000);
+      http
+        .expectOne('/api/visitors?societyId=1&page=0&size=20')
+        .flush(null, { status: 503, statusText: 'Unavailable' });
+      await fixture.whenStable();
+      expect(el().querySelectorAll('mat-card').length).toBe(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('opens on the status from the URL', async () => {
+    TestBed.overrideProvider(ActivatedRoute, {
+      useValue: { snapshot: { queryParamMap: convertToParamMap({ status: 'ENTERED' }) } },
+    });
+    localStorage.clear();
+    localStorage.setItem('sm.societyId', '1');
+    TestBed.configureTestingModule({
+      imports: [VisitorList],
+      providers: [
+        provideRouter([]),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: AuthStore, useValue: { can: () => true, user: () => ({ roles: [] }) } },
+      ],
+    });
+    http = TestBed.inject(HttpTestingController);
+    fixture = TestBed.createComponent(VisitorList);
+    await fixture.whenStable();
+    http.expectOne('/api/visitors?societyId=1&status=ENTERED&page=0&size=20').flush([]);
   });
 });

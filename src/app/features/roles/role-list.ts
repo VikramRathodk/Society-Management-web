@@ -39,13 +39,21 @@ export class RoleList {
   protected readonly loading = signal(true);
   protected readonly columns = ['name', 'scope', 'inherits', 'permissions'];
 
+  protected readonly loadError = signal(false);
+
   constructor() {
+    this.load();
+  }
+
+  protected load(): void {
+    this.loading.set(true);
+    this.loadError.set(false);
     this.api
       .list()
       .pipe(finalize(() => this.loading.set(false)))
       .subscribe({
         next: (roles) => this.roles.set(sortRoles(roles)),
-        error: () => {}, // reported by the error interceptor
+        error: () => this.loadError.set(true), // also reported by the error interceptor
       });
   }
 

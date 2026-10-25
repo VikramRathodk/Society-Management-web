@@ -21,6 +21,10 @@
 
 @if (loading()) {
   <mat-progress-bar mode="indeterminate" />
+} @else if (loadError()) {
+  <app-empty-state icon="cloud_off" message="Couldn't load visitors.">
+    <button mat-stroked-button (click)="retry()">Try again</button>
+  </app-empty-state>
 } @else if (visitors().length === 0) {
   <app-empty-state icon="badge" message="No visitors to show." />
 } @else {

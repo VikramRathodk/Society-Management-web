@@ -10,6 +10,10 @@
 
 @if (loading()) {
   <mat-progress-bar mode="indeterminate" />
+} @else if (loadError()) {
+  <app-empty-state icon="cloud_off" message="Couldn't load the wings.">
+    <button mat-stroked-button (click)="retry()">Try again</button>
+  </app-empty-state>
 } @else if (ctx.selectedSocietyId() == null) {
   <app-empty-state icon="apartment" message="Select a society to see its wings and flats." />
 } @else if (wings().length === 0) {

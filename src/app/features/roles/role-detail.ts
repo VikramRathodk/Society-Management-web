@@ -12,11 +12,12 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { Router, RouterLink } from '@angular/router';
-import { catchError, filter, forkJoin, of, switchMap, tap } from 'rxjs';
+import { Observable, catchError, filter, forkJoin, of, switchMap, tap } from 'rxjs';
 
 import { RoleApi } from '../../core/api/role.api';
 import { AuthStore } from '../../core/auth/auth.store';
 import { Permission, Role } from '../../core/models';
+import { HasUnsavedChanges } from '../../core/unsaved-changes.guard';
 import { confirmDialog } from '../../shared/confirm-dialog';
 import { EmptyState } from '../../shared/empty-state';
 import { sortBy } from '../../shared/sort';
@@ -40,9 +41,10 @@ import { inheritCandidates, inheritedPermissions } from './role-graph';
     PermissionMatrix,
   ],
   templateUrl: './role-detail.html',
+  host: { '(window:beforeunload)': 'warnBeforeUnload($event)' },
   styleUrl: './role-detail.scss',
 })
-export class RoleDetail {
+export class RoleDetail implements HasUnsavedChanges {
   private readonly api = inject(RoleApi);
   private readonly auth = inject(AuthStore);
   private readonly dialog = inject(MatDialog);
@@ -121,6 +123,28 @@ export class RoleDetail {
         this.resetInherits();
         this.resetPermissions();
       });
+  }
+
+  canLeave(): boolean | Observable<boolean> {
+    if (!this.hasUnsavedChanges()) return true;
+    return confirmDialog(this.dialog, {
+      title: 'Discard changes?',
+      message: 'You have unsaved changes to this role. Leave without saving them?',
+      confirmText: 'Discard',
+    });
+  }
+
+  /** Closing the tab or reloading: let the browser show its own "leave site?" prompt. */
+  protected warnBeforeUnload(event: BeforeUnloadEvent): void {
+    if (this.hasUnsavedChanges()) event.preventDefault();
+  }
+
+  private hasUnsavedChanges(): boolean {
+    return (
+      (this.canUpdateRole && this.detailsForm.dirty) ||
+      this.inheritsDirty() ||
+      this.permissionsDirty()
+    );
   }
 
   protected roleName(code: string): string {

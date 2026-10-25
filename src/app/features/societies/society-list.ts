@@ -43,13 +43,21 @@ export class SocietyList {
   protected readonly loading = signal(true);
   protected readonly columns = ['name', 'address', 'actions'];
 
+  protected readonly loadError = signal(false);
+
   constructor() {
+    this.load();
+  }
+
+  protected load(): void {
+    this.loading.set(true);
+    this.loadError.set(false);
     this.api
       .list()
       .pipe(finalize(() => this.loading.set(false)))
       .subscribe({
         next: (list) => this.societies.set(sortBy(list, (s) => s.name)),
-        error: () => {}, // reported by the error interceptor
+        error: () => this.loadError.set(true), // also reported by the error interceptor
       });
   }
 

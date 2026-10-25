@@ -1,59 +1,64 @@
-# SocietyManagementWeb
+# Society Management — Web
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 21.2.28.
+Angular web client (admin / committee / gate portal) for the Society Management Spring Boot API.
+The design and API contract are in [docs/ANGULAR_FRONTEND.md](docs/ANGULAR_FRONTEND.md).
 
-## Development server
+Built with Angular 21 (standalone components, signals, zoneless) and Angular Material.
 
-To start a local development server, run:
+## Running locally
 
-```bash
-ng serve
-```
+1. Start the backend on `http://localhost:8080`, with the dev seed (`scripts/dev-seed.sql`) loaded.
+2. Start the web app:
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
+   ```bash
+   npm install
+   npm start
+   ```
 
-## Code scaffolding
+3. Open `http://localhost:4200`. Requests to `/api/...` are forwarded to `:8080` by
+   `proxy.conf.json` (the backend has no CORS setup). Restart `npm start` after editing that file.
 
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
+Dev logins (every password is `Pass@123`):
 
-```bash
-ng generate component component-name
-```
+| User           | Phone        | Role                      |
+| -------------- | ------------ | ------------------------- |
+| Stan Lee       | `9000000999` | Super admin               |
+| Nick Fury      | `9000000616` | Secretary, Avengers Tower |
+| Steve Rogers   | `9000000001` | Committee                 |
+| Happy Hogan    | `9000000002` | Guard                     |
+| Tony Stark     | `9000000003` | Resident, Penthouse       |
+| Wanda Maximoff | `9000000007` | Resident, Stark Wing-1001 |
 
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
+## Tests
 
-```bash
-ng generate --help
-```
+| Command                     | What it does                                              |
+| --------------------------- | --------------------------------------------------------- |
+| `npm test`                  | Unit tests (Vitest) in watch mode                         |
+| `npx ng test --watch=false` | Unit tests once                                           |
+| `npm run e2e`               | End-to-end tests (Playwright) against the running backend |
 
-## Building
+The e2e tests use the installed Chrome (no browser download), reuse a running `npm start` or start
+one, and run on a desktop and a phone-sized viewport. They read the dev seed, and the visitor test
+deletes the entry it creates. Full-page screenshots of every screen are saved to
+`test-results/screens`; the HTML report is in `playwright-report`.
 
-To build the project run:
-
-```bash
-ng build
-```
-
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
-
-## Running unit tests
-
-To execute unit tests with the [Vitest](https://vitest.dev/) test runner, use the following command:
-
-```bash
-ng test
-```
-
-## Running end-to-end tests
-
-For end-to-end (e2e) testing, run:
+## Build
 
 ```bash
-ng e2e
+npm run build
 ```
 
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
+Output goes to `dist/society-management-web`. In production, serve it from the same origin as the
+API (for example behind a reverse proxy), or add CORS to the backend.
 
-## Additional Resources
+## Project layout
 
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+```
+src/app/
+├── core/        API services, auth (store, interceptors, guards), society context, models
+├── shared/      Dialogs, empty state, sorting helpers
+├── features/    One folder per screen: auth, dashboard, profile, societies, structure,
+│                users, visitors, roles
+└── layout/      Shell: top bar, society switcher, side nav
+e2e/             Playwright tests
+```

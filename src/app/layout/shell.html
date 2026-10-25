@@ -24,7 +24,10 @@
   }
 
   @if (auth.user(); as user) {
-    <span class="shell-user">{{ user.name }}</span>
+    <a mat-button class="shell-user" routerLink="/profile" aria-label="My profile">
+      <mat-icon>account_circle</mat-icon>
+      {{ user.name }}
+    </a>
   }
   <button mat-icon-button (click)="logout()" aria-label="Log out">
     <mat-icon>logout</mat-icon>

@@ -60,17 +60,25 @@ export class UserList {
   );
   protected readonly selfId = computed(() => this.auth.user()?.id);
 
+  protected readonly loadError = signal(false);
+  private readonly attempt = signal(0);
+
   constructor() {
-    toObservable(this.ctx.selectedSocietyId)
+    toObservable(computed(() => [this.ctx.selectedSocietyId(), this.attempt()] as const))
       .pipe(
         tap(() => this.loading.set(true)),
-        switchMap((societyId) => this.api.list(societyId).pipe(catchError(() => of([])))),
+        switchMap(([societyId]) => this.api.list(societyId).pipe(catchError(() => of(null)))),
         takeUntilDestroyed(),
       )
       .subscribe((users) => {
-        this.users.set(sortBy(users, (u) => u.name));
+        this.loadError.set(users === null);
+        this.users.set(sortBy(users ?? [], (u) => u.name));
         this.loading.set(false);
       });
+  }
+
+  protected retry(): void {
+    this.attempt.update((n) => n + 1);
   }
 
   /** Assignments that matter here: platform roles and roles in the selected society. */

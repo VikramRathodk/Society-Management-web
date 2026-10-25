@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, DestroyRef, inject, signal } from '@angular/core';
+import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -14,6 +14,7 @@ import { catchError, of, switchMap, tap } from 'rxjs';
 
 import { StructureApi } from '../../core/api/structure.api';
 import { VisitorApi } from '../../core/api/visitor.api';
+import { AuthStore } from '../../core/auth/auth.store';
 import { errorMessage } from '../../core/auth/error.interceptor';
 import { Flat, Wing } from '../../core/models';
 import { SocietyContextStore } from '../../core/society-context/society-context.store';
@@ -44,6 +45,7 @@ export class VisitorCreate {
   private readonly router = inject(Router);
   private readonly snack = inject(MatSnackBar);
   private readonly fb = inject(NonNullableFormBuilder);
+  private readonly auth = inject(AuthStore);
   protected readonly ctx = inject(SocietyContextStore);
 
   protected readonly photoAccept = PHOTO_TYPES.join(',');
@@ -61,6 +63,13 @@ export class VisitorCreate {
   protected readonly photoError = signal<string | null>(null);
   protected readonly saving = signal(false);
   protected readonly error = signal<string | null>(null);
+  /**
+   * Picking a flat needs the flat directory. The seeded GUARD role doesn't have it, so say so
+   * instead of showing empty dropdowns.
+   */
+  protected readonly canListFlats = computed(() =>
+    this.auth.can('FLAT.DIRECTORY.VIEW', this.ctx.selectedSocietyId()),
+  );
 
   constructor() {
     toObservable(this.ctx.selectedSocietyId)
@@ -70,7 +79,7 @@ export class VisitorCreate {
           this.form.controls.wingId.setValue(null);
         }),
         switchMap((societyId) =>
-          societyId == null
+          societyId == null || !this.canListFlats()
             ? of([])
             : this.structureApi.wings(societyId).pipe(catchError(() => of([]))),
         ),

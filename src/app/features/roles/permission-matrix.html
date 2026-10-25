@@ -1,6 +1,6 @@
 <div class="groups">
   @for (group of groups(); track group.module) {
-    <section class="group">
+    <section class="group" [class.group--wide]="group.actions.length > 5">
       <h3>{{ label(group.module) }}</h3>
       <div class="table-scroll">
         <table>

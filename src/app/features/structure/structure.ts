@@ -55,22 +55,30 @@ export class Structure {
     );
   });
 
+  protected readonly loadError = signal(false);
+  private readonly attempt = signal(0);
+
   constructor() {
-    toObservable(this.ctx.selectedSocietyId)
+    toObservable(computed(() => [this.ctx.selectedSocietyId(), this.attempt()] as const))
       .pipe(
         tap(() => {
           this.loading.set(true);
           this.flats.set(new Map());
         }),
-        switchMap((societyId) =>
-          societyId == null ? of([]) : this.api.wings(societyId).pipe(catchError(() => of([]))),
+        switchMap(([societyId]) =>
+          societyId == null ? of([]) : this.api.wings(societyId).pipe(catchError(() => of(null))),
         ),
         takeUntilDestroyed(),
       )
       .subscribe((wings) => {
-        this.wings.set(sortBy(wings, (w) => w.name));
+        this.loadError.set(wings === null);
+        this.wings.set(sortBy(wings ?? [], (w) => w.name));
         this.loading.set(false);
       });
+  }
+
+  protected retry(): void {
+    this.attempt.update((n) => n + 1);
   }
 
   protected loadFlats(wing: Wing): void {

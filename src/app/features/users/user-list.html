@@ -14,6 +14,10 @@
 
 @if (loading()) {
   <mat-progress-bar mode="indeterminate" />
+} @else if (loadError()) {
+  <app-empty-state icon="cloud_off" message="Couldn't load users.">
+    <button mat-stroked-button (click)="retry()">Try again</button>
+  </app-empty-state>
 } @else if (filtered().length === 0) {
   <app-empty-state
     icon="group"

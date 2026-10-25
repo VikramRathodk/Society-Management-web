@@ -1,0 +1,47 @@
+<div class="page-header">
+  <h1>
+    @if (auth.user(); as user) {
+      Welcome, {{ user.name }}
+    } @else {
+      Welcome
+    }
+  </h1>
+</div>
+
+@if (ctx.selectedSociety(); as society) {
+  <p class="society">{{ society.name }}</p>
+}
+
+<div class="actions">
+  <a mat-flat-button *hasPermission="'VISITOR.ENTRY.CREATE'" routerLink="/visitors/new">
+    <mat-icon>person_add</mat-icon>
+    Log visitor
+  </a>
+  <a mat-stroked-button *hasPermission="'USER.ACCOUNT.CREATE'" routerLink="/users/new">
+    <mat-icon>group_add</mat-icon>
+    New user
+  </a>
+  <a mat-stroked-button routerLink="/profile">
+    <mat-icon>account_circle</mat-icon>
+    My profile
+  </a>
+</div>
+
+@if (cards().length) {
+  <div class="cards">
+    @for (card of cards(); track card.label) {
+      <a
+        class="card-link"
+        [routerLink]="card.link"
+        [queryParams]="card.queryParams"
+        [attr.aria-label]="card.label + ': ' + (card.value ?? 'loading')"
+      >
+        <mat-card appearance="outlined" class="stat">
+          <mat-icon class="stat-icon">{{ card.icon }}</mat-icon>
+          <span class="stat-value">{{ card.value ?? '…' }}</span>
+          <span class="stat-label">{{ card.label }}</span>
+        </mat-card>
+      </a>
+    }
+  </div>
+}

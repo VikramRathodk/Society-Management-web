@@ -8,6 +8,10 @@
 
 @if (loading()) {
   <mat-progress-bar mode="indeterminate" />
+} @else if (loadError()) {
+  <app-empty-state icon="cloud_off" message="Couldn't load roles.">
+    <button mat-stroked-button (click)="load()">Try again</button>
+  </app-empty-state>
 } @else if (roles().length === 0) {
   <app-empty-state icon="admin_panel_settings" message="No roles found." />
 } @else {

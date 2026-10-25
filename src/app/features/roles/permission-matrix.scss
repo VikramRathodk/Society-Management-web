@@ -44,3 +44,8 @@ td {
 .inherited {
   opacity: 0.6;
 }
+
+// Modules with many actions (Complaint, Visitor) get a full row so no column is cut off.
+.group--wide {
+  grid-column: 1 / -1;
+}

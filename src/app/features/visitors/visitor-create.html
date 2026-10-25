@@ -7,6 +7,13 @@
 
 <mat-card appearance="outlined" class="form-card">
   <mat-card-content>
+    @if (!canListFlats()) {
+      <p class="form-notice" role="status">
+        Your role can log visitors but can't see the flat list (it needs the
+        <strong>FLAT.DIRECTORY.VIEW</strong> permission), so there is no flat to choose. Ask an
+        administrator to add it to your role.
+      </p>
+    }
     <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
       <div class="row">
         <mat-form-field appearance="outline">

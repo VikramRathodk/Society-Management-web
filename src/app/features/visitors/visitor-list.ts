@@ -8,7 +8,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import {
   Observable,
   catchError,
@@ -75,7 +75,10 @@ export class VisitorList {
     { label: 'Rejected', value: 'REJECTED' },
   ];
 
-  protected readonly status = signal<VisitorStatus | null>(null);
+  /** Starts from `?status=` so dashboard cards can link to a filtered log. */
+  protected readonly status = signal<VisitorStatus | null>(
+    statusParam(inject(ActivatedRoute).snapshot.queryParamMap.get('status')),
+  );
   protected readonly visitors = signal<Visitor[]>([]);
   protected readonly loading = signal(true);
   protected readonly loadingMore = signal(false);
@@ -88,20 +91,25 @@ export class VisitorList {
     status: this.status(),
   }));
   private page = 0;
+  protected readonly loadError = signal(false);
+  private readonly attempt = signal(0);
 
   constructor() {
-    toObservable(this.query)
+    toObservable(computed(() => [this.query(), this.attempt()] as const))
       .pipe(
         tap(() => {
           this.loading.set(true);
           this.page = 0;
         }),
-        switchMap((query) => this.fetch(query, 0, PAGE_SIZE)),
+        switchMap(([query]) =>
+          this.api.list({ ...query, page: 0, size: PAGE_SIZE }).pipe(catchError(() => of(null))),
+        ),
         takeUntilDestroyed(),
       )
       .subscribe((list) => {
-        this.visitors.set(list);
-        this.hasMore.set(list.length === PAGE_SIZE);
+        this.loadError.set(list === null);
+        this.visitors.set(list ?? []);
+        this.hasMore.set(list?.length === PAGE_SIZE);
         this.loading.set(false);
       });
 
@@ -119,7 +127,9 @@ export class VisitorList {
         takeUntilDestroyed(),
       )
       .subscribe(({ query, size, list }) => {
-        if (query !== this.query()) return; // the filter changed while polling
+        // Skip failed polls (keep what is shown) and results for a filter that has since changed.
+        if (!list || query !== this.query()) return;
+        this.loadError.set(false);
         this.visitors.update((current) => dedupe([...list, ...current.slice(size)]));
       });
   }
@@ -128,13 +138,17 @@ export class VisitorList {
     this.status.set(status);
   }
 
+  protected retry(): void {
+    this.attempt.update((n) => n + 1);
+  }
+
   protected loadMore(): void {
     this.loadingMore.set(true);
     const query = this.query();
     this.fetch(query, this.page + 1, PAGE_SIZE)
       .pipe(finalize(() => this.loadingMore.set(false)))
       .subscribe((list) => {
-        if (query !== this.query()) return;
+        if (!list || query !== this.query()) return; // a failure is reported by the interceptor
         this.page++;
         this.visitors.update((current) => dedupe([...current, ...list]));
         this.hasMore.set(list.length === PAGE_SIZE);
@@ -220,10 +234,9 @@ export class VisitorList {
     return this.auth.user()?.roles.some((a) => a.flatId === visitor.flatId) ?? false;
   }
 
+  /** null on failure, so callers leave what is on screen alone instead of treating it as empty. */
   private fetch(query: VisitorQuery, page: number, size: number, silent = false) {
-    return this.api
-      .list({ ...query, page, size }, { silent })
-      .pipe(catchError(() => of<Visitor[]>([])));
+    return this.api.list({ ...query, page, size }, { silent }).pipe(catchError(() => of(null)));
   }
 
   private setBusy(id: number, busy: boolean): void {
@@ -239,4 +252,10 @@ export class VisitorList {
 function dedupe(visitors: Visitor[]): Visitor[] {
   const seen = new Set<number>();
   return visitors.filter((v) => !seen.has(v.id) && seen.add(v.id));
+}
+
+const STATUSES: readonly VisitorStatus[] = ['PENDING', 'APPROVED', 'REJECTED', 'ENTERED', 'EXITED'];
+
+function statusParam(value: string | null): VisitorStatus | null {
+  return STATUSES.find((s) => s === value) ?? null;
 }
