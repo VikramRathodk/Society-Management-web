@@ -1,0 +1,72 @@
+<div class="role-fields" [formGroup]="form">
+  <mat-form-field appearance="outline">
+    <mat-label>Role</mat-label>
+    <mat-select formControlName="role">
+      @if (societyRoles().length && platformRoles().length) {
+        <mat-optgroup label="Society roles">
+          @for (role of societyRoles(); track role.code) {
+            <mat-option [value]="role.code">{{ role.name }}</mat-option>
+          }
+        </mat-optgroup>
+        <mat-optgroup label="Platform roles">
+          @for (role of platformRoles(); track role.code) {
+            <mat-option [value]="role.code">{{ role.name }}</mat-option>
+          }
+        </mat-optgroup>
+      } @else {
+        @for (role of roles(); track role.code) {
+          <mat-option [value]="role.code">{{ role.name }}</mat-option>
+        }
+      }
+    </mat-select>
+    @if (rolesLoaded() && roles().length === 0) {
+      <mat-hint>There are no roles you can assign here.</mat-hint>
+    }
+    @if (form.controls.role.invalid) {
+      <mat-error>Role is required</mat-error>
+    }
+  </mat-form-field>
+
+  @if (requiresFlat()) {
+    <div class="flat-row">
+      <mat-form-field appearance="outline">
+        <mat-label>Wing</mat-label>
+        <mat-select formControlName="wingId">
+          @for (wing of wings(); track wing.id) {
+            <mat-option [value]="wing.id">{{ wing.name }}</mat-option>
+          }
+        </mat-select>
+        @if (form.controls.wingId.invalid) {
+          <mat-error>Wing is required</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Flat</mat-label>
+        <mat-select formControlName="flatId">
+          @for (flat of flats(); track flat.id) {
+            <mat-option [value]="flat.id">{{ flat.flatNumber }}</mat-option>
+          }
+        </mat-select>
+        @if (form.controls.wingId.value == null) {
+          <mat-hint>Choose a wing first</mat-hint>
+        }
+        @if (form.controls.flatId.invalid) {
+          <mat-error>Flat is required</mat-error>
+        }
+      </mat-form-field>
+    </div>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Resident type</mat-label>
+      <mat-select formControlName="residentType">
+        @for (type of residentTypes; track type) {
+          <mat-option [value]="type">{{ residentTypeLabel(type) }}</mat-option>
+        }
+      </mat-select>
+      @if (form.controls.residentType.invalid) {
+        <mat-error>Resident type is required</mat-error>
+      }
+    </mat-form-field>
+  }
+</div>

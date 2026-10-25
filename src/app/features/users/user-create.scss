@@ -1,0 +1,40 @@
+.form-card {
+  max-width: 640px;
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+h2 {
+  margin: 8px 0;
+  font: var(--mat-sys-title-medium);
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 12px;
+
+  mat-form-field {
+    flex: 1 1 200px;
+  }
+}
+
+.context-note {
+  margin: 0 0 12px;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.form-error {
+  margin: 0 0 12px;
+  color: var(--mat-sys-error);
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}

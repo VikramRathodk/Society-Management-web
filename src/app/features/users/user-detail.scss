@@ -1,0 +1,48 @@
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr));
+  gap: 16px;
+  align-items: start;
+}
+
+.permissions {
+  grid-column: 1 / -1;
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-top: 8px;
+}
+
+.card-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.status {
+  padding: 2px 12px;
+  border-radius: 12px;
+  background: var(--mat-sys-primary-container);
+  color: var(--mat-sys-on-primary-container);
+  font: var(--mat-sys-label-large);
+}
+
+.status--inactive {
+  background: var(--mat-sys-surface-container-highest);
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.danger {
+  color: var(--mat-sys-error);
+}
+
+.muted {
+  color: var(--mat-sys-on-surface-variant);
+}
+
+h3 {
+  margin: 16px 0 8px;
+  font: var(--mat-sys-title-small);
+}

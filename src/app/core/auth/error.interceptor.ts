@@ -1,4 +1,9 @@
-import { HttpErrorResponse, HttpInterceptorFn } from '@angular/common/http';
+import {
+  HttpContext,
+  HttpContextToken,
+  HttpErrorResponse,
+  HttpInterceptorFn,
+} from '@angular/common/http';
 import { inject } from '@angular/core';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { Router } from '@angular/router';
@@ -6,6 +11,13 @@ import { catchError, throwError } from 'rxjs';
 
 import { ErrorResponse } from '../models';
 import { AuthStore } from './auth.store';
+
+/** Set on requests whose caller shows every error inline, so no snackbar is raised (401 still logs out). */
+export const INLINE_ERRORS = new HttpContextToken<boolean>(() => false);
+
+export function inlineErrors(): HttpContext {
+  return new HttpContext().set(INLINE_ERRORS, true);
+}
 
 export const errorInterceptor: HttpInterceptorFn = (req, next) => {
   const auth = inject(AuthStore);
@@ -19,7 +31,7 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
       if (err.status === 401) {
         auth.logout();
         router.navigate(['/login'], { queryParams: { returnUrl: router.url } });
-      } else if (err.status !== 400) {
+      } else if (err.status !== 400 && !req.context.get(INLINE_ERRORS)) {
         snack.open(errorMessage(err), 'Close', { duration: 4000 });
       }
       return throwError(() => err);

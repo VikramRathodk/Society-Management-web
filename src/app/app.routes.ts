@@ -40,6 +40,24 @@ export const routes: Routes = [
         loadComponent: () => import('./features/structure/structure').then((m) => m.Structure),
       },
       {
+        path: 'users/new',
+        canMatch: [permissionGuard],
+        data: { permission: 'USER.ACCOUNT.CREATE' },
+        loadComponent: () => import('./features/users/user-create').then((m) => m.UserCreate),
+      },
+      {
+        path: 'users/:id',
+        canMatch: [permissionGuard],
+        data: { permission: 'USER.ACCOUNT.VIEW' },
+        loadComponent: () => import('./features/users/user-detail').then((m) => m.UserDetail),
+      },
+      {
+        path: 'users',
+        canMatch: [permissionGuard],
+        data: { permission: 'USER.ACCOUNT.VIEW' },
+        loadComponent: () => import('./features/users/user-list').then((m) => m.UserList),
+      },
+      {
         path: 'forbidden',
         loadComponent: () => import('./features/forbidden/forbidden').then((m) => m.Forbidden),
       },

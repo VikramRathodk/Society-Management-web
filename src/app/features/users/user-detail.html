@@ -1,0 +1,152 @@
+<div class="page-header">
+  <a mat-icon-button routerLink="/users" aria-label="Back to users">
+    <mat-icon>arrow_back</mat-icon>
+  </a>
+  <h1>{{ user()?.name ?? 'User' }}</h1>
+  @if (user(); as u) {
+    <span class="status" [class.status--inactive]="!u.isActive">
+      {{ u.isActive ? 'Active' : 'Inactive' }}
+    </span>
+  }
+</div>
+
+@if (loading()) {
+  <mat-progress-bar mode="indeterminate" />
+} @else if (user(); as u) {
+  <div class="cards">
+    <!-- Profile -->
+    <mat-card appearance="outlined">
+      <mat-card-header>
+        <mat-card-title>Profile</mat-card-title>
+        <mat-card-subtitle>{{ u.phone }}</mat-card-subtitle>
+      </mat-card-header>
+      <mat-card-content>
+        <form [formGroup]="profileForm" (ngSubmit)="saveProfile()">
+          <mat-form-field appearance="outline">
+            <mat-label>Name</mat-label>
+            <input matInput formControlName="name" />
+            @if (profileForm.controls.name.invalid) {
+              <mat-error>Name is required</mat-error>
+            }
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Email</mat-label>
+            <input matInput formControlName="email" type="email" />
+            @if (profileForm.controls.email.invalid) {
+              <mat-error>Enter a valid email</mat-error>
+            }
+          </mat-form-field>
+          @if (canEditProfile()) {
+            <div class="card-actions">
+              <button
+                mat-flat-button
+                type="submit"
+                [disabled]="profileForm.pristine || savingProfile()"
+              >
+                Save
+              </button>
+            </div>
+          }
+        </form>
+      </mat-card-content>
+      @if (canToggleActive() || canDelete()) {
+        <mat-card-actions align="end">
+          @if (canToggleActive()) {
+            <button mat-button (click)="setActive(!u.isActive)">
+              {{ u.isActive ? 'Deactivate' : 'Activate' }}
+            </button>
+          }
+          @if (canDelete()) {
+            <button mat-button class="danger" (click)="remove()">Delete user</button>
+          }
+        </mat-card-actions>
+      }
+    </mat-card>
+
+    <!-- Role assignments -->
+    <mat-card appearance="outlined">
+      <mat-card-header>
+        <mat-card-title>Roles</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        @if (u.roles.length === 0) {
+          <p class="muted">No roles assigned.</p>
+        } @else {
+          <mat-list>
+            @for (a of u.roles; track a.id) {
+              <mat-list-item>
+                <span matListItemTitle>{{ a.roleName }}</span>
+                <span matListItemLine>
+                  @if (a.societyId == null) {
+                    Platform-wide
+                  } @else {
+                    {{ societyLabel(a.societyId) }}
+                    @if (a.flatId != null) {
+                      · {{ flatLabel(a.flatId) }}
+                    }
+                    @if (a.residentType) {
+                      · {{ a.residentType.charAt(0) + a.residentType.slice(1).toLowerCase() }}
+                    }
+                  }
+                </span>
+                @if (canRemoveRole(a)) {
+                  <button
+                    mat-icon-button
+                    matListItemMeta
+                    (click)="removeRole(a)"
+                    matTooltip="Remove role"
+                    [attr.aria-label]="'Remove ' + a.roleName"
+                  >
+                    <mat-icon>close</mat-icon>
+                  </button>
+                }
+              </mat-list-item>
+            }
+          </mat-list>
+        }
+      </mat-card-content>
+      @if (canAssignRole()) {
+        <mat-card-actions align="end">
+          <button mat-button (click)="assignRole()">
+            <mat-icon>add</mat-icon>
+            Assign role
+          </button>
+        </mat-card-actions>
+      }
+    </mat-card>
+
+    <!-- Effective permissions -->
+    @if (access(); as a) {
+      <mat-expansion-panel class="permissions">
+        <mat-expansion-panel-header>
+          <mat-panel-title>Effective permissions</mat-panel-title>
+        </mat-expansion-panel-header>
+        @if (a.platformPermissions.length) {
+          <h3>Platform-wide</h3>
+          <mat-chip-set aria-label="Platform permissions">
+            @for (p of a.platformPermissions; track p) {
+              <mat-chip>{{ p }}</mat-chip>
+            }
+          </mat-chip-set>
+        }
+        @for (s of a.societies; track s.societyId) {
+          <h3>
+            {{ societyLabel(s.societyId) }} <span class="muted">({{ s.roles.join(', ') }})</span>
+          </h3>
+          <mat-chip-set [attr.aria-label]="'Permissions in ' + societyLabel(s.societyId)">
+            @for (p of s.permissions; track p) {
+              <mat-chip>{{ p }}</mat-chip>
+            }
+          </mat-chip-set>
+        }
+        @if (!a.platformPermissions.length && !a.societies.length) {
+          <p class="muted">No permissions.</p>
+        }
+      </mat-expansion-panel>
+    }
+  </div>
+} @else {
+  <app-empty-state icon="person_off" message="This user could not be found.">
+    <a mat-button routerLink="/users">Back to users</a>
+  </app-empty-state>
+}

@@ -17,6 +17,10 @@ export class StructureApi {
     return this.http.post<Wing>(`${this.baseUrl}/societies/${societyId}/wings`, { name });
   }
 
+  getWing(id: number) {
+    return this.http.get<Wing>(`${this.baseUrl}/wings/${id}`);
+  }
+
   updateWing(id: number, name: string) {
     return this.http.patch<Wing>(`${this.baseUrl}/wings/${id}`, { name });
   }
@@ -31,6 +35,10 @@ export class StructureApi {
 
   createFlat(wingId: number, flatNumber: string) {
     return this.http.post<Flat>(`${this.baseUrl}/wings/${wingId}/flats`, { flatNumber });
+  }
+
+  getFlat(id: number) {
+    return this.http.get<Flat>(`${this.baseUrl}/flats/${id}`);
   }
 
   updateFlat(id: number, flatNumber: string) {
