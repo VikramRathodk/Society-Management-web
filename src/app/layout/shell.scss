@@ -1,24 +1,57 @@
+@use '@angular/material' as mat;
+
 :host {
   display: flex;
   flex-direction: column;
-  min-height: 100%;
+  height: 100%;
+}
+
+.shell-toolbar {
+  gap: 8px;
+  border-bottom: 1px solid var(--mat-sys-outline-variant);
 }
 
 .shell-title {
   color: inherit;
   text-decoration: none;
+  white-space: nowrap;
 }
 
 .shell-spacer {
   flex: 1;
 }
 
+.society-switcher {
+  width: 220px;
+  @include mat.form-field-density(-4);
+}
+
+.shell-society,
 .shell-user {
-  margin-right: 8px;
   font: var(--mat-sys-body-large);
+  white-space: nowrap;
+}
+
+.shell-container {
+  flex: 1;
+}
+
+.shell-sidenav {
+  width: 240px;
 }
 
 .shell-content {
-  flex: 1;
   padding: 16px;
+}
+
+// Phones: keep the switcher and logout, drop the extras.
+@media (max-width: 599.98px) {
+  .shell-title,
+  .shell-user {
+    display: none;
+  }
+
+  .society-switcher {
+    width: 160px;
+  }
 }
