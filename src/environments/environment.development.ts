@@ -1,4 +1,5 @@
 export const environment = {
   production: false,
-  apiUrl: 'http://localhost:3000/api',
+  // Calls use relative /api/... paths; proxy.conf.json forwards them to the backend.
+  apiBaseUrl: '',
 };
