@@ -1,0 +1,20 @@
+.settings-card {
+  max-width: 560px;
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-top: 8px;
+}
+
+.form-error {
+  margin: 0 0 12px;
+  color: var(--mat-sys-error);
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+}

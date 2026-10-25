@@ -11,6 +11,17 @@ export interface Society {
   complexId: number | null;
 }
 
+export interface CreateSocietyRequest {
+  name: string;
+  address?: string;
+  complexId?: number;
+}
+
+export interface UpdateSocietyRequest {
+  name?: string;
+  address?: string;
+}
+
 export interface Wing {
   id: number;
   societyId: number;

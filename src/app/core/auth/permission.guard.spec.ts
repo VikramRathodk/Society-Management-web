@@ -5,7 +5,7 @@ import { RouterTestingHarness } from '@angular/router/testing';
 
 import { SocietyContextStore } from '../society-context/society-context.store';
 import { AuthStore } from './auth.store';
-import { permissionGuard } from './permission.guard';
+import { permissionGuard, societyPermissionGuard } from './permission.guard';
 
 @Component({ template: '' })
 class Page {}
@@ -23,6 +23,12 @@ describe('permissionGuard', () => {
             path: 'users',
             component: Page,
             canMatch: [permissionGuard],
+            data: { permission: 'USER.ACCOUNT.VIEW' },
+          },
+          {
+            path: 'societies/:id/settings',
+            component: Page,
+            canActivate: [societyPermissionGuard],
             data: { permission: 'USER.ACCOUNT.VIEW' },
           },
           { path: 'forbidden', component: Page },
@@ -60,5 +66,19 @@ describe('permissionGuard', () => {
     await router.navigateByUrl(router.url, { onSameUrlNavigation: 'reload' });
     harness.detectChanges();
     expect(router.url).toBe('/forbidden');
+  });
+
+  describe('societyPermissionGuard', () => {
+    it('checks the society in the URL, not the selected one', async () => {
+      ctx.select(2);
+      await RouterTestingHarness.create('/societies/1/settings');
+      expect(router.url).toBe('/societies/1/settings');
+    });
+
+    it('redirects to /forbidden for a society without the permission', async () => {
+      ctx.select(1);
+      await RouterTestingHarness.create('/societies/2/settings');
+      expect(router.url).toBe('/forbidden');
+    });
   });
 });

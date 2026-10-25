@@ -1,0 +1,58 @@
+<div class="page-header">
+  <h1>Societies</h1>
+  <button
+    mat-flat-button
+    *hasPermission="'SOCIETY.SETTINGS.CREATE'; platform: true"
+    (click)="create()"
+  >
+    <mat-icon>add</mat-icon>
+    New society
+  </button>
+</div>
+
+@if (loading()) {
+  <mat-progress-bar mode="indeterminate" />
+} @else if (societies().length === 0) {
+  <app-empty-state icon="apartment" message="No societies yet" />
+} @else {
+  <div class="table-scroll">
+    <table mat-table [dataSource]="societies()">
+      <ng-container matColumnDef="name">
+        <th mat-header-cell *matHeaderCellDef>Name</th>
+        <td mat-cell *matCellDef="let society">{{ society.name }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="address">
+        <th mat-header-cell *matHeaderCellDef>Address</th>
+        <td mat-cell *matCellDef="let society">{{ society.address ?? '—' }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="actions">
+        <th mat-header-cell *matHeaderCellDef><span class="cdk-visually-hidden">Actions</span></th>
+        <td mat-cell *matCellDef="let society" class="actions-cell">
+          <a
+            mat-icon-button
+            *hasPermission="'SOCIETY.SETTINGS.UPDATE'; society: society.id"
+            [routerLink]="['/societies', society.id, 'settings']"
+            matTooltip="Settings"
+            [attr.aria-label]="'Settings for ' + society.name"
+          >
+            <mat-icon>settings</mat-icon>
+          </a>
+          <button
+            mat-icon-button
+            *hasPermission="'SOCIETY.SETTINGS.DELETE'; platform: true"
+            (click)="remove(society)"
+            matTooltip="Delete"
+            [attr.aria-label]="'Delete ' + society.name"
+          >
+            <mat-icon>delete</mat-icon>
+          </button>
+        </td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="columns"></tr>
+      <tr mat-row *matRowDef="let row; columns: columns"></tr>
+    </table>
+  </div>
+}

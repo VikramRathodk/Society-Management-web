@@ -1,0 +1,94 @@
+<div class="page-header">
+  <h1>Structure</h1>
+  @if (ctx.selectedSocietyId() != null) {
+    <button mat-flat-button *hasPermission="'FLAT.STRUCTURE.CREATE'" (click)="addWing()">
+      <mat-icon>add</mat-icon>
+      Add wing
+    </button>
+  }
+</div>
+
+@if (loading()) {
+  <mat-progress-bar mode="indeterminate" />
+} @else if (ctx.selectedSocietyId() == null) {
+  <app-empty-state icon="apartment" message="Select a society to see its wings and flats." />
+} @else if (wings().length === 0) {
+  <app-empty-state icon="domain" message="This society has no wings yet." />
+} @else {
+  <mat-accordion multi>
+    @for (wing of wings(); track wing.id) {
+      <mat-expansion-panel (opened)="loadFlats(wing)">
+        <mat-expansion-panel-header>
+          <mat-panel-title>{{ wing.name }}</mat-panel-title>
+          <mat-panel-description>
+            @if (flats().get(wing.id); as wingFlats) {
+              {{ wingFlats.length }} {{ wingFlats.length === 1 ? 'flat' : 'flats' }}
+            }
+            <span class="panel-actions">
+              <button
+                mat-icon-button
+                *hasPermission="'FLAT.STRUCTURE.UPDATE'"
+                (click)="$event.stopPropagation(); renameWing(wing)"
+                matTooltip="Rename wing"
+                [attr.aria-label]="'Rename ' + wing.name"
+              >
+                <mat-icon>edit</mat-icon>
+              </button>
+              <button
+                mat-icon-button
+                *hasPermission="'FLAT.STRUCTURE.DELETE'"
+                (click)="$event.stopPropagation(); deleteWing(wing)"
+                matTooltip="Delete wing"
+                [attr.aria-label]="'Delete ' + wing.name"
+              >
+                <mat-icon>delete</mat-icon>
+              </button>
+            </span>
+          </mat-panel-description>
+        </mat-expansion-panel-header>
+
+        @if (loadingFlats().has(wing.id)) {
+          <mat-progress-bar mode="indeterminate" />
+        } @else if (flats().get(wing.id); as wingFlats) {
+          @if (wingFlats.length === 0) {
+            <p class="no-flats">No flats in this wing yet.</p>
+          } @else {
+            <div class="flat-grid">
+              @for (flat of wingFlats; track flat.id) {
+                @if (canEditFlats()) {
+                  <button
+                    mat-stroked-button
+                    class="flat-tile"
+                    [matMenuTriggerFor]="flatMenu"
+                    [matMenuTriggerData]="{ wing, flat }"
+                  >
+                    {{ flat.flatNumber }}
+                  </button>
+                } @else {
+                  <span class="flat-tile flat-tile--static">{{ flat.flatNumber }}</span>
+                }
+              }
+            </div>
+          }
+          <button mat-button *hasPermission="'FLAT.STRUCTURE.CREATE'" (click)="addFlat(wing)">
+            <mat-icon>add</mat-icon>
+            Add flat
+          </button>
+        }
+      </mat-expansion-panel>
+    }
+  </mat-accordion>
+}
+
+<mat-menu #flatMenu="matMenu">
+  <ng-template matMenuContent let-wing="wing" let-flat="flat">
+    <button mat-menu-item *hasPermission="'FLAT.STRUCTURE.UPDATE'" (click)="renameFlat(wing, flat)">
+      <mat-icon>edit</mat-icon>
+      Rename
+    </button>
+    <button mat-menu-item *hasPermission="'FLAT.STRUCTURE.DELETE'" (click)="deleteFlat(wing, flat)">
+      <mat-icon>delete</mat-icon>
+      Delete
+    </button>
+  </ng-template>
+</mat-menu>

@@ -24,7 +24,16 @@ interface NavItem {
 }
 
 /** Add an entry here as each feature route lands. */
-const NAV_ITEMS: NavItem[] = [{ label: 'Dashboard', icon: 'dashboard', link: '/dashboard' }];
+const NAV_ITEMS: NavItem[] = [
+  { label: 'Dashboard', icon: 'dashboard', link: '/dashboard' },
+  {
+    label: 'Societies',
+    icon: 'apartment',
+    link: '/societies',
+    permission: 'SOCIETY.SETTINGS.VIEW',
+  },
+  { label: 'Structure', icon: 'domain', link: '/structure', permission: 'FLAT.DIRECTORY.VIEW' },
+];
 
 /** Frame for signed-in pages: top bar with society switcher, side nav and content. */
 @Component({

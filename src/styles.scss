@@ -37,3 +37,18 @@ body {
   height: 100%;
 }
 /* You can add global styles to this file, and also import other style files */
+
+// Title row at the top of each page: heading on the left, actions on the right.
+.page-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  margin-bottom: 16px;
+
+  h1 {
+    flex: 1;
+    margin: 0;
+    font: var(--mat-sys-headline-small);
+  }
+}
