@@ -145,6 +145,14 @@ export class VisitorList {
     return this.auth.can(permission, visitor.societyId);
   }
 
+  /** Approve/reject: residents decide for their own flat; anyone else also needs OVERRIDE. */
+  protected canDecide(permission: string, visitor: Visitor): boolean {
+    return (
+      this.can(permission, visitor) &&
+      (this.isResidentOf(visitor) || this.can('VISITOR.APPROVAL.OVERRIDE', visitor))
+    );
+  }
+
   protected approve(visitor: Visitor): void {
     this.decide(visitor, 'Approve', () => this.api.approve(visitor.id));
   }
@@ -179,8 +187,7 @@ export class VisitorList {
 
   /** Someone who isn't a resident of the flat decides on its behalf (SECRETARY+): confirm first. */
   private decide(visitor: Visitor, verb: 'Approve' | 'Reject', request: () => Observable<unknown>) {
-    const isResident = this.auth.user()?.roles.some((a) => a.flatId === visitor.flatId) ?? false;
-    const confirmed = isResident
+    const confirmed = this.isResidentOf(visitor)
       ? of(true)
       : confirmDialog(this.dialog, {
           title: `${verb} on behalf of flat ${visitor.flatNumber}?`,
@@ -207,6 +214,10 @@ export class VisitorList {
           this.visitors.update((list) => list.map((v) => (v.id === updated.id ? updated : v))),
         error: () => {}, // reported by the error interceptor
       });
+  }
+
+  private isResidentOf(visitor: Visitor): boolean {
+    return this.auth.user()?.roles.some((a) => a.flatId === visitor.flatId) ?? false;
   }
 
   private fetch(query: VisitorQuery, page: number, size: number, silent = false) {

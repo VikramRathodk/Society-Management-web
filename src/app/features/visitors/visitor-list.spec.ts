@@ -36,6 +36,7 @@ describe('VisitorList', () => {
   let fixture: ComponentFixture<VisitorList>;
   let http: HttpTestingController;
   let residentFlatIds: number[];
+  let deniedPermissions: string[];
 
   const el = () => fixture.nativeElement as HTMLElement;
   const button = (label: string, root: ParentNode = el()) =>
@@ -54,7 +55,7 @@ describe('VisitorList', () => {
         {
           provide: AuthStore,
           useValue: {
-            can: () => true,
+            can: (permission: string) => !deniedPermissions.includes(permission),
             canOnPlatform: () => false,
             user: () => ({ roles: residentFlatIds.map((flatId) => ({ flatId })) }),
           },
@@ -68,9 +69,20 @@ describe('VisitorList', () => {
     await fixture.whenStable();
   }
 
-  beforeEach(() => (residentFlatIds = [9]));
+  beforeEach(() => {
+    residentFlatIds = [9];
+    deniedPermissions = [];
+  });
 
   afterEach(() => http.verify());
+
+  it('hides approve/reject from non-residents without the override permission', async () => {
+    residentFlatIds = [];
+    deniedPermissions = ['VISITOR.APPROVAL.OVERRIDE']; // e.g. a committee member
+    await setup([visitor()]);
+    expect(button('Approve')).toBeUndefined();
+    expect(button('Reject')).toBeUndefined();
+  });
 
   it('lets a resident of the flat approve directly, then refreshes the row', async () => {
     await setup([visitor()]);

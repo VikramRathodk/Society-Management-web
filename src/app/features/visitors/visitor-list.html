@@ -81,10 +81,10 @@
         <div class="visitor-actions">
           @switch (v.status) {
             @case ('PENDING') {
-              @if (can('VISITOR.APPROVAL.REJECT', v)) {
+              @if (canDecide('VISITOR.APPROVAL.REJECT', v)) {
                 <button mat-button (click)="reject(v)" [disabled]="busy().has(v.id)">Reject</button>
               }
-              @if (can('VISITOR.APPROVAL.APPROVE', v)) {
+              @if (canDecide('VISITOR.APPROVAL.APPROVE', v)) {
                 <button mat-flat-button (click)="approve(v)" [disabled]="busy().has(v.id)">
                   Approve
                 </button>
