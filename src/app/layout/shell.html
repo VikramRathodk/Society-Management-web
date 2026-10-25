@@ -1,0 +1,14 @@
+<mat-toolbar class="shell-toolbar">
+  <a class="shell-title" routerLink="/dashboard">Society Management</a>
+  <span class="shell-spacer"></span>
+  @if (auth.user(); as user) {
+    <span class="shell-user">{{ user.name }}</span>
+  }
+  <button mat-icon-button (click)="logout()" aria-label="Log out">
+    <mat-icon>logout</mat-icon>
+  </button>
+</mat-toolbar>
+
+<main class="shell-content">
+  <router-outlet />
+</main>

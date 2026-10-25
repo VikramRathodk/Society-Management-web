@@ -1,0 +1,28 @@
+.login-page {
+  display: grid;
+  place-items: center;
+  min-height: 100%;
+  padding: 16px;
+  box-sizing: border-box;
+}
+
+.login-card {
+  width: 100%;
+  max-width: 400px;
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 16px;
+}
+
+.login-error {
+  margin: 0 0 12px;
+  color: var(--mat-sys-error);
+}
+
+mat-spinner {
+  margin: 0 auto;
+}
