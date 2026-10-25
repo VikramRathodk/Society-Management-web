@@ -1,11 +1,20 @@
 <main class="login-page">
-  <mat-card class="login-card" appearance="outlined">
-    <mat-card-header>
-      <mat-card-title>Society Management</mat-card-title>
-      <mat-card-subtitle>Sign in to continue</mat-card-subtitle>
-    </mat-card-header>
+  <aside class="brand-panel" aria-hidden="true">
+    <span class="brand-mark"><mat-icon>apartment</mat-icon></span>
+    <div>
+      <p class="brand-title">Society Management</p>
+      <p class="brand-text">Visitors, residents and your society's structure, in one calm place.</p>
+    </div>
+  </aside>
 
-    <mat-card-content>
+  <section class="form-side">
+    <div class="form-wrap">
+      <div class="brand-mark brand-mark--small" aria-hidden="true">
+        <mat-icon>apartment</mat-icon>
+      </div>
+      <h1>Welcome back</h1>
+      <p class="lead">Sign in with your phone number to continue.</p>
+
       <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
         <mat-form-field appearance="outline">
           <mat-label>Phone</mat-label>
@@ -40,10 +49,13 @@
         </mat-form-field>
 
         @if (error(); as message) {
-          <p class="login-error" role="alert">{{ message }}</p>
+          <p class="login-error" role="alert">
+            <mat-icon>error</mat-icon>
+            {{ message }}
+          </p>
         }
 
-        <button mat-flat-button type="submit" [disabled]="submitting()">
+        <button mat-flat-button class="submit" type="submit" [disabled]="submitting()">
           @if (submitting()) {
             <mat-spinner diameter="20" />
           } @else {
@@ -51,6 +63,6 @@
           }
         </button>
       </form>
-    </mat-card-content>
-  </mat-card>
+    </div>
+  </section>
 </main>

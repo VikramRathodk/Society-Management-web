@@ -3,7 +3,6 @@ import { Component, inject, input, numberAttribute, signal } from '@angular/core
 import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
-import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
@@ -16,7 +15,7 @@ import { SocietyApi } from '../../core/api/society.api';
 import { errorMessage } from '../../core/auth/error.interceptor';
 import { Society } from '../../core/models';
 import { SocietyContextStore } from '../../core/society-context/society-context.store';
-import { EmptyState } from '../../shared/empty-state';
+import { EmptyState, PageHeader, Section } from '../../shared/ui';
 
 @Component({
   selector: 'app-society-settings',
@@ -24,12 +23,13 @@ import { EmptyState } from '../../shared/empty-state';
     ReactiveFormsModule,
     RouterLink,
     MatButtonModule,
-    MatCardModule,
     MatFormFieldModule,
     MatIconModule,
     MatInputModule,
     MatProgressBarModule,
     EmptyState,
+    PageHeader,
+    Section,
   ],
   templateUrl: './society-settings.html',
   styleUrl: './society-settings.scss',

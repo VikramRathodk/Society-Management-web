@@ -1,39 +1,56 @@
-import { Component, inject, signal } from '@angular/core';
+import { DatePipe } from '@angular/common';
+import { Component, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
-import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { RouterLink } from '@angular/router';
-import { Observable, catchError, forkJoin, map, of, switchMap } from 'rxjs';
+import { Observable, catchError, forkJoin, map, of, switchMap, tap } from 'rxjs';
 
 import { StructureApi } from '../../core/api/structure.api';
 import { UserApi } from '../../core/api/user.api';
 import { VisitorApi } from '../../core/api/visitor.api';
 import { AuthStore } from '../../core/auth/auth.store';
 import { HasPermission } from '../../core/auth/has-permission.directive';
+import { Visitor, VisitorStatus } from '../../core/models';
 import { SocietyContextStore } from '../../core/society-context/society-context.store';
+import { Section, StatCard, Tone } from '../../shared/ui';
+import { VisitorPhotos, VisitorRow } from '../visitors/visitor-ui';
 
 /** The API caps a page at 100 and returns no totals, so larger counts show as "100+". */
 const MAX = 100;
 
-interface StatCard {
+/** Per item: undefined = not loaded yet (or not permitted), null = failed. */
+interface DashboardData {
+  pending?: Visitor[] | null;
+  inside?: Visitor[] | null;
+  recent?: Visitor[] | null;
+  users?: number | null;
+  wings?: number | null;
+}
+
+interface Card {
   label: string;
   icon: string;
+  value: string | null;
   link: string;
   queryParams?: Record<string, string>;
-  /** Resolves to the number to show; undefined when it couldn't be loaded. */
-  count: Observable<number | undefined>;
+  tone: Tone;
 }
 
-interface LoadedCard extends Omit<StatCard, 'count'> {
-  /** null while loading, '—' if it failed. */
-  value: string | null;
-}
-
-/** Cards built from the user's permissions in the selected society. */
+/** Overview built from the user's permissions in the selected society. */
 @Component({
   selector: 'app-dashboard',
-  imports: [RouterLink, MatButtonModule, MatCardModule, MatIconModule, HasPermission],
+  imports: [
+    DatePipe,
+    RouterLink,
+    MatButtonModule,
+    MatIconModule,
+    HasPermission,
+    Section,
+    StatCard,
+    VisitorRow,
+  ],
+  providers: [VisitorPhotos],
   templateUrl: './dashboard.html',
   styleUrl: './dashboard.scss',
 })
@@ -44,86 +61,129 @@ export class Dashboard {
   protected readonly auth = inject(AuthStore);
   protected readonly ctx = inject(SocietyContextStore);
 
-  protected readonly cards = signal<LoadedCard[]>([]);
+  protected readonly today = new Date();
+  protected readonly greeting = greetingFor(this.today);
+  protected readonly firstName = computed(() => this.auth.user()?.name.split(' ')[0] ?? '');
 
-  constructor() {
-    toObservable(this.ctx.selectedSocietyId)
-      .pipe(
-        map((societyId) => this.cardsFor(societyId)),
-        switchMap((cards) => {
-          this.cards.set(cards.map(({ count: _, ...card }) => ({ ...card, value: null })));
-          if (!cards.length) return of([]);
-          return forkJoin(cards.map((c) => c.count));
-        }),
-        takeUntilDestroyed(),
-      )
-      .subscribe((counts) =>
-        this.cards.update((cards) =>
-          cards.map((card, i) => ({ ...card, value: display(counts[i]) })),
-        ),
-      );
-  }
+  private readonly can = (permission: string) =>
+    this.auth.can(permission, this.ctx.selectedSocietyId());
+  protected readonly canViewVisitors = computed(() => this.can('VISITOR.ENTRY.VIEW'));
 
-  private cardsFor(societyId: number | null): StatCard[] {
-    const can = (permission: string) => this.auth.can(permission, societyId);
-    const settle = (source: Observable<unknown[]>) =>
-      source.pipe(
-        map((list) => list.length),
-        catchError(() => of(undefined)),
-      );
-    const visitors = (status?: 'PENDING' | 'ENTERED') =>
-      this.visitorApi.list({ societyId, status, page: 0, size: MAX }, { silent: true });
+  protected readonly data = signal<DashboardData>({});
+  protected readonly loading = signal(true);
 
-    const cards: StatCard[] = [];
-    if (can('VISITOR.ENTRY.VIEW')) {
+  protected readonly cards = computed<Card[]>(() => {
+    const d = this.data();
+    const loading = this.loading();
+    const value = (n: number | null | undefined) => (loading ? null : display(n));
+    const cards: Card[] = [];
+    if (this.canViewVisitors()) {
+      const waiting = d.pending?.length ?? 0;
       cards.push(
         {
           label: 'Waiting for approval',
           icon: 'hourglass_top',
+          value: value(d.pending === null ? null : d.pending?.length),
           link: '/visitors',
           queryParams: { status: 'PENDING' },
-          count: settle(visitors('PENDING')),
+          tone: waiting > 0 ? 'warning' : 'neutral',
         },
         {
           label: 'Inside now',
           icon: 'login',
+          value: value(d.inside === null ? null : d.inside?.length),
           link: '/visitors',
           queryParams: { status: 'ENTERED' },
-          count: settle(visitors('ENTERED')),
+          tone: 'primary',
         },
         {
           label: 'Logged today',
           icon: 'today',
+          value: value(
+            d.recent === null ? null : d.recent?.filter((v) => isToday(v.loggedAt)).length,
+          ),
           link: '/visitors',
-          count: settle(visitors().pipe(map((list) => list.filter((v) => isToday(v.loggedAt))))),
+          tone: 'neutral',
         },
       );
     }
-    if (can('USER.ACCOUNT.VIEW')) {
+    if (this.can('USER.ACCOUNT.VIEW')) {
       cards.push({
         label: 'Users',
         icon: 'group',
+        value: value(d.users),
         link: '/users',
-        count: settle(this.userApi.list(societyId)),
+        tone: 'neutral',
       });
     }
-    if (can('FLAT.DIRECTORY.VIEW') && societyId != null) {
+    if (this.can('FLAT.DIRECTORY.VIEW') && this.ctx.selectedSocietyId() != null) {
       cards.push({
         label: 'Wings',
         icon: 'domain',
+        value: value(d.wings),
         link: '/structure',
-        count: settle(this.structureApi.wings(societyId)),
+        tone: 'neutral',
       });
     }
     return cards;
+  });
+
+  /** Oldest first: the ones that have waited longest. */
+  protected readonly waiting = computed(() =>
+    [...(this.data().pending ?? [])].reverse().slice(0, 5),
+  );
+  protected readonly recent = computed(() => (this.data().recent ?? []).slice(0, 6));
+
+  constructor() {
+    toObservable(this.ctx.selectedSocietyId)
+      .pipe(
+        tap(() => {
+          this.loading.set(true);
+          this.data.set({});
+        }),
+        switchMap((societyId) => this.load(societyId)),
+        takeUntilDestroyed(),
+      )
+      .subscribe((data) => {
+        this.data.set(data);
+        this.loading.set(false);
+      });
+  }
+
+  /** Everything the visible cards and panels need; each failure only blanks its own part. */
+  private load(societyId: number | null): Observable<DashboardData> {
+    const settle = <T>(source: Observable<T>) => source.pipe(catchError(() => of(null)));
+    const visitors = (status?: VisitorStatus) =>
+      settle(this.visitorApi.list({ societyId, status, page: 0, size: MAX }, { silent: true }));
+
+    const requests: { [K in keyof DashboardData]?: Observable<DashboardData[K]> } = {};
+    if (this.can('VISITOR.ENTRY.VIEW')) {
+      requests.pending = visitors('PENDING');
+      requests.inside = visitors('ENTERED');
+      requests.recent = visitors();
+    }
+    if (this.can('USER.ACCOUNT.VIEW')) {
+      requests.users = settle(this.userApi.list(societyId).pipe(map((list) => list.length)));
+    }
+    if (this.can('FLAT.DIRECTORY.VIEW') && societyId != null) {
+      requests.wings = settle(this.structureApi.wings(societyId).pipe(map((list) => list.length)));
+    }
+    return Object.keys(requests).length ? forkJoin(requests) : of({});
   }
 }
 
-function display(count: number | undefined): string {
-  if (count === undefined) return '—';
+function display(count: number | null | undefined): string {
+  if (count == null) return '—';
   return count >= MAX ? `${MAX}+` : String(count);
 }
 
 function isToday(iso: string | null): boolean {
   return !!iso && new Date(iso).toDateString() === new Date().toDateString();
+}
+
+function greetingFor(date: Date): string {
+  const hour = date.getHours();
+  if (hour < 12) return 'Good morning';
+  if (hour < 17) return 'Good afternoon';
+  return 'Good evening';
 }

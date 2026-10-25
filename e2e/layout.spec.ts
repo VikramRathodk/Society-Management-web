@@ -58,3 +58,31 @@ async function expectNoHorizontalScroll(page: import('@playwright/test').Page): 
   );
   expect(overflow, 'page should not scroll horizontally').toBeLessThanOrEqual(1);
 }
+
+test('the theme menu switches to dark and remembers it', async ({ page }, info) => {
+  await login(page, users.secretary);
+  await page.getByRole('button', { name: 'Theme' }).click();
+  await page.getByRole('menuitemradio', { name: 'Dark' }).click();
+  await expect(page.locator('html')).toHaveClass(/theme-dark/);
+
+  await page.reload(); // applied by index.html before the app boots
+  await expect(page.locator('html')).toHaveClass(/theme-dark/);
+  const background = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
+  expect(background, 'dark page background').not.toBe('rgb(255, 255, 255)');
+
+  for (const [name, url] of [
+    ['dashboard', '/dashboard'],
+    ['visitors', '/visitors'],
+  ]) {
+    await page.goto(url);
+    await expect(page.locator('mat-progress-bar')).toHaveCount(0, { timeout: 10_000 });
+    await page.screenshot({
+      path: `test-results/screens/${info.project.name}-${name}-dark.png`,
+      fullPage: true,
+    });
+  }
+
+  await page.getByRole('button', { name: 'Theme' }).click();
+  await page.getByRole('menuitemradio', { name: 'System' }).click();
+  await expect(page.locator('html')).not.toHaveClass(/theme-dark/);
+});

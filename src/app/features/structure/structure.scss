@@ -32,3 +32,14 @@ mat-panel-description {
   margin: 0 0 8px;
   color: var(--mat-sys-on-surface-variant);
 }
+
+// Each wing is its own rounded panel (no accordion, so corners don't merge).
+.wings {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.wings mat-expansion-panel {
+  border: 1px solid var(--mat-sys-outline-variant);
+}

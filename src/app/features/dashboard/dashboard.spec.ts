@@ -4,7 +4,36 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 
 import { AuthStore } from '../../core/auth/auth.store';
+import { Visitor } from '../../core/models';
 import { Dashboard } from './dashboard';
+
+function visitor(
+  id: number,
+  name: string,
+  loggedAt: string,
+  status: Visitor['status'] = 'PENDING',
+): Visitor {
+  return {
+    id,
+    societyId: 1,
+    flatId: 9,
+    flatNumber: '1001',
+    visitorName: name,
+    visitorPhone: null,
+    purpose: null,
+    photoUrl: null,
+    status,
+    loggedById: 2,
+    loggedByName: 'Happy Hogan',
+    respondedById: null,
+    respondedByName: null,
+    overridden: false,
+    loggedAt,
+    respondedAt: null,
+    enteredAt: null,
+    exitedAt: null,
+  };
+}
 
 describe('Dashboard', () => {
   let fixture: ComponentFixture<Dashboard>;
@@ -50,13 +79,22 @@ describe('Dashboard', () => {
     expect(labels()).toEqual(['Waiting for approval', 'Inside now', 'Logged today']);
 
     const now = new Date().toISOString();
-    http.expectOne('/api/visitors?societyId=1&status=PENDING&page=0&size=100').flush([{}, {}]);
+    // Newest first, as the API returns them.
+    const pending = [visitor(2, 'Newer Guest', now), visitor(1, 'Older Guest', now)];
+    http.expectOne('/api/visitors?societyId=1&status=PENDING&page=0&size=100').flush(pending);
     http.expectOne('/api/visitors?societyId=1&status=ENTERED&page=0&size=100').flush([]);
     http
       .expectOne('/api/visitors?societyId=1&page=0&size=100')
-      .flush([{ loggedAt: now }, { loggedAt: '2020-01-01T00:00:00Z' }]);
+      .flush([...pending, visitor(3, 'Old Guest', '2020-01-01T00:00:00Z', 'EXITED')]);
     await fixture.whenStable();
-    expect(values()).toEqual(['2', '0', '1']);
+    expect(values()).toEqual(['2', '0', '2']);
+
+    // "Needs approval" lists the longest-waiting visitor first.
+    const panel = (fixture.nativeElement as HTMLElement).querySelector('app-section')!;
+    const names = [...panel.querySelectorAll('app-visitor-row .name')].map((n) =>
+      n.textContent?.trim(),
+    );
+    expect(names).toEqual(['Older Guest', 'Newer Guest']);
   });
 
   it('adds user and wing cards for a secretary; a failed count shows a dash', async () => {

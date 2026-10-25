@@ -1,12 +1,11 @@
-<div class="page-header">
-  <h1>Structure</h1>
+<app-page-header title="Structure" [subtitle]="subtitle()">
   @if (ctx.selectedSocietyId() != null) {
     <button mat-flat-button *hasPermission="'FLAT.STRUCTURE.CREATE'" (click)="addWing()">
       <mat-icon>add</mat-icon>
       Add wing
     </button>
   }
-</div>
+</app-page-header>
 
 @if (loading()) {
   <mat-progress-bar mode="indeterminate" />
@@ -19,7 +18,7 @@
 } @else if (wings().length === 0) {
   <app-empty-state icon="domain" message="This society has no wings yet." />
 } @else {
-  <mat-accordion multi>
+  <div class="wings">
     @for (wing of wings(); track wing.id) {
       <mat-expansion-panel (opened)="loadFlats(wing)">
         <mat-expansion-panel-header>
@@ -81,7 +80,7 @@
         }
       </mat-expansion-panel>
     }
-  </mat-accordion>
+  </div>
 }
 
 <mat-menu #flatMenu="matMenu">

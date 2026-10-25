@@ -39,6 +39,9 @@ describe('VisitorList', () => {
   let deniedPermissions: string[];
 
   const el = () => fixture.nativeElement as HTMLElement;
+  /** Status and override pills inside the visitor rows (not the filter chips). */
+  const pills = () =>
+    [...el().querySelectorAll('app-visitor-row app-status-pill')].map((p) => p.textContent?.trim());
   const button = (label: string, root: ParentNode = el()) =>
     [...root.querySelectorAll('button')].find((b) => b.textContent?.trim() === label);
 
@@ -91,7 +94,7 @@ describe('VisitorList', () => {
     http.expectOne('/api/visitors/1').flush(visitor({ status: 'APPROVED' }));
     await fixture.whenStable();
 
-    expect(el().textContent).toContain('APPROVED');
+    expect(pills()).toContain('Approved');
     expect(button('Mark entered')).toBeDefined();
   });
 
@@ -109,7 +112,7 @@ describe('VisitorList', () => {
     http.expectOne('/api/visitors/1/approve').flush({});
     http.expectOne('/api/visitors/1').flush(visitor({ status: 'APPROVED', overridden: true }));
     await fixture.whenStable();
-    expect(el().textContent).toContain('override');
+    expect(pills()).toContain('Override');
   });
 
   it('re-fetches the row when someone else already answered (409)', async () => {
@@ -120,17 +123,17 @@ describe('VisitorList', () => {
       .flush({ message: 'Already responded' }, { status: 409, statusText: 'Conflict' });
     http.expectOne('/api/visitors/1').flush(visitor({ status: 'APPROVED' }));
     await fixture.whenStable();
-    expect(el().textContent).toContain('APPROVED');
+    expect(pills()).toContain('Approved');
   });
 
   it('loads the next page until a short page comes back', async () => {
     await setup(Array.from({ length: 20 }, (_, i) => visitor({ id: i + 1 })));
-    button('Load more')!.click();
+    button('Load older visitors')!.click();
     http.expectOne('/api/visitors?societyId=1&page=1&size=20').flush([visitor({ id: 21 })]);
     await fixture.whenStable();
 
-    expect(el().querySelectorAll('mat-card').length).toBe(21);
-    expect(button('Load more')).toBeUndefined();
+    expect(el().querySelectorAll('app-visitor-row').length).toBe(21);
+    expect(button('Load older visitors')).toBeUndefined();
   });
 
   it('keeps the list when a background refresh fails', async () => {
@@ -143,7 +146,7 @@ describe('VisitorList', () => {
         .expectOne('/api/visitors?societyId=1&page=0&size=20')
         .flush(null, { status: 503, statusText: 'Unavailable' });
       await fixture.whenStable();
-      expect(el().querySelectorAll('mat-card').length).toBe(1);
+      expect(el().querySelectorAll('app-visitor-row').length).toBe(1);
     } finally {
       vi.useRealTimers();
     }

@@ -12,16 +12,48 @@ table {
   width: 100%;
 }
 
+td {
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+
+.person {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 .user-link {
-  color: var(--mat-sys-primary);
-  font-weight: 500;
+  color: var(--mat-sys-on-surface);
+  font-weight: 600;
   text-decoration: none;
 
   &:hover {
+    color: var(--mat-sys-primary);
     text-decoration: underline;
   }
 }
 
-.inactive td {
+.phone {
   color: var(--mat-sys-on-surface-variant);
+  font: var(--mat-sys-body-small);
+}
+
+.pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.person .pills {
+  margin-top: 6px;
+}
+
+.status-cell {
+  width: 1%;
+  white-space: nowrap;
+}
+
+.inactive .person {
+  opacity: 0.6;
 }

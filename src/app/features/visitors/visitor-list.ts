@@ -1,11 +1,11 @@
-import { DatePipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
-import { MatCardModule } from '@angular/material/card';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatDialog } from '@angular/material/dialog';
+import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
+import { MatInputModule } from '@angular/material/input';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { ActivatedRoute, RouterLink } from '@angular/router';
@@ -28,8 +28,8 @@ import { HasPermission } from '../../core/auth/has-permission.directive';
 import { Visitor, VisitorStatus } from '../../core/models';
 import { SocietyContextStore } from '../../core/society-context/society-context.store';
 import { confirmDialog } from '../../shared/confirm-dialog';
-import { EmptyState } from '../../shared/empty-state';
-import { VisitorPhoto, VisitorPhotos } from './visitor-photo';
+import { EmptyState, PageHeader } from '../../shared/ui';
+import { VisitorPhotos, VisitorRow, groupByDay } from './visitor-ui';
 
 const PAGE_SIZE = 20;
 const MAX_PAGE_SIZE = 100;
@@ -44,17 +44,18 @@ interface StatusFilter {
 @Component({
   selector: 'app-visitor-list',
   imports: [
-    DatePipe,
     RouterLink,
     MatButtonModule,
-    MatCardModule,
     MatChipsModule,
+    MatFormFieldModule,
     MatIconModule,
+    MatInputModule,
     MatProgressBarModule,
     MatTooltipModule,
     HasPermission,
     EmptyState,
-    VisitorPhoto,
+    PageHeader,
+    VisitorRow,
   ],
   providers: [VisitorPhotos],
   templateUrl: './visitor-list.html',
@@ -63,7 +64,7 @@ interface StatusFilter {
 export class VisitorList {
   private readonly api = inject(VisitorApi);
   private readonly auth = inject(AuthStore);
-  private readonly ctx = inject(SocietyContextStore);
+  protected readonly ctx = inject(SocietyContextStore);
   private readonly dialog = inject(MatDialog);
 
   protected readonly filters: StatusFilter[] = [
@@ -83,6 +84,22 @@ export class VisitorList {
   protected readonly loading = signal(true);
   protected readonly loadingMore = signal(false);
   protected readonly hasMore = signal(false);
+  protected readonly subtitle = computed(() =>
+    [this.ctx.selectedSociety()?.name, 'Updates every 15 seconds'].filter(Boolean).join(' · '),
+  );
+  /** Filters what is loaded by name, flat, phone or purpose. */
+  protected readonly search = signal('');
+  protected readonly groups = computed(() => {
+    const query = this.search().trim().toLowerCase();
+    const shown = query
+      ? this.visitors().filter((v) =>
+          [v.visitorName, v.flatNumber, v.visitorPhone, v.purpose].some((field) =>
+            field?.toLowerCase().includes(query),
+          ),
+        )
+      : this.visitors();
+    return groupByDay(shown);
+  });
   /** Visitors with an action in flight, so their buttons can be disabled. */
   protected readonly busy = signal<ReadonlySet<number>>(new Set());
 
@@ -136,6 +153,10 @@ export class VisitorList {
 
   protected setStatus(status: VisitorStatus | null): void {
     this.status.set(status);
+  }
+
+  protected onSearch(event: Event): void {
+    this.search.set((event.target as HTMLInputElement).value);
   }
 
   protected retry(): void {

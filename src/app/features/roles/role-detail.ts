@@ -2,8 +2,6 @@ import { Component, computed, inject, input, signal } from '@angular/core';
 import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
-import { MatCardModule } from '@angular/material/card';
-import { MatChipsModule } from '@angular/material/chips';
 import { MatDialog } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
@@ -19,8 +17,8 @@ import { AuthStore } from '../../core/auth/auth.store';
 import { Permission, Role } from '../../core/models';
 import { HasUnsavedChanges } from '../../core/unsaved-changes.guard';
 import { confirmDialog } from '../../shared/confirm-dialog';
-import { EmptyState } from '../../shared/empty-state';
 import { sortBy } from '../../shared/sort';
+import { EmptyState, PageHeader, Section, StatusPill } from '../../shared/ui';
 import { PermissionMatrix } from './permission-matrix';
 import { inheritCandidates, inheritedPermissions } from './role-graph';
 
@@ -30,14 +28,15 @@ import { inheritCandidates, inheritedPermissions } from './role-graph';
     ReactiveFormsModule,
     RouterLink,
     MatButtonModule,
-    MatCardModule,
-    MatChipsModule,
     MatFormFieldModule,
     MatIconModule,
     MatInputModule,
     MatProgressBarModule,
     MatSelectModule,
     EmptyState,
+    PageHeader,
+    Section,
+    StatusPill,
     PermissionMatrix,
   ],
   templateUrl: './role-detail.html',
@@ -60,6 +59,19 @@ export class RoleDetail implements HasUnsavedChanges {
   protected readonly role = computed(
     () => this.roles().find((r) => r.code === this.code()) ?? null,
   );
+
+  protected readonly roleMeta = computed(() => {
+    const r = this.role();
+    if (!r) return null;
+    return [
+      r.code,
+      r.scopeLevel === 'PLATFORM' ? 'Platform role' : 'Society role',
+      r.isSystem ? 'Built-in' : null,
+      r.requiresFlat ? 'Tied to a flat' : null,
+    ]
+      .filter(Boolean)
+      .join(' · ');
+  });
 
   protected readonly canUpdateRole = this.auth.canOnPlatform('SYSTEM.ROLE.UPDATE');
   protected readonly canEditPermissions = this.auth.canOnPlatform('SYSTEM.PERMISSION.UPDATE');

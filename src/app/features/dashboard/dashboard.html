@@ -1,47 +1,60 @@
-<div class="page-header">
-  <h1>
-    @if (auth.user(); as user) {
-      Welcome, {{ user.name }}
-    } @else {
-      Welcome
-    }
-  </h1>
-</div>
-
-@if (ctx.selectedSociety(); as society) {
-  <p class="society">{{ society.name }}</p>
-}
-
-<div class="actions">
-  <a mat-flat-button *hasPermission="'VISITOR.ENTRY.CREATE'" routerLink="/visitors/new">
-    <mat-icon>person_add</mat-icon>
-    Log visitor
-  </a>
-  <a mat-stroked-button *hasPermission="'USER.ACCOUNT.CREATE'" routerLink="/users/new">
-    <mat-icon>group_add</mat-icon>
-    New user
-  </a>
-  <a mat-stroked-button routerLink="/profile">
-    <mat-icon>account_circle</mat-icon>
-    My profile
-  </a>
-</div>
+<header class="hero">
+  <div>
+    <p class="date">
+      {{ today | date: 'EEEE, d MMMM' }}
+      @if (ctx.selectedSociety(); as society) {
+        · {{ society.name }}
+      }
+    </p>
+    <h1>{{ greeting }}{{ firstName() ? ', ' + firstName() : '' }}</h1>
+  </div>
+  <div class="actions">
+    <a mat-flat-button *hasPermission="'VISITOR.ENTRY.CREATE'" routerLink="/visitors/new">
+      <mat-icon>person_add</mat-icon>
+      Log visitor
+    </a>
+    <a mat-stroked-button *hasPermission="'USER.ACCOUNT.CREATE'" routerLink="/users/new">
+      <mat-icon>group_add</mat-icon>
+      New user
+    </a>
+  </div>
+</header>
 
 @if (cards().length) {
-  <div class="cards">
+  <div class="stats">
     @for (card of cards(); track card.label) {
-      <a
-        class="card-link"
-        [routerLink]="card.link"
+      <app-stat-card
+        [icon]="card.icon"
+        [label]="card.label"
+        [value]="card.value"
+        [link]="card.link"
         [queryParams]="card.queryParams"
-        [attr.aria-label]="card.label + ': ' + (card.value ?? 'loading')"
-      >
-        <mat-card appearance="outlined" class="stat">
-          <mat-icon class="stat-icon">{{ card.icon }}</mat-icon>
-          <span class="stat-value">{{ card.value ?? '…' }}</span>
-          <span class="stat-label">{{ card.label }}</span>
-        </mat-card>
-      </a>
+        [tone]="card.tone"
+      />
     }
+  </div>
+}
+
+@if (canViewVisitors()) {
+  <div class="panels">
+    <app-section title="Needs approval" subtitle="Longest waiting first">
+      <a sectionActions mat-button routerLink="/visitors" [queryParams]="{ status: 'PENDING' }">
+        Review
+      </a>
+      @for (v of waiting(); track v.id) {
+        <app-visitor-row [visitor]="v" compact />
+      } @empty {
+        <p class="quiet">{{ loading() ? 'Loading…' : 'Nobody is waiting at the gate.' }}</p>
+      }
+    </app-section>
+
+    <app-section title="Recent activity">
+      <a sectionActions mat-button routerLink="/visitors">Gate log</a>
+      @for (v of recent(); track v.id) {
+        <app-visitor-row [visitor]="v" compact />
+      } @empty {
+        <p class="quiet">{{ loading() ? 'Loading…' : 'No visitors yet.' }}</p>
+      }
+    </app-section>
   </div>
 }

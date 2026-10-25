@@ -1,8 +1,7 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, inject, signal, viewChild } from '@angular/core';
+import { Component, computed, inject, signal, viewChild } from '@angular/core';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
-import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
@@ -12,6 +11,7 @@ import { UserApi } from '../../core/api/user.api';
 import { AuthStore } from '../../core/auth/auth.store';
 import { errorMessage } from '../../core/auth/error.interceptor';
 import { SocietyContextStore } from '../../core/society-context/society-context.store';
+import { PageHeader, Section } from '../../shared/ui';
 import { RoleFields } from './role-fields';
 
 /** Create a user together with their first role (guide section 7.1). */
@@ -21,11 +21,12 @@ import { RoleFields } from './role-fields';
     ReactiveFormsModule,
     RouterLink,
     MatButtonModule,
-    MatCardModule,
     MatFormFieldModule,
     MatIconModule,
     MatInputModule,
+    PageHeader,
     RoleFields,
+    Section,
   ],
   templateUrl: './user-create.html',
   styleUrl: './user-create.scss',
@@ -37,6 +38,10 @@ export class UserCreate {
   protected readonly includePlatformRoles = inject(AuthStore).canOnPlatform('USER.ACCOUNT.CREATE');
 
   private readonly roleFields = viewChild.required(RoleFields);
+  protected readonly roleSubtitle = computed(() => {
+    const society = this.ctx.selectedSociety()?.name;
+    return society ? `Society roles are created in ${society}` : null;
+  });
 
   protected readonly form = inject(NonNullableFormBuilder).group({
     name: ['', [Validators.required, Validators.pattern(/\S/)]],

@@ -5,6 +5,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatListModule } from '@angular/material/list';
+import { MatMenuModule } from '@angular/material/menu';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSidenavModule } from '@angular/material/sidenav';
 import { MatToolbarModule } from '@angular/material/toolbar';
@@ -13,6 +14,7 @@ import { map } from 'rxjs';
 
 import { AuthStore } from '../core/auth/auth.store';
 import { SocietyContextStore } from '../core/society-context/society-context.store';
+import { ThemeMode, ThemeStore } from '../core/theme';
 
 interface NavItem {
   label: string;
@@ -55,6 +57,7 @@ const NAV_ITEMS: NavItem[] = [
     MatFormFieldModule,
     MatIconModule,
     MatListModule,
+    MatMenuModule,
     MatSelectModule,
     MatSidenavModule,
     MatToolbarModule,
@@ -66,6 +69,16 @@ export class Shell {
   private readonly router = inject(Router);
   protected readonly auth = inject(AuthStore);
   protected readonly ctx = inject(SocietyContextStore);
+  protected readonly theme = inject(ThemeStore);
+
+  protected readonly themes: { mode: ThemeMode; label: string; icon: string }[] = [
+    { mode: 'light', label: 'Light', icon: 'light_mode' },
+    { mode: 'dark', label: 'Dark', icon: 'dark_mode' },
+    { mode: 'system', label: 'System', icon: 'contrast' },
+  ];
+  protected readonly themeIcon = computed(
+    () => this.themes.find((t) => t.mode === this.theme.mode())!.icon,
+  );
 
   protected readonly isHandset = toSignal(
     inject(BreakpointObserver)

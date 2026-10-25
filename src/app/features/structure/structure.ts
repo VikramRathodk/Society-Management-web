@@ -15,9 +15,9 @@ import { HasPermission } from '../../core/auth/has-permission.directive';
 import { Flat, Wing } from '../../core/models';
 import { SocietyContextStore } from '../../core/society-context/society-context.store';
 import { confirmDialog } from '../../shared/confirm-dialog';
-import { EmptyState } from '../../shared/empty-state';
 import { nameDialog } from '../../shared/name-dialog';
 import { sortBy } from '../../shared/sort';
+import { EmptyState, PageHeader } from '../../shared/ui';
 
 /** Wing → flat tree for the selected society. Flats load when a wing is first expanded. */
 @Component({
@@ -31,6 +31,7 @@ import { sortBy } from '../../shared/sort';
     MatTooltipModule,
     HasPermission,
     EmptyState,
+    PageHeader,
   ],
   templateUrl: './structure.html',
   styleUrl: './structure.scss',
@@ -46,6 +47,13 @@ export class Structure {
   /** Flats per wing id; a wing has no entry until its panel is first opened. */
   protected readonly flats = signal<ReadonlyMap<number, Flat[]>>(new Map());
   protected readonly loadingFlats = signal<ReadonlySet<number>>(new Set());
+
+  protected readonly subtitle = computed(() => {
+    const society = this.ctx.selectedSociety()?.name;
+    const n = this.wings().length;
+    const count = this.loading() ? null : `${n} ${n === 1 ? 'wing' : 'wings'}`;
+    return [count, society].filter(Boolean).join(' · ') || null;
+  });
 
   protected readonly canEditFlats = computed(() => {
     const societyId = this.ctx.selectedSocietyId();

@@ -5,7 +5,7 @@ import { apiToken, choose, login, logout, users } from './support';
 const visitorName = `E2E Visitor ${Date.now()}`;
 
 function card(page: Page) {
-  return page.locator('mat-card', { hasText: visitorName });
+  return page.locator('app-visitor-row', { hasText: visitorName });
 }
 
 test.describe.serial('visitor lifecycle', () => {
@@ -34,9 +34,9 @@ test.describe.serial('visitor lifecycle', () => {
     await page.getByRole('button', { name: 'Log visitor' }).click();
 
     await expect(page).toHaveURL(/\/visitors$/);
-    await expect(card(page)).toContainText('PENDING');
+    await expect(card(page)).toContainText('Pending');
     // The photo is fetched with the auth header and shown as a thumbnail.
-    await expect(card(page).locator('app-visitor-photo img')).toBeVisible();
+    await expect(card(page).locator('app-visitor-avatar img')).toBeVisible();
     // The guard can't decide on the flat's behalf.
     await expect(card(page).getByRole('button', { name: 'Approve' })).toHaveCount(0);
   });
@@ -59,17 +59,17 @@ test.describe.serial('visitor lifecycle', () => {
     await login(page, users.resident1001);
     await page.goto('/visitors');
     await card(page).getByRole('button', { name: 'Approve' }).click();
-    await expect(card(page)).toContainText('APPROVED');
-    await expect(card(page)).not.toContainText('override');
+    await expect(card(page)).toContainText('Approved');
+    await expect(card(page)).not.toContainText('Override');
   });
 
   test('guard marks the visitor in and out', async ({ page }) => {
     await login(page, users.guard);
     await page.goto('/visitors');
     await card(page).getByRole('button', { name: 'Mark entered' }).click();
-    await expect(card(page)).toContainText('ENTERED');
+    await expect(card(page)).toContainText('Inside');
     await card(page).getByRole('button', { name: 'Mark exited' }).click();
-    await expect(card(page)).toContainText('EXITED');
+    await expect(card(page)).toContainText('Exited');
 
     // The status filter narrows the list.
     await page.getByRole('option', { name: 'Pending' }).click();

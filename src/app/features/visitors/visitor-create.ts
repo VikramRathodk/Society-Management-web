@@ -3,7 +3,6 @@ import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
-import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
@@ -19,6 +18,7 @@ import { errorMessage } from '../../core/auth/error.interceptor';
 import { Flat, Wing } from '../../core/models';
 import { SocietyContextStore } from '../../core/society-context/society-context.store';
 import { sortBy } from '../../shared/sort';
+import { PageHeader, Section } from '../../shared/ui';
 
 const PHOTO_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
@@ -30,11 +30,12 @@ const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
     ReactiveFormsModule,
     RouterLink,
     MatButtonModule,
-    MatCardModule,
     MatFormFieldModule,
     MatIconModule,
     MatInputModule,
     MatSelectModule,
+    PageHeader,
+    Section,
   ],
   templateUrl: './visitor-create.html',
   styleUrl: './visitor-create.scss',

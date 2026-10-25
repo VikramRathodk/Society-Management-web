@@ -1,7 +1,6 @@
 import { Component, computed, effect, inject, signal, untracked } from '@angular/core';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
-import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatListModule } from '@angular/material/list';
@@ -12,6 +11,7 @@ import { UserApi } from '../../core/api/user.api';
 import { AuthStore } from '../../core/auth/auth.store';
 import { RoleAssignment } from '../../core/models';
 import { SocietyContextStore } from '../../core/society-context/society-context.store';
+import { PageHeader, Section } from '../../shared/ui';
 
 /** The signed-in user's own name and email; reachable for residents, who can't open /users. */
 @Component({
@@ -19,10 +19,11 @@ import { SocietyContextStore } from '../../core/society-context/society-context.
   imports: [
     ReactiveFormsModule,
     MatButtonModule,
-    MatCardModule,
     MatFormFieldModule,
     MatInputModule,
     MatListModule,
+    PageHeader,
+    Section,
   ],
   templateUrl: './profile.html',
   styleUrl: './profile.scss',

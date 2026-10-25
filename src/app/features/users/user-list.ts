@@ -1,7 +1,6 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
-import { MatChipsModule } from '@angular/material/chips';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
@@ -16,8 +15,8 @@ import { AuthStore } from '../../core/auth/auth.store';
 import { HasPermission } from '../../core/auth/has-permission.directive';
 import { RoleAssignment, User } from '../../core/models';
 import { SocietyContextStore } from '../../core/society-context/society-context.store';
-import { EmptyState } from '../../shared/empty-state';
 import { sortBy } from '../../shared/sort';
+import { Avatar, EmptyState, PageHeader, Section, StatusPill } from '../../shared/ui';
 
 /** Directory of users in the selected society (or everyone visible when none is selected). */
 @Component({
@@ -25,7 +24,6 @@ import { sortBy } from '../../shared/sort';
   imports: [
     RouterLink,
     MatButtonModule,
-    MatChipsModule,
     MatFormFieldModule,
     MatIconModule,
     MatInputModule,
@@ -33,7 +31,11 @@ import { sortBy } from '../../shared/sort';
     MatSlideToggleModule,
     MatTableModule,
     HasPermission,
+    Avatar,
     EmptyState,
+    PageHeader,
+    Section,
+    StatusPill,
   ],
   templateUrl: './user-list.html',
   styleUrl: './user-list.scss',
@@ -46,7 +48,7 @@ export class UserList {
   protected readonly users = signal<User[]>([]);
   protected readonly loading = signal(true);
   protected readonly search = signal('');
-  protected readonly columns = ['name', 'phone', 'roles', 'status'];
+  protected readonly columns = ['name', 'roles', 'status'];
 
   protected readonly filtered = computed(() => {
     const query = this.search().trim().toLowerCase();
@@ -59,6 +61,11 @@ export class UserList {
     this.auth.can('USER.ACCOUNT.DELETE', this.ctx.selectedSocietyId()),
   );
   protected readonly selfId = computed(() => this.auth.user()?.id);
+  protected readonly subtitle = computed(() => {
+    const society = this.ctx.selectedSociety()?.name;
+    const count = this.loading() ? null : `${this.users().length} people`;
+    return [count, society].filter(Boolean).join(' · ') || null;
+  });
 
   protected readonly loadError = signal(false);
   private readonly attempt = signal(0);

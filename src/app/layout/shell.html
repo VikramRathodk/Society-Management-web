@@ -4,7 +4,10 @@
       <mat-icon>menu</mat-icon>
     </button>
   }
-  <a class="shell-title" routerLink="/dashboard">Society Management</a>
+  <a class="brand" routerLink="/dashboard" aria-label="Society Management home">
+    <span class="brand-mark"><mat-icon>apartment</mat-icon></span>
+    <span class="brand-name">Society Management</span>
+  </a>
   <span class="shell-spacer"></span>
 
   @if (ctx.societies().length > 1) {
@@ -22,6 +25,26 @@
   } @else if (ctx.selectedSociety(); as society) {
     <span class="shell-society">{{ society.name }}</span>
   }
+
+  <button mat-icon-button [matMenuTriggerFor]="themeMenu" aria-label="Theme">
+    <mat-icon>{{ themeIcon() }}</mat-icon>
+  </button>
+  <mat-menu #themeMenu="matMenu" xPosition="before">
+    @for (t of themes; track t.mode) {
+      <button
+        mat-menu-item
+        (click)="theme.set(t.mode)"
+        [attr.aria-checked]="theme.mode() === t.mode"
+        role="menuitemradio"
+      >
+        <mat-icon>{{ t.icon }}</mat-icon>
+        <span>{{ t.label }}</span>
+        @if (theme.mode() === t.mode) {
+          <mat-icon class="check">check</mat-icon>
+        }
+      </button>
+    }
+  </mat-menu>
 
   @if (auth.user(); as user) {
     <a mat-button class="shell-user" routerLink="/profile" aria-label="My profile">
@@ -59,6 +82,8 @@
   </mat-sidenav>
 
   <mat-sidenav-content class="shell-content">
-    <router-outlet />
+    <div class="page">
+      <router-outlet />
+    </div>
   </mat-sidenav-content>
 </mat-sidenav-container>

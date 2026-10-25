@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
@@ -14,8 +14,8 @@ import { HasPermission } from '../../core/auth/has-permission.directive';
 import { Society } from '../../core/models';
 import { SocietyContextStore } from '../../core/society-context/society-context.store';
 import { confirmDialog } from '../../shared/confirm-dialog';
-import { EmptyState } from '../../shared/empty-state';
 import { sortBy } from '../../shared/sort';
+import { EmptyState, PageHeader, Section } from '../../shared/ui';
 import { SocietyCreateDialog } from './society-create-dialog';
 
 @Component({
@@ -29,6 +29,8 @@ import { SocietyCreateDialog } from './society-create-dialog';
     MatTooltipModule,
     HasPermission,
     EmptyState,
+    PageHeader,
+    Section,
   ],
   templateUrl: './society-list.html',
   styleUrl: './society-list.scss',
@@ -44,6 +46,10 @@ export class SocietyList {
   protected readonly columns = ['name', 'address', 'actions'];
 
   protected readonly loadError = signal(false);
+  protected readonly subtitle = computed(() => {
+    const n = this.societies().length;
+    return this.loading() ? null : `${n} ${n === 1 ? 'society' : 'societies'}`;
+  });
 
   constructor() {
     this.load();

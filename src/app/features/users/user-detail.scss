@@ -1,37 +1,81 @@
-.cards {
+.grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr));
   gap: 16px;
   align-items: start;
 }
 
 .permissions {
   grid-column: 1 / -1;
+  border: 1px solid var(--mat-sys-outline-variant);
 }
 
 form {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  padding-top: 8px;
 }
 
-.card-actions {
+.form-actions {
   display: flex;
   justify-content: flex-end;
 }
 
-.status {
-  padding: 2px 12px;
-  border-radius: 12px;
-  background: var(--mat-sys-primary-container);
-  color: var(--mat-sys-on-primary-container);
-  font: var(--mat-sys-label-large);
+.role {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px 10px 20px;
+  border-top: 1px solid var(--mat-sys-surface-container-high);
 }
 
-.status--inactive {
-  background: var(--mat-sys-surface-container-highest);
+.role-icon {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: var(--mat-sys-surface-container-high);
   color: var(--mat-sys-on-surface-variant);
+
+  mat-icon {
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+  }
+}
+
+.role-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.role-name {
+  font-weight: 600;
+}
+
+.role-where {
+  color: var(--mat-sys-on-surface-variant);
+  font: var(--mat-sys-body-small);
+}
+
+.quiet {
+  margin: 0;
+  padding: 16px 20px 20px;
+  border-top: 1px solid var(--mat-sys-surface-container-high);
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+h3 {
+  margin: 16px 0 8px;
+  font: var(--mat-sys-title-small);
+  font-weight: 600;
 }
 
 .danger {
@@ -40,9 +84,5 @@ form {
 
 .muted {
   color: var(--mat-sys-on-surface-variant);
-}
-
-h3 {
-  margin: 16px 0 8px;
-  font: var(--mat-sys-title-small);
+  font-weight: 400;
 }

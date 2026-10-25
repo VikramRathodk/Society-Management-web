@@ -3,14 +3,11 @@ import { Component, computed, inject, input, numberAttribute, signal } from '@an
 import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
-import { MatCardModule } from '@angular/material/card';
-import { MatChipsModule } from '@angular/material/chips';
 import { MatDialog } from '@angular/material/dialog';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
-import { MatListModule } from '@angular/material/list';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
@@ -23,7 +20,7 @@ import { AuthStore } from '../../core/auth/auth.store';
 import { Access, RoleAssignment, User } from '../../core/models';
 import { SocietyContextStore } from '../../core/society-context/society-context.store';
 import { confirmDialog } from '../../shared/confirm-dialog';
-import { EmptyState } from '../../shared/empty-state';
+import { EmptyState, PageHeader, Section, StatusPill } from '../../shared/ui';
 import { AssignRoleDialog, AssignRoleDialogData } from './assign-role-dialog';
 
 @Component({
@@ -32,16 +29,16 @@ import { AssignRoleDialog, AssignRoleDialogData } from './assign-role-dialog';
     ReactiveFormsModule,
     RouterLink,
     MatButtonModule,
-    MatCardModule,
-    MatChipsModule,
     MatExpansionModule,
     MatFormFieldModule,
     MatIconModule,
     MatInputModule,
-    MatListModule,
     MatProgressBarModule,
     MatTooltipModule,
     EmptyState,
+    PageHeader,
+    Section,
+    StatusPill,
   ],
   templateUrl: './user-detail.html',
   styleUrl: './user-detail.scss',

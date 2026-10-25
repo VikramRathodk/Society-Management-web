@@ -8,13 +8,38 @@
 
 .shell-toolbar {
   gap: 8px;
-  border-bottom: 1px solid var(--mat-sys-outline-variant);
+  padding: 0 16px;
 }
 
-.shell-title {
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   color: inherit;
   text-decoration: none;
   white-space: nowrap;
+}
+
+.brand-mark {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: var(--mat-sys-primary);
+  color: var(--mat-sys-on-primary);
+
+  mat-icon {
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+  }
+}
+
+.brand-name {
+  font: var(--mat-sys-title-medium);
+  font-weight: 600;
+  letter-spacing: -0.01em;
 }
 
 .shell-spacer {
@@ -26,10 +51,22 @@
   @include mat.form-field-density(-4);
 }
 
-.shell-society,
-.shell-user {
+.shell-society {
+  overflow: hidden;
+  color: var(--mat-sys-on-surface-variant);
   font: var(--mat-sys-body-large);
+  text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.shell-user {
+  white-space: nowrap;
+}
+
+.check {
+  margin-left: auto;
+  margin-right: 0;
+  color: var(--mat-sys-primary);
 }
 
 .shell-container {
@@ -37,18 +74,29 @@
 }
 
 .shell-sidenav {
-  width: 240px;
+  width: 232px;
+  padding: 8px 4px;
 }
 
+// Content sits in a centred column so wide screens don't stretch everything edge to edge.
 .shell-content {
-  padding: 16px;
+  padding: 8px 24px 32px;
 }
 
-// Phones: keep the switcher and logout, drop the extras.
+.page {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+// Phones: keep the switcher, theme and logout; drop the extras.
 @media (max-width: 599.98px) {
-  .shell-title,
+  .brand-name,
   .shell-user {
     display: none;
+  }
+
+  .shell-content {
+    padding: 8px 16px 24px;
   }
 
   .society-switcher {
