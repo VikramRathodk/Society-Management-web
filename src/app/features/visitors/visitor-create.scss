@@ -1,0 +1,51 @@
+.form-card {
+  max-width: 640px;
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-top: 8px;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 12px;
+
+  mat-form-field {
+    flex: 1 1 200px;
+  }
+}
+
+.photo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.photo-preview {
+  width: 120px;
+  height: 120px;
+  border-radius: 12px;
+  object-fit: cover;
+}
+
+.photo-hint {
+  color: var(--mat-sys-on-surface-variant);
+  font: var(--mat-sys-body-small);
+}
+
+.form-error {
+  margin: 0 0 12px;
+  color: var(--mat-sys-error);
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}

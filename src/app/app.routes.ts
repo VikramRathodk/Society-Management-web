@@ -58,6 +58,19 @@ export const routes: Routes = [
         loadComponent: () => import('./features/users/user-list').then((m) => m.UserList),
       },
       {
+        path: 'visitors/new',
+        canMatch: [permissionGuard],
+        data: { permission: 'VISITOR.ENTRY.CREATE' },
+        loadComponent: () =>
+          import('./features/visitors/visitor-create').then((m) => m.VisitorCreate),
+      },
+      {
+        path: 'visitors',
+        canMatch: [permissionGuard],
+        data: { permission: 'VISITOR.ENTRY.VIEW' },
+        loadComponent: () => import('./features/visitors/visitor-list').then((m) => m.VisitorList),
+      },
+      {
         path: 'forbidden',
         loadComponent: () => import('./features/forbidden/forbidden').then((m) => m.Forbidden),
       },

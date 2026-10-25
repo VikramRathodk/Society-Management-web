@@ -1,0 +1,131 @@
+<div class="page-header">
+  <h1>Visitors</h1>
+  <a mat-flat-button *hasPermission="'VISITOR.ENTRY.CREATE'" routerLink="/visitors/new">
+    <mat-icon>person_add</mat-icon>
+    Log visitor
+  </a>
+</div>
+
+<mat-chip-listbox
+  class="filters"
+  aria-label="Filter by status"
+  [hideSingleSelectionIndicator]="true"
+  (change)="setStatus($event.value ?? null)"
+>
+  @for (f of filters; track f.label) {
+    <mat-chip-option [value]="f.value" [selected]="status() === f.value">{{
+      f.label
+    }}</mat-chip-option>
+  }
+</mat-chip-listbox>
+
+@if (loading()) {
+  <mat-progress-bar mode="indeterminate" />
+} @else if (visitors().length === 0) {
+  <app-empty-state icon="badge" message="No visitors to show." />
+} @else {
+  <div class="visitor-list">
+    @for (v of visitors(); track v.id) {
+      <mat-card appearance="outlined" class="visitor">
+        <div class="visitor-main">
+          <app-visitor-photo
+            [visitorId]="v.id"
+            [hasPhoto]="v.photoUrl != null"
+            [name]="v.visitorName"
+          />
+          <div class="visitor-info">
+            <div class="visitor-title">
+              <span class="visitor-name">{{ v.visitorName }}</span>
+              <span class="status status--{{ v.status.toLowerCase() }}">{{ v.status }}</span>
+              @if (v.overridden) {
+                <span
+                  class="override"
+                  matTooltip="Decided by {{ v.respondedByName }} on the flat's behalf"
+                >
+                  override
+                </span>
+              }
+            </div>
+            <div class="visitor-meta">
+              Flat {{ v.flatNumber }}
+              @if (v.purpose) {
+                · {{ v.purpose }}
+              }
+              @if (v.visitorPhone) {
+                · {{ v.visitorPhone }}
+              }
+            </div>
+            <div class="visitor-times">
+              @if (v.loggedAt) {
+                <span>Logged {{ v.loggedAt | date: 'd MMM, h:mm a' }} by {{ v.loggedByName }}</span>
+              }
+              @if (v.respondedAt) {
+                <span>
+                  {{ v.status === 'REJECTED' ? 'Rejected' : 'Approved' }}
+                  {{ v.respondedAt | date: 'h:mm a' }}
+                  @if (v.respondedByName) {
+                    by {{ v.respondedByName }}
+                  }
+                </span>
+              }
+              @if (v.enteredAt) {
+                <span>In {{ v.enteredAt | date: 'h:mm a' }}</span>
+              }
+              @if (v.exitedAt) {
+                <span>Out {{ v.exitedAt | date: 'h:mm a' }}</span>
+              }
+            </div>
+          </div>
+        </div>
+
+        <div class="visitor-actions">
+          @switch (v.status) {
+            @case ('PENDING') {
+              @if (can('VISITOR.APPROVAL.REJECT', v)) {
+                <button mat-button (click)="reject(v)" [disabled]="busy().has(v.id)">Reject</button>
+              }
+              @if (can('VISITOR.APPROVAL.APPROVE', v)) {
+                <button mat-flat-button (click)="approve(v)" [disabled]="busy().has(v.id)">
+                  Approve
+                </button>
+              }
+            }
+            @case ('APPROVED') {
+              @if (can('VISITOR.ENTRY.UPDATE', v)) {
+                <button mat-flat-button (click)="markEntered(v)" [disabled]="busy().has(v.id)">
+                  Mark entered
+                </button>
+              }
+            }
+            @case ('ENTERED') {
+              @if (can('VISITOR.ENTRY.UPDATE', v)) {
+                <button mat-stroked-button (click)="markExited(v)" [disabled]="busy().has(v.id)">
+                  Mark exited
+                </button>
+              }
+            }
+          }
+          @if (can('VISITOR.ENTRY.DELETE', v)) {
+            <button
+              mat-icon-button
+              (click)="remove(v)"
+              [disabled]="busy().has(v.id)"
+              matTooltip="Delete entry"
+              [attr.aria-label]="'Delete entry for ' + v.visitorName"
+            >
+              <mat-icon>delete</mat-icon>
+            </button>
+          }
+        </div>
+      </mat-card>
+    }
+  </div>
+
+  @if (hasMore()) {
+    <div class="load-more">
+      <button mat-stroked-button (click)="loadMore()" [disabled]="loadingMore()">
+        {{ loadingMore() ? 'Loading…' : 'Load more' }}
+      </button>
+    </div>
+  }
+}

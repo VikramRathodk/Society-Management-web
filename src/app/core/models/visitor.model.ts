@@ -22,3 +22,10 @@ export interface Visitor {
   enteredAt: string | null;
   exitedAt: string | null;
 }
+
+export interface LogVisitorRequest {
+  flatId: number;
+  visitorName: string;
+  visitorPhone?: string;
+  purpose?: string;
+}
