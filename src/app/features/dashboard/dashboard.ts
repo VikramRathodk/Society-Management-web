@@ -6,18 +6,23 @@ import { MatIconModule } from '@angular/material/icon';
 import { RouterLink } from '@angular/router';
 import { Observable, catchError, forkJoin, map, of, switchMap, tap } from 'rxjs';
 
+import { ComplaintApi } from '../../core/api/complaint.api';
+import { NoticeApi } from '../../core/api/notice.api';
 import { StructureApi } from '../../core/api/structure.api';
 import { UserApi } from '../../core/api/user.api';
 import { VisitorApi } from '../../core/api/visitor.api';
 import { AuthStore } from '../../core/auth/auth.store';
 import { HasPermission } from '../../core/auth/has-permission.directive';
-import { Visitor, VisitorStatus } from '../../core/models';
+import { Complaint, Notice, Visitor, VisitorStatus } from '../../core/models';
 import { SocietyContextStore } from '../../core/society-context/society-context.store';
 import { Section, StatCard, Tone } from '../../shared/ui';
-import { VisitorPhotos, VisitorRow } from '../visitors/visitor-ui';
+import { ComplaintRow } from '../complaints/complaint-ui';
+import { VisitorPhotos, VisitorRow, timeAgo } from '../visitors/visitor-ui';
 
 /** The API caps a page at 100 and returns no totals, so larger counts show as "100+". */
 const MAX = 100;
+/** Latest notices shown on the board panel. */
+const NOTICES = 3;
 
 /** Per item: undefined = not loaded yet (or not permitted), null = failed. */
 interface DashboardData {
@@ -26,6 +31,8 @@ interface DashboardData {
   recent?: Visitor[] | null;
   users?: number | null;
   wings?: number | null;
+  openComplaints?: Complaint[] | null;
+  notices?: Notice[] | null;
 }
 
 interface Card {
@@ -49,6 +56,7 @@ interface Card {
     Section,
     StatCard,
     VisitorRow,
+    ComplaintRow,
   ],
   providers: [VisitorPhotos],
   templateUrl: './dashboard.html',
@@ -58,6 +66,8 @@ export class Dashboard {
   private readonly visitorApi = inject(VisitorApi);
   private readonly userApi = inject(UserApi);
   private readonly structureApi = inject(StructureApi);
+  private readonly complaintApi = inject(ComplaintApi);
+  private readonly noticeApi = inject(NoticeApi);
   protected readonly auth = inject(AuthStore);
   protected readonly ctx = inject(SocietyContextStore);
 
@@ -68,6 +78,13 @@ export class Dashboard {
   private readonly can = (permission: string) =>
     this.auth.can(permission, this.ctx.selectedSocietyId());
   protected readonly canViewVisitors = computed(() => this.can('VISITOR.ENTRY.VIEW'));
+  protected readonly canViewComplaints = computed(
+    () => this.can('COMPLAINT.TICKET.VIEW') && this.ctx.selectedSocietyId() != null,
+  );
+  protected readonly canViewNotices = computed(
+    () => this.can('NOTICE.POST.VIEW') && this.ctx.selectedSocietyId() != null,
+  );
+  protected readonly timeAgo = timeAgo;
 
   protected readonly data = signal<DashboardData>({});
   protected readonly loading = signal(true);
@@ -107,6 +124,17 @@ export class Dashboard {
         },
       );
     }
+    if (this.canViewComplaints()) {
+      const open = d.openComplaints?.length ?? 0;
+      cards.push({
+        label: 'Open complaints',
+        icon: 'report_problem',
+        value: value(d.openComplaints === null ? null : d.openComplaints?.length),
+        link: '/complaints',
+        queryParams: { status: 'OPEN' },
+        tone: open > 0 ? 'warning' : 'neutral',
+      });
+    }
     if (this.can('USER.ACCOUNT.VIEW')) {
       cards.push({
         label: 'Users',
@@ -133,6 +161,11 @@ export class Dashboard {
     [...(this.data().pending ?? [])].reverse().slice(0, 5),
   );
   protected readonly recent = computed(() => (this.data().recent ?? []).slice(0, 6));
+  /** Oldest first, like the approvals panel: the ones that have waited longest. */
+  protected readonly openComplaints = computed(() =>
+    [...(this.data().openComplaints ?? [])].reverse().slice(0, 5),
+  );
+  protected readonly notices = computed(() => this.data().notices ?? []);
 
   constructor() {
     toObservable(this.ctx.selectedSocietyId)
@@ -167,6 +200,14 @@ export class Dashboard {
     }
     if (this.can('FLAT.DIRECTORY.VIEW') && societyId != null) {
       requests.wings = settle(this.structureApi.wings(societyId).pipe(map((list) => list.length)));
+    }
+    if (this.can('COMPLAINT.TICKET.VIEW') && societyId != null) {
+      requests.openComplaints = settle(
+        this.complaintApi.list({ societyId, status: 'OPEN', page: 0, size: MAX }, { silent: true }),
+      );
+    }
+    if (this.can('NOTICE.POST.VIEW') && societyId != null) {
+      requests.notices = settle(this.noticeApi.list(societyId, 0, NOTICES, { silent: true }));
     }
     return Object.keys(requests).length ? forkJoin(requests) : of({});
   }

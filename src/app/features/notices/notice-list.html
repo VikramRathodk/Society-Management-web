@@ -1,0 +1,76 @@
+<app-page-header title="Notices" [subtitle]="subtitle()">
+  <button mat-flat-button *hasPermission="'NOTICE.POST.CREATE'" (click)="post()">
+    <mat-icon>campaign</mat-icon>
+    Post notice
+  </button>
+</app-page-header>
+
+@if (loading()) {
+  <mat-progress-bar mode="indeterminate" />
+} @else if (loadError()) {
+  <app-empty-state icon="cloud_off" message="Couldn't load notices.">
+    <button mat-stroked-button (click)="retry()">Try again</button>
+  </app-empty-state>
+} @else if (notices().length === 0) {
+  <app-empty-state icon="campaign" message="No notices yet.">
+    <button mat-stroked-button *hasPermission="'NOTICE.POST.CREATE'" (click)="post()">
+      Post the first notice
+    </button>
+  </app-empty-state>
+} @else {
+  <div class="board">
+    @for (n of notices(); track n.id) {
+      <article class="notice">
+        <header>
+          <app-avatar [name]="n.postedByName" [size]="36" />
+          <div class="byline">
+            <span class="author">{{ n.postedByName }}</span>
+            <span class="time" [title]="n.createdAt | date: 'medium'">
+              {{ timeAgo(n.createdAt) }}
+              @if (n.updatedAt) {
+                · <span [title]="'Edited ' + (n.updatedAt | date: 'medium')">
+                  edited{{ n.updatedById !== n.postedById ? ' by ' + n.updatedByName : '' }}
+                </span>
+              }
+            </span>
+          </div>
+          @if (canChange('NOTICE.POST.UPDATE', n) || canChange('NOTICE.POST.DELETE', n)) {
+            <button
+              mat-icon-button
+              [matMenuTriggerFor]="menu"
+              [attr.aria-label]="'Actions for ' + n.title"
+            >
+              <mat-icon>more_vert</mat-icon>
+            </button>
+            <mat-menu #menu="matMenu" xPosition="before">
+              @if (canChange('NOTICE.POST.UPDATE', n)) {
+                <button mat-menu-item (click)="edit(n)">
+                  <mat-icon>edit</mat-icon>
+                  Edit
+                </button>
+              }
+              @if (canChange('NOTICE.POST.DELETE', n)) {
+                <button mat-menu-item (click)="remove(n)">
+                  <mat-icon>delete</mat-icon>
+                  Delete
+                </button>
+              }
+            </mat-menu>
+          }
+        </header>
+        <h2>{{ n.title }}</h2>
+        @if (n.description) {
+          <p class="body">{{ n.description }}</p>
+        }
+      </article>
+    }
+  </div>
+
+  @if (hasMore()) {
+    <div class="load-more">
+      <button mat-button (click)="loadMore()" [disabled]="loadingMore()">
+        {{ loadingMore() ? 'Loading…' : 'Load older notices' }}
+      </button>
+    </div>
+  }
+}

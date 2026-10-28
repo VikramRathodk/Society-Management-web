@@ -1,0 +1,116 @@
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  gap: 16px;
+  align-items: start;
+
+  @media (max-width: 959.98px) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.description {
+  margin: 0 0 16px;
+  font: var(--mat-sys-body-large);
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 6px 16px;
+  margin: 0;
+  font: var(--mat-sys-body-medium);
+}
+
+dt {
+  color: var(--mat-sys-on-surface-variant);
+}
+
+dd {
+  margin: 0;
+}
+
+.moves {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 20px;
+}
+
+.hint {
+  margin: 20px 0 0;
+  color: var(--mat-sys-on-surface-variant);
+  font: var(--mat-sys-body-small);
+}
+
+.timeline {
+  margin: 0;
+  padding: 4px 20px 16px;
+  list-style: none;
+
+  li {
+    position: relative;
+    display: flex;
+    gap: 14px;
+    padding-bottom: 16px;
+
+    // The line joining one step's dot to the next.
+    &:not(:last-child)::before {
+      content: '';
+      position: absolute;
+      top: 14px;
+      bottom: 0;
+      left: 5px;
+      width: 2px;
+      background: var(--mat-sys-outline-variant);
+    }
+
+    &:last-child {
+      padding-bottom: 0;
+    }
+  }
+}
+
+.dot {
+  flex-shrink: 0;
+  width: 12px;
+  height: 12px;
+  margin-top: 4px;
+  border-radius: 50%;
+  background: var(--mat-sys-outline);
+
+  &[data-tone='warning'] {
+    background: var(--app-warning);
+  }
+  &[data-tone='primary'] {
+    background: var(--mat-sys-primary);
+  }
+  &[data-tone='success'] {
+    background: var(--app-success);
+  }
+}
+
+.step {
+  min-width: 0;
+}
+
+.step-title {
+  font: var(--mat-sys-label-large);
+  font-weight: 600;
+}
+
+.note {
+  margin: 4px 0 2px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: var(--mat-sys-surface-container);
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+.time {
+  color: var(--mat-sys-on-surface-variant);
+  font: var(--mat-sys-body-small);
+}

@@ -13,6 +13,10 @@
       <mat-icon>person_add</mat-icon>
       Log visitor
     </a>
+    <a mat-stroked-button *hasPermission="'COMPLAINT.TICKET.CREATE'" routerLink="/complaints/new">
+      <mat-icon>add_comment</mat-icon>
+      Raise complaint
+    </a>
     <a mat-stroked-button *hasPermission="'USER.ACCOUNT.CREATE'" routerLink="/users/new">
       <mat-icon>group_add</mat-icon>
       New user
@@ -56,5 +60,38 @@
         <p class="quiet">{{ loading() ? 'Loading…' : 'No visitors yet.' }}</p>
       }
     </app-section>
+  </div>
+}
+
+@if (canViewNotices() || canViewComplaints()) {
+  <div class="panels more">
+    @if (canViewNotices()) {
+      <app-section title="Notice board">
+        <a sectionActions mat-button routerLink="/notices">All notices</a>
+        @for (n of notices(); track n.id) {
+          <a class="notice" routerLink="/notices">
+            <span class="notice-title">{{ n.title }}</span>
+            <span class="notice-meta">{{ n.postedByName }} · {{ timeAgo(n.createdAt) }}</span>
+          </a>
+        } @empty {
+          <p class="quiet">{{ loading() ? 'Loading…' : 'No notices yet.' }}</p>
+        }
+      </app-section>
+    }
+
+    @if (canViewComplaints()) {
+      <app-section title="Open complaints" subtitle="Longest waiting first">
+        <a sectionActions mat-button routerLink="/complaints" [queryParams]="{ status: 'OPEN' }">
+          View all
+        </a>
+        @for (c of openComplaints(); track c.id) {
+          <a class="complaint" [routerLink]="['/complaints', c.id]">
+            <app-complaint-row [complaint]="c" compact />
+          </a>
+        } @empty {
+          <p class="quiet">{{ loading() ? 'Loading…' : 'No open complaints.' }}</p>
+        }
+      </app-section>
+    }
   </div>
 }

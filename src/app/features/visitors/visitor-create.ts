@@ -65,8 +65,8 @@ export class VisitorCreate {
   protected readonly saving = signal(false);
   protected readonly error = signal<string | null>(null);
   /**
-   * Picking a flat needs the flat directory. The seeded GUARD role doesn't have it, so say so
-   * instead of showing empty dropdowns.
+   * Picking a flat needs the flat directory (GUARD has it since backend V10; a custom gate role
+   * might not), so say so instead of showing empty dropdowns.
    */
   protected readonly canListFlats = computed(() =>
     this.auth.can('FLAT.DIRECTORY.VIEW', this.ctx.selectedSocietyId()),

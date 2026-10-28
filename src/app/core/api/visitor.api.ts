@@ -77,4 +77,14 @@ export class VisitorApi {
   delete(id: number) {
     return this.http.delete<void>(`${this.baseUrl}/${id}`);
   }
+
+  /** CSV of the gate log between two ISO dates (inclusive). Errors are shown in the dialog. */
+  export(societyId: number, from: string, to: string) {
+    return this.http.get(`${this.baseUrl}/export`, {
+      params: { societyId, from, to },
+      responseType: 'blob',
+      observe: 'response',
+      context: inlineErrors(),
+    });
+  }
 }

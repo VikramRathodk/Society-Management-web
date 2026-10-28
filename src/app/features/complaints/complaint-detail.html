@@ -1,0 +1,87 @@
+<app-page-header
+  [title]="category() ? category()!.label + ' complaint' : 'Complaint'"
+  [subtitle]="complaint() ? 'Flat ' + complaint()!.flatNumber + ' · raised by ' + complaint()!.raisedByName : null"
+  back="/complaints"
+  backLabel="Back to complaints"
+>
+  @if (status(); as s) {
+    <app-status-pill headerMeta [tone]="s.tone">{{ s.label }}</app-status-pill>
+  }
+  @if (canEdit()) {
+    <button mat-stroked-button (click)="edit()" [disabled]="busy()">
+      <mat-icon>edit</mat-icon>
+      Edit
+    </button>
+  }
+  @if (canWithdraw()) {
+    <button mat-stroked-button (click)="withdraw()" [disabled]="busy()">
+      <mat-icon>undo</mat-icon>
+      Withdraw
+    </button>
+  }
+</app-page-header>
+
+@if (loading() && !complaint()) {
+  <mat-progress-bar mode="indeterminate" />
+} @else if (loadError() === 'missing') {
+  <app-empty-state icon="search_off" message="This complaint doesn't exist or isn't yours to see." />
+} @else if (loadError() === 'failed') {
+  <app-empty-state icon="cloud_off" message="Couldn't load the complaint.">
+    <button mat-stroked-button (click)="retry()">Try again</button>
+  </app-empty-state>
+} @else if (complaint(); as c) {
+  <div class="layout">
+    <app-section title="Details" padded>
+      <p class="description">{{ c.description }}</p>
+      <dl>
+        <dt>Raised</dt>
+        <dd [title]="c.createdAt | date: 'medium'">{{ c.createdAt | date: 'd MMM y, h:mm a' }}</dd>
+        @if (c.updatedAt) {
+          <dt>Last change</dt>
+          <dd [title]="c.updatedAt | date: 'medium'">
+            {{ timeAgo(c.updatedAt) }} by {{ c.updatedByName }}
+          </dd>
+        }
+      </dl>
+
+      @if (moves().length) {
+        <div class="moves">
+          @for (m of moves(); track m.move) {
+            @if (m.primary) {
+              <button mat-flat-button (click)="move(m)" [disabled]="busy()">
+                <mat-icon>{{ m.icon }}</mat-icon>
+                {{ m.label }}
+              </button>
+            } @else {
+              <button mat-stroked-button (click)="move(m)" [disabled]="busy()">
+                <mat-icon>{{ m.icon }}</mat-icon>
+                {{ m.label }}
+              </button>
+            }
+          }
+        </div>
+      } @else if (isAuthor() && c.status !== 'CLOSED') {
+        <p class="hint">The committee will update this as it is worked on.</p>
+      }
+    </app-section>
+
+    <app-section title="History">
+      <ol class="timeline">
+        @for (step of timeline(); track $index) {
+          <li>
+            <span class="dot" [attr.data-tone]="statusOf(step.toStatus).tone"></span>
+            <div class="step">
+              <div class="step-title">{{ stepLabel(step) }} by {{ step.actorName }}</div>
+              @if (step.note) {
+                <p class="note">{{ step.note }}</p>
+              }
+              <span class="time" [title]="step.createdAt | date: 'medium'">{{
+                timeAgo(step.createdAt)
+              }}</span>
+            </div>
+          </li>
+        }
+      </ol>
+    </app-section>
+  </div>
+}

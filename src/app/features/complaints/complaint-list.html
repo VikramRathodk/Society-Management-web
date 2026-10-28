@@ -1,0 +1,64 @@
+<app-page-header title="Complaints" [subtitle]="subtitle()">
+  <button mat-stroked-button *hasPermission="'COMPLAINT.TICKET.EXPORT'" (click)="export()">
+    <mat-icon>download</mat-icon>
+    Export
+  </button>
+  <a mat-flat-button *hasPermission="'COMPLAINT.TICKET.CREATE'" routerLink="/complaints/new">
+    <mat-icon>add_comment</mat-icon>
+    Raise complaint
+  </a>
+</app-page-header>
+
+<div class="toolbar">
+  <mat-chip-listbox
+    class="filters"
+    aria-label="Filter by status"
+    [hideSingleSelectionIndicator]="true"
+    (change)="setStatus($event.value ?? null)"
+  >
+    @for (f of filters; track f.label) {
+      <mat-chip-option [value]="f.value" [selected]="status() === f.value">{{
+        f.label
+      }}</mat-chip-option>
+    }
+  </mat-chip-listbox>
+
+  <mat-form-field appearance="outline" class="category" subscriptSizing="dynamic">
+    <mat-label>Category</mat-label>
+    <mat-select [value]="category()" (selectionChange)="setCategory($event.value)">
+      <mat-option [value]="null">All categories</mat-option>
+      @for (c of categories; track c.value) {
+        <mat-option [value]="c.value">{{ c.label }}</mat-option>
+      }
+    </mat-select>
+  </mat-form-field>
+</div>
+
+@if (loading()) {
+  <mat-progress-bar mode="indeterminate" />
+} @else if (loadError()) {
+  <app-empty-state icon="cloud_off" message="Couldn't load complaints.">
+    <button mat-stroked-button (click)="retry()">Try again</button>
+  </app-empty-state>
+} @else if (complaints().length === 0) {
+  <app-empty-state
+    icon="task_alt"
+    [message]="status() || category() ? 'No complaints match these filters.' : 'No complaints yet.'"
+  />
+} @else {
+  <div class="list">
+    @for (c of complaints(); track c.id) {
+      <a class="item" [routerLink]="['/complaints', c.id]">
+        <app-complaint-row [complaint]="c" />
+      </a>
+    }
+  </div>
+
+  @if (hasMore()) {
+    <div class="load-more">
+      <button mat-button (click)="loadMore()" [disabled]="loadingMore()">
+        {{ loadingMore() ? 'Loading…' : 'Load older complaints' }}
+      </button>
+    </div>
+  }
+}

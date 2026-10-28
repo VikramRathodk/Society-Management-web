@@ -88,6 +88,37 @@ export const routes: Routes = [
         loadComponent: () => import('./features/visitors/visitor-list').then((m) => m.VisitorList),
       },
       {
+        path: 'notices',
+        title: 'Notices',
+        canMatch: [permissionGuard],
+        data: { permission: 'NOTICE.POST.VIEW' },
+        loadComponent: () => import('./features/notices/notice-list').then((m) => m.NoticeList),
+      },
+      {
+        path: 'complaints/new',
+        title: 'Raise complaint',
+        canMatch: [permissionGuard],
+        data: { permission: 'COMPLAINT.TICKET.CREATE' },
+        loadComponent: () =>
+          import('./features/complaints/complaint-create').then((m) => m.ComplaintCreate),
+      },
+      {
+        path: 'complaints/:id',
+        title: 'Complaint',
+        canMatch: [permissionGuard],
+        data: { permission: 'COMPLAINT.TICKET.VIEW' },
+        loadComponent: () =>
+          import('./features/complaints/complaint-detail').then((m) => m.ComplaintDetail),
+      },
+      {
+        path: 'complaints',
+        title: 'Complaints',
+        canMatch: [permissionGuard],
+        data: { permission: 'COMPLAINT.TICKET.VIEW' },
+        loadComponent: () =>
+          import('./features/complaints/complaint-list').then((m) => m.ComplaintList),
+      },
+      {
         path: 'roles/:code',
         title: 'Role',
         canMatch: [permissionGuard],

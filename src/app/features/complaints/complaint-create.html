@@ -1,0 +1,97 @@
+<app-page-header
+  title="Raise complaint"
+  subtitle="The committee is notified and you can follow its progress here"
+  back="/complaints"
+  backLabel="Back to complaints"
+/>
+
+<app-section padded class="form-card">
+  <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+    @if (pickAny()) {
+      <div class="row">
+        <mat-form-field appearance="outline">
+          <mat-label>Wing</mat-label>
+          <mat-select formControlName="wingId">
+            @for (wing of wings(); track wing.id) {
+              <mat-option [value]="wing.id">{{ wing.name }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Flat</mat-label>
+          <mat-select formControlName="flatId">
+            @for (flat of flats(); track flat.id) {
+              <mat-option [value]="flat.id">{{ flat.flatNumber }}</mat-option>
+            }
+          </mat-select>
+          @if (form.controls.wingId.value == null) {
+            <mat-hint>Choose a wing first</mat-hint>
+          }
+          @if (form.controls.flatId.invalid) {
+            <mat-error>Flat is required</mat-error>
+          }
+        </mat-form-field>
+      </div>
+    } @else if (ownFlats().length > 1) {
+      <mat-form-field appearance="outline">
+        <mat-label>Flat</mat-label>
+        <mat-select formControlName="flatId">
+          @for (flat of ownFlats(); track flat.id) {
+            <mat-option [value]="flat.id">{{ flat.label }}</mat-option>
+          }
+        </mat-select>
+        @if (form.controls.flatId.invalid) {
+          <mat-error>Flat is required</mat-error>
+        }
+      </mat-form-field>
+    } @else if (ownFlats().length === 1) {
+      <p class="for-flat">
+        <mat-icon>home</mat-icon>
+        For flat <strong>{{ ownFlats()[0].label }}</strong>
+      </p>
+    }
+
+    <div class="field-label" id="category-label">Category</div>
+    <mat-button-toggle-group
+      formControlName="category"
+      class="categories"
+      aria-labelledby="category-label"
+      [hideSingleSelectionIndicator]="true"
+    >
+      @for (c of categories; track c.value) {
+        <mat-button-toggle [value]="c.value">
+          <mat-icon>{{ c.icon }}</mat-icon>
+          {{ c.label }}
+        </mat-button-toggle>
+      }
+    </mat-button-toggle-group>
+    @if (form.controls.category.invalid && form.controls.category.touched) {
+      <p class="form-error" role="alert">Choose a category</p>
+    }
+
+    <mat-form-field appearance="outline">
+      <mat-label>What's wrong?</mat-label>
+      <textarea
+        matInput
+        formControlName="description"
+        rows="5"
+        maxlength="5000"
+        placeholder="e.g. Kitchen tap has been leaking since this morning"
+      ></textarea>
+      <mat-hint align="end">{{ form.controls.description.value.length }} / 5000</mat-hint>
+      @if (form.controls.description.invalid) {
+        <mat-error>Describe the problem</mat-error>
+      }
+    </mat-form-field>
+
+    @if (error(); as message) {
+      <p class="form-error" role="alert">{{ message }}</p>
+    }
+
+    <div class="form-actions">
+      <a mat-button routerLink="/complaints">Cancel</a>
+      <button mat-flat-button type="submit" [disabled]="saving()">Raise complaint</button>
+    </div>
+  </form>
+</app-section>

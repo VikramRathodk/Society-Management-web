@@ -1,4 +1,8 @@
 <app-page-header title="Visitors" [subtitle]="subtitle()">
+  <button mat-stroked-button *hasPermission="'VISITOR.ENTRY.EXPORT'" (click)="export()">
+    <mat-icon>download</mat-icon>
+    Export
+  </button>
   <a mat-flat-button *hasPermission="'VISITOR.ENTRY.CREATE'" routerLink="/visitors/new">
     <mat-icon>person_add</mat-icon>
     Log visitor

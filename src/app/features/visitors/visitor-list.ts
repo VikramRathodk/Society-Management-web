@@ -28,6 +28,7 @@ import { HasPermission } from '../../core/auth/has-permission.directive';
 import { Visitor, VisitorStatus } from '../../core/models';
 import { SocietyContextStore } from '../../core/society-context/society-context.store';
 import { confirmDialog } from '../../shared/confirm-dialog';
+import { exportDialog } from '../../shared/export-dialog';
 import { EmptyState, PageHeader } from '../../shared/ui';
 import { VisitorPhotos, VisitorRow, groupByDay } from './visitor-ui';
 
@@ -161,6 +162,15 @@ export class VisitorList {
 
   protected retry(): void {
     this.attempt.update((n) => n + 1);
+  }
+
+  protected export(): void {
+    const societyId = this.ctx.selectedSocietyId();
+    if (societyId == null) return;
+    exportDialog(this.dialog, {
+      title: 'Export gate log',
+      download: ({ from, to }) => this.api.export(societyId, from, to),
+    }).subscribe();
   }
 
   protected loadMore(): void {

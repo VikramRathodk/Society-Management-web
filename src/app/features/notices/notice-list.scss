@@ -1,0 +1,57 @@
+.board {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 760px;
+}
+
+.notice {
+  padding: 16px 20px 18px;
+  border: 1px solid var(--mat-sys-outline-variant);
+  border-radius: var(--app-radius);
+  background: var(--mat-sys-surface-container-lowest);
+
+  header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  h2 {
+    margin: 12px 0 0;
+    font: var(--mat-sys-title-medium);
+    font-weight: 600;
+    overflow-wrap: anywhere;
+  }
+}
+
+.byline {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.author {
+  font: var(--mat-sys-label-large);
+  font-weight: 600;
+}
+
+.time {
+  color: var(--mat-sys-on-surface-variant);
+  font: var(--mat-sys-body-small);
+}
+
+.body {
+  margin: 6px 0 0;
+  color: var(--mat-sys-on-surface-variant);
+  white-space: pre-line; // keep the author's line breaks
+  overflow-wrap: anywhere;
+}
+
+.load-more {
+  display: flex;
+  justify-content: center;
+  max-width: 760px;
+  margin-top: 12px;
+}

@@ -2,14 +2,32 @@ import { expect, test } from '@playwright/test';
 
 import { SeedUser, login, users } from './support';
 
-const NAV = ['Dashboard', 'Societies', 'Structure', 'Users', 'Visitors', 'Roles'];
+const NAV = [
+  'Dashboard',
+  'Societies',
+  'Structure',
+  'Users',
+  'Visitors',
+  'Notices',
+  'Complaints',
+  'Roles',
+];
 
 /** What each seeded role should see in the side nav. */
 const expectedNav: [string, SeedUser, string[]][] = [
   ['super admin', users.superAdmin, NAV],
-  ['secretary', users.secretary, ['Dashboard', 'Societies', 'Structure', 'Users', 'Visitors']],
+  ['secretary', users.secretary, [
+    'Dashboard',
+    'Societies',
+    'Structure',
+    'Users',
+    'Visitors',
+    'Notices',
+    'Complaints',
+  ]],
   // GUARD has FLAT.DIRECTORY.VIEW so it can pick flats when logging visitors.
-  ['guard', users.guard, ['Dashboard', 'Structure', 'Visitors']],
+  ['guard', users.guard, ['Dashboard', 'Structure', 'Visitors', 'Notices']],
+  ['resident', users.resident1001, ['Dashboard', 'Structure', 'Visitors', 'Notices', 'Complaints']],
 ];
 
 for (const [role, user, visible] of expectedNav) {

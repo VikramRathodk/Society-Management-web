@@ -3,3 +3,5 @@ export * from './user.model';
 export * from './role.model';
 export * from './structure.model';
 export * from './visitor.model';
+export * from './notice.model';
+export * from './complaint.model';
