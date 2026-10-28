@@ -6,7 +6,12 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Component, booleanAttribute, computed, inject, input, signal } from '@angular/core';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
-import { MAT_DIALOG_DATA, MatDialog, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
+import {
+  MAT_DIALOG_DATA,
+  MatDialog,
+  MatDialogModule,
+  MatDialogRef,
+} from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
@@ -185,7 +190,13 @@ interface MoveDialogData {
 /** Confirms a status change with an optional note. Closes with the updated complaint. */
 @Component({
   selector: 'app-complaint-move-dialog',
-  imports: [ReactiveFormsModule, MatButtonModule, MatDialogModule, MatFormFieldModule, MatInputModule],
+  imports: [
+    ReactiveFormsModule,
+    MatButtonModule,
+    MatDialogModule,
+    MatFormFieldModule,
+    MatInputModule,
+  ],
   template: `
     <h2 mat-dialog-title>{{ data.option.label }}</h2>
     <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
@@ -255,7 +266,10 @@ export class ComplaintMoveDialog {
 }
 
 /** Emits the updated complaint, or undefined if cancelled. */
-export function moveDialog(dialog: MatDialog, data: MoveDialogData): Observable<Complaint | undefined> {
+export function moveDialog(
+  dialog: MatDialog,
+  data: MoveDialogData,
+): Observable<Complaint | undefined> {
   return dialog.open(ComplaintMoveDialog, { data, width: '480px' }).afterClosed();
 }
 
@@ -344,6 +358,9 @@ export class ComplaintEditDialog {
 }
 
 /** Emits the updated complaint, or undefined if cancelled. */
-export function editComplaintDialog(dialog: MatDialog, complaint: Complaint): Observable<Complaint | undefined> {
+export function editComplaintDialog(
+  dialog: MatDialog,
+  complaint: Complaint,
+): Observable<Complaint | undefined> {
   return dialog.open(ComplaintEditDialog, { data: complaint, width: '520px' }).afterClosed();
 }

@@ -2,7 +2,12 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Component, inject, signal } from '@angular/core';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
-import { MAT_DIALOG_DATA, MatDialog, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
+import {
+  MAT_DIALOG_DATA,
+  MatDialog,
+  MatDialogModule,
+  MatDialogRef,
+} from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { Observable } from 'rxjs';
@@ -20,7 +25,13 @@ interface NoticeDialogData {
 /** Post a notice, or edit one. Closes with the saved notice. */
 @Component({
   selector: 'app-notice-dialog',
-  imports: [ReactiveFormsModule, MatButtonModule, MatDialogModule, MatFormFieldModule, MatInputModule],
+  imports: [
+    ReactiveFormsModule,
+    MatButtonModule,
+    MatDialogModule,
+    MatFormFieldModule,
+    MatInputModule,
+  ],
   template: `
     <h2 mat-dialog-title>{{ data.notice ? 'Edit notice' : 'Post a notice' }}</h2>
     <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
@@ -100,6 +111,9 @@ export class NoticeDialog {
 }
 
 /** Emits the saved notice, or undefined if the dialog was cancelled. */
-export function noticeDialog(dialog: MatDialog, data: NoticeDialogData): Observable<Notice | undefined> {
+export function noticeDialog(
+  dialog: MatDialog,
+  data: NoticeDialogData,
+): Observable<Notice | undefined> {
   return dialog.open(NoticeDialog, { data, width: '560px' }).afterClosed();
 }

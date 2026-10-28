@@ -84,7 +84,9 @@ src/app/
 │   │   ├── role.api.ts
 │   │   ├── society.api.ts   # societies, complexes
 │   │   ├── structure.api.ts # wings, flats
-│   │   └── visitor.api.ts
+│   │   ├── visitor.api.ts
+│   │   ├── notice.api.ts
+│   │   └── complaint.api.ts
 │   ├── auth/
 │   │   ├── auth.store.ts        # token + user + access (signals)
 │   │   ├── auth.interceptor.ts  # attaches Bearer token
@@ -94,7 +96,7 @@ src/app/
 │   ├── society-context/
 │   │   └── society-context.store.ts # currently selected society
 │   └── models/              # TS interfaces mirroring the DTOs (section 5)
-├── shared/                  # dumb UI: tables, confirm dialog, status chip, empty states
+├── shared/                  # dumb UI: confirm & export dialogs, status chip, empty states
 ├── features/
 │   ├── auth/login/
 │   ├── dashboard/
@@ -102,7 +104,9 @@ src/app/
 │   ├── structure/           # wings → flats tree
 │   ├── users/               # directory, create, roles, activate/deactivate
 │   ├── roles/               # role & permission editor (super admin)
-│   ├── visitors/            # gate log, log-visitor form, approvals
+│   ├── visitors/            # gate log, log-visitor form, approvals, export
+│   ├── notices/             # notice board, post/edit dialog
+│   ├── complaints/          # list, raise form, detail with timeline and status changes
 │   └── profile/
 ├── layout/                  # shell: top bar, society switcher, side nav
 ├── app.routes.ts
@@ -342,9 +346,37 @@ export interface Visitor {
 | POST | `/api/visitors/{id}/enter` | `VISITOR.ENTRY.UPDATE` | only from APPROVED |
 | POST | `/api/visitors/{id}/exit` | `VISITOR.ENTRY.UPDATE` | only from ENTERED |
 | DELETE | `/api/visitors/{id}` | `VISITOR.ENTRY.DELETE` | 204 |
+| GET | `/api/visitors/export?societyId=&from=&to=` | `VISITOR.ENTRY.EXPORT` | CSV download; ISO dates, inclusive, ≤ 366 days, ≤ 10,000 rows (400 above) |
 
 Visitor list is a plain array (no total count) — implement "Load more" / next-page by requesting `page + 1`
-until fewer than `size` rows come back.
+until fewer than `size` rows come back. Guards see entries they logged plus every still-active one
+(PENDING/APPROVED/ENTERED); finished entries of other guards need `VISITOR.HISTORY.VIEW` (COMMITTEE+).
+
+### `notice.api.ts`
+| Method | Path | Permission | Notes |
+|---|---|---|---|
+| POST | `/api/societies/{societyId}/notices` | `NOTICE.POST.CREATE` | `{ title, description? }` |
+| GET | `/api/societies/{societyId}/notices?page=0&size=20` | `NOTICE.POST.VIEW` | newest first; `size` max 100 |
+| GET | `/api/notices/{id}` | `NOTICE.POST.VIEW` | |
+| PATCH | `/api/notices/{id}` | `NOTICE.POST.UPDATE` | own notices; anyone's with `NOTICE.POST.MODERATE` (SECRETARY+). `""` clears the description |
+| DELETE | `/api/notices/{id}` | `NOTICE.POST.DELETE` | same own/moderate rule; 204 |
+
+### `complaint.api.ts`
+| Method | Path | Permission | Notes |
+|---|---|---|---|
+| POST | `/api/complaints` | `COMPLAINT.TICKET.CREATE` | `{ flatId, category, description }`; residents only for their own flat |
+| GET | `/api/complaints?societyId=&status=&category=&flatId=&page=0&size=20` | `COMPLAINT.TICKET.VIEW` | newest first; residents get only their flat(s) |
+| GET | `/api/complaints/{id}` | `COMPLAINT.TICKET.VIEW` | |
+| GET | `/api/complaints/{id}/activity` | `COMPLAINT.TICKET.VIEW` | timeline, oldest first: raised (`fromStatus: null`) then each status change with its `note` |
+| PATCH | `/api/complaints/{id}` | `COMPLAINT.TICKET.UPDATE` | **author only**, while OPEN or IN_PROGRESS (409 after) |
+| DELETE | `/api/complaints/{id}` | `COMPLAINT.TICKET.DELETE` | withdraw: author only, while OPEN or IN_PROGRESS |
+| POST | `/api/complaints/{id}/start` | `COMPLAINT.RESOLUTION.APPROVE` | OPEN → IN_PROGRESS; optional body `{ note }` |
+| POST | `/api/complaints/{id}/resolve` | `COMPLAINT.RESOLUTION.APPROVE` | OPEN/IN_PROGRESS → RESOLVED |
+| POST | `/api/complaints/{id}/close` | `COMPLAINT.RESOLUTION.APPROVE` | RESOLVED → CLOSED (final) |
+| POST | `/api/complaints/{id}/reopen` | `COMPLAINT.RESOLUTION.REJECT` | RESOLVED → OPEN |
+| GET | `/api/complaints/export?societyId=&from=&to=` | `COMPLAINT.TICKET.EXPORT` | CSV download, same limits as the visitor export |
+
+Categories: `PLUMBING`, `ELECTRICAL`, `SECURITY`, `OTHER`. An invalid or concurrent status change is a 409.
 
 ---
 
@@ -353,7 +385,7 @@ until fewer than `size` rows come back.
 | Route | Screen | Gate (route `data`) |
 |---|---|---|
 | `/login` | Login | public |
-| `/dashboard` | Cards built from permissions: pending visitors, today's log, user count | authenticated |
+| `/dashboard` | Cards built from permissions: pending visitors, today's log, open complaints, user count; notice board and open-complaints panels | authenticated |
 | `/societies` | List / create / delete | `SOCIETY.SETTINGS.VIEW` |
 | `/societies/:id/settings` | Edit name & address | `SOCIETY.SETTINGS.UPDATE` |
 | `/structure` | Wing → flat tree for selected society | `FLAT.DIRECTORY.VIEW` |
@@ -361,8 +393,12 @@ until fewer than `size` rows come back.
 | `/users/new` | Create user + first role | `USER.ACCOUNT.CREATE` |
 | `/users/:id` | Profile, role assignments, effective permissions | `USER.ACCOUNT.VIEW` |
 | `/roles` | Role list, permission matrix editor, inheritance | `SYSTEM.ROLE.VIEW` + platform |
-| `/visitors` | Gate log with status filter | `VISITOR.ENTRY.VIEW` |
+| `/visitors` | Gate log with status filter, CSV export | `VISITOR.ENTRY.VIEW` |
 | `/visitors/new` | Log visitor (guard desk) | `VISITOR.ENTRY.CREATE` |
+| `/notices` | Notice board; post, and edit/delete own (or any, with MODERATE) | `NOTICE.POST.VIEW` |
+| `/complaints` | Complaints with status/category filters, CSV export | `COMPLAINT.TICKET.VIEW` |
+| `/complaints/new` | Raise a complaint (own flat preselected; wing → flat picker without one) | `COMPLAINT.TICKET.CREATE` |
+| `/complaints/:id` | Details, author edit/withdraw, committee status changes with a note, timeline | `COMPLAINT.TICKET.VIEW` |
 | `/profile` | Edit own name/email | `USER.PROFILE.UPDATE` |
 
 ### 7.1 Create user form
@@ -476,8 +512,8 @@ export const appConfig: ApplicationConfig = {
 7. **Roles (super admin)** — role list, permission matrix, inheritance editor, custom role create/delete.
 8. **Polish** — empty/loading/error states, responsive layout, e2e tests against the dev seed.
 
-Later, as the backend ships them: **Notices** (`NOTICE.POST.*`), **Complaints** (`COMPLAINT.*`),
-visitor export (`VISITOR.ENTRY.EXPORT`).
+9. **Notices & complaints** — notice board, complaint list/raise/detail with timeline and status notes,
+   CSV exports (visitors and complaints), dashboard cards and panels.
 
 ---
 

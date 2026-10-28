@@ -92,7 +92,9 @@ export class ComplaintList {
         switchMap(([query]) =>
           query == null
             ? of([])
-            : this.api.list({ ...query, page: 0, size: PAGE_SIZE }).pipe(catchError(() => of(null))),
+            : this.api
+                .list({ ...query, page: 0, size: PAGE_SIZE })
+                .pipe(catchError(() => of(null))),
         ),
         takeUntilDestroyed(),
       )

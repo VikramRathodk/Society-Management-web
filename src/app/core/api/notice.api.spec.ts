@@ -18,7 +18,7 @@ describe('NoticeApi', () => {
 
   afterEach(() => http.verify());
 
-  it('lists one society\'s board a page at a time', () => {
+  it("lists one society's board a page at a time", () => {
     api.list(3, 1, 20).subscribe();
     http.expectOne('/api/societies/3/notices?page=1&size=20').flush([]);
   });

@@ -16,15 +16,11 @@ const NAV = [
 /** What each seeded role should see in the side nav. */
 const expectedNav: [string, SeedUser, string[]][] = [
   ['super admin', users.superAdmin, NAV],
-  ['secretary', users.secretary, [
-    'Dashboard',
-    'Societies',
-    'Structure',
-    'Users',
-    'Visitors',
-    'Notices',
-    'Complaints',
-  ]],
+  [
+    'secretary',
+    users.secretary,
+    ['Dashboard', 'Societies', 'Structure', 'Users', 'Visitors', 'Notices', 'Complaints'],
+  ],
   // GUARD has FLAT.DIRECTORY.VIEW so it can pick flats when logging visitors.
   ['guard', users.guard, ['Dashboard', 'Structure', 'Visitors', 'Notices']],
   ['resident', users.resident1001, ['Dashboard', 'Structure', 'Visitors', 'Notices', 'Complaints']],

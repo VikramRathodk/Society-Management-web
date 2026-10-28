@@ -1,8 +1,19 @@
 import { HttpResponse } from '@angular/common/http';
 import { Component, inject, signal } from '@angular/core';
-import { AbstractControl, NonNullableFormBuilder, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
+import {
+  AbstractControl,
+  NonNullableFormBuilder,
+  ReactiveFormsModule,
+  ValidationErrors,
+  Validators,
+} from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
-import { MAT_DIALOG_DATA, MatDialog, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
+import {
+  MAT_DIALOG_DATA,
+  MatDialog,
+  MatDialogModule,
+  MatDialogRef,
+} from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { Observable, map } from 'rxjs';
@@ -24,7 +35,13 @@ interface ExportDialogData {
 /** Picks an inclusive date range (default: the last 30 days) and downloads the CSV for it. */
 @Component({
   selector: 'app-export-dialog',
-  imports: [ReactiveFormsModule, MatButtonModule, MatDialogModule, MatFormFieldModule, MatInputModule],
+  imports: [
+    ReactiveFormsModule,
+    MatButtonModule,
+    MatDialogModule,
+    MatFormFieldModule,
+    MatInputModule,
+  ],
   template: `
     <h2 mat-dialog-title>{{ data.title }}</h2>
     <form [formGroup]="form" (ngSubmit)="submit()" novalidate>

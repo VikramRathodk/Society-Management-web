@@ -28,7 +28,8 @@
             <span class="time" [title]="n.createdAt | date: 'medium'">
               {{ timeAgo(n.createdAt) }}
               @if (n.updatedAt) {
-                · <span [title]="'Edited ' + (n.updatedAt | date: 'medium')">
+                ·
+                <span [title]="'Edited ' + (n.updatedAt | date: 'medium')">
                   edited{{ n.updatedById !== n.postedById ? ' by ' + n.updatedByName : '' }}
                 </span>
               }

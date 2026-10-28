@@ -31,7 +31,9 @@ test.describe.serial('notice board', () => {
     await expect(notice(page)).toContainText('Nick Fury');
   });
 
-  test('a resident reads it on the board and the dashboard, without edit actions', async ({ page }) => {
+  test('a resident reads it on the board and the dashboard, without edit actions', async ({
+    page,
+  }) => {
     await login(page, users.resident1001);
     await expect(page.getByText(title)).toBeVisible(); // dashboard "Notice board" panel
     await page.goto('/notices');
@@ -50,14 +52,18 @@ test.describe.serial('notice board', () => {
   test('secretary edits then deletes it', async ({ page }) => {
     await login(page, users.secretary);
     await page.goto('/notices');
-    await notice(page).getByRole('button', { name: /Actions for/ }).click();
+    await notice(page)
+      .getByRole('button', { name: /Actions for/ })
+      .click();
     await page.getByRole('menuitem', { name: 'Edit' }).click();
     await page.getByLabel('Title').fill(`${title} (moved to Monday)`);
     await page.getByRole('button', { name: 'Save' }).click();
     await expect(notice(page)).toContainText('(moved to Monday)');
     await expect(notice(page)).toContainText('edited');
 
-    await notice(page).getByRole('button', { name: /Actions for/ }).click();
+    await notice(page)
+      .getByRole('button', { name: /Actions for/ })
+      .click();
     await page.getByRole('menuitem', { name: 'Delete' }).click();
     await page.getByRole('dialog').getByRole('button', { name: 'Delete' }).click();
     await expect(notice(page)).toHaveCount(0);

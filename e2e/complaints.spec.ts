@@ -27,12 +27,15 @@ test.describe.serial('complaint lifecycle', () => {
     // The last test withdraws it; if a step failed earlier, reopen it so the author can withdraw.
     const committee = { Authorization: `Bearer ${await apiToken(request, users.committee)}` };
     const author = { Authorization: `Bearer ${await apiToken(request, users.resident1001)}` };
-    const res = await request.get('/api/complaints?societyId=1&page=0&size=100', { headers: committee });
-    const left = ((await res.json()) as { id: number; description: string; status: string }[]).filter(
-      (c) => c.description === description,
-    );
+    const res = await request.get('/api/complaints?societyId=1&page=0&size=100', {
+      headers: committee,
+    });
+    const left = (
+      (await res.json()) as { id: number; description: string; status: string }[]
+    ).filter((c) => c.description === description);
     for (const c of left) {
-      if (c.status === 'RESOLVED') await request.post(`/api/complaints/${c.id}/reopen`, { headers: committee });
+      if (c.status === 'RESOLVED')
+        await request.post(`/api/complaints/${c.id}/reopen`, { headers: committee });
       await request.delete(`/api/complaints/${c.id}`, { headers: author });
     }
   });
@@ -41,7 +44,7 @@ test.describe.serial('complaint lifecycle', () => {
     await login(page, users.resident1001);
     await page.goto('/complaints/new');
     await expect(page.getByText('For flat Stark Wing-1001')).toBeVisible();
-    await page.getByRole('button', { name: /Plumbing/ }).click();
+    await page.getByRole('radio', { name: /Plumbing/ }).click();
     await page.getByLabel("What's wrong?").fill(description);
     await page.getByRole('button', { name: 'Raise complaint' }).click();
 

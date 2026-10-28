@@ -75,7 +75,9 @@ export class ComplaintDetail {
     return MOVES[c.status].filter((m) => this.auth.can(m.permission, c.societyId));
   });
   /** Only the author edits or withdraws, and only until it is resolved. */
-  protected readonly isAuthor = computed(() => this.complaint()?.raisedById === this.auth.user()?.id);
+  protected readonly isAuthor = computed(
+    () => this.complaint()?.raisedById === this.auth.user()?.id,
+  );
   protected readonly editable = computed(() => {
     const c = this.complaint();
     return !!c && this.isAuthor() && EDITABLE_STATUSES.includes(c.status);

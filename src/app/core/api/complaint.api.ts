@@ -58,7 +58,9 @@ export class ComplaintApi {
 
   /** Author only, while OPEN or IN_PROGRESS. Errors are shown in the dialog. */
   update(id: number, changes: UpdateComplaintRequest) {
-    return this.http.patch<Complaint>(`${this.baseUrl}/${id}`, changes, { context: inlineErrors() });
+    return this.http.patch<Complaint>(`${this.baseUrl}/${id}`, changes, {
+      context: inlineErrors(),
+    });
   }
 
   /** Author only, while OPEN or IN_PROGRESS. Removes the complaint and its timeline. */

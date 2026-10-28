@@ -26,8 +26,22 @@ function complaint(status: Complaint['status'], raisedById = 7): Complaint {
 }
 
 const timeline: ComplaintActivity[] = [
-  { fromStatus: null, toStatus: 'OPEN', note: null, actorId: 7, actorName: 'Wanda Maximoff', createdAt: '2026-10-28T10:00:00Z' },
-  { fromStatus: 'OPEN', toStatus: 'RESOLVED', note: 'Washer replaced', actorId: 3, actorName: 'Steve Rogers', createdAt: '2026-10-28T12:00:00Z' },
+  {
+    fromStatus: null,
+    toStatus: 'OPEN',
+    note: null,
+    actorId: 7,
+    actorName: 'Wanda Maximoff',
+    createdAt: '2026-10-28T10:00:00Z',
+  },
+  {
+    fromStatus: 'OPEN',
+    toStatus: 'RESOLVED',
+    note: 'Washer replaced',
+    actorId: 3,
+    actorName: 'Steve Rogers',
+    createdAt: '2026-10-28T12:00:00Z',
+  },
 ];
 
 describe('ComplaintDetail', () => {
@@ -69,19 +83,31 @@ describe('ComplaintDetail', () => {
   afterEach(() => http.verify());
 
   it('offers the committee the moves the status allows', async () => {
-    await setup(['COMPLAINT.TICKET.VIEW', 'COMPLAINT.RESOLUTION.APPROVE', 'COMPLAINT.RESOLUTION.REJECT'], 3, complaint('RESOLVED'));
+    await setup(
+      ['COMPLAINT.TICKET.VIEW', 'COMPLAINT.RESOLUTION.APPROVE', 'COMPLAINT.RESOLUTION.REJECT'],
+      3,
+      complaint('RESOLVED'),
+    );
     expect(buttons()).toEqual(['replay Reopen', 'lock Close']);
   });
 
   it('lets the author edit and withdraw while open, but not move it', async () => {
-    const resident = ['COMPLAINT.TICKET.VIEW', 'COMPLAINT.TICKET.UPDATE', 'COMPLAINT.TICKET.DELETE'];
+    const resident = [
+      'COMPLAINT.TICKET.VIEW',
+      'COMPLAINT.TICKET.UPDATE',
+      'COMPLAINT.TICKET.DELETE',
+    ];
     await setup(resident, 7, complaint('OPEN'));
     expect(buttons()).toEqual(['edit Edit', 'undo Withdraw']);
     expect(text()).toContain('The committee will update this');
   });
 
   it('locks the complaint for its author once resolved', async () => {
-    await setup(['COMPLAINT.TICKET.VIEW', 'COMPLAINT.TICKET.UPDATE', 'COMPLAINT.TICKET.DELETE'], 7, complaint('RESOLVED'));
+    await setup(
+      ['COMPLAINT.TICKET.VIEW', 'COMPLAINT.TICKET.UPDATE', 'COMPLAINT.TICKET.DELETE'],
+      7,
+      complaint('RESOLVED'),
+    );
     expect(buttons()).toEqual([]);
   });
 

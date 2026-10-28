@@ -87,7 +87,8 @@ export class ComplaintCreate {
         }),
         switchMap(([societyId, flatIds]) => {
           if (societyId == null) return of({ own: [], wings: [] });
-          if (flatIds.length) return this.labelFlats(flatIds).pipe(map((own) => ({ own, wings: [] })));
+          if (flatIds.length)
+            return this.labelFlats(flatIds).pipe(map((own) => ({ own, wings: [] })));
           return this.structureApi.wings(societyId).pipe(
             catchError(() => of([])),
             map((wings) => ({ own: [], wings })),
@@ -123,18 +124,20 @@ export class ComplaintCreate {
     const { flatId, category, description } = this.form.getRawValue();
     this.saving.set(true);
     this.error.set(null);
-    this.api.raise({ flatId: flatId!, category: category!, description: description.trim() }).subscribe({
-      next: (complaint) => {
-        this.snack.open('Complaint raised — the committee has been notified', undefined, {
-          duration: 3000,
-        });
-        this.router.navigate(['/complaints', complaint.id]);
-      },
-      error: (err: HttpErrorResponse) => {
-        this.saving.set(false);
-        this.error.set(errorMessage(err));
-      },
-    });
+    this.api
+      .raise({ flatId: flatId!, category: category!, description: description.trim() })
+      .subscribe({
+        next: (complaint) => {
+          this.snack.open('Complaint raised — the committee has been notified', undefined, {
+            duration: 3000,
+          });
+          this.router.navigate(['/complaints', complaint.id]);
+        },
+        error: (err: HttpErrorResponse) => {
+          this.saving.set(false);
+          this.error.set(errorMessage(err));
+        },
+      });
   }
 
   /** "A-101" labels for the user's flats; falls back to "Flat #id" if a lookup fails. */
