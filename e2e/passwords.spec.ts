@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-import { SEED_PASSWORD, login, logout, users } from './support';
+import { SEED_PASSWORD, apiToken, login, logout, users } from './support';
 
 const NEW_PASSWORD = 'Changed@456';
 
@@ -51,4 +51,44 @@ test('resident changes their password from the profile page', async ({ page }) =
   await page.getByLabel('Password', { exact: true }).fill(NEW_PASSWORD);
   await page.getByRole('button', { name: 'Sign in' }).click();
   await expect(page).toHaveURL(/\/dashboard/);
+});
+
+test('secretary resets a resident password from the user page', async ({ page, request }) => {
+  const token = await apiToken(request, users.secretary);
+  const all = await (
+    await request.get('/api/users', { headers: { Authorization: `Bearer ${token}` } })
+  ).json();
+  const wanda = all.find((u: { phone: string }) => u.phone === users.resident1001.phone);
+
+  await login(page, users.secretary);
+  await page.goto(`/users/${wanda.id}`);
+  await page.getByRole('button', { name: 'Reset password' }).click();
+
+  const dialog = page.getByRole('dialog');
+  await dialog.getByLabel('New password', { exact: true }).fill(NEW_PASSWORD);
+  await dialog.getByLabel('Confirm new password').fill('Something@else');
+  await dialog.getByRole('button', { name: 'Reset password' }).click();
+  await expect(dialog.getByRole('alert')).toHaveText("Passwords don't match");
+
+  await dialog.getByLabel('Confirm new password').fill(NEW_PASSWORD);
+  await dialog.getByRole('button', { name: 'Reset password' }).click();
+  await expect(dialog).toBeHidden();
+  await expect(page.getByText(`Password reset for ${users.resident1001.name}`)).toBeVisible();
+
+  const login1001 = await request.post('/api/auth/login', {
+    data: { phone: users.resident1001.phone, password: NEW_PASSWORD },
+  });
+  expect(login1001.ok()).toBeTruthy();
+});
+
+test('reset password is not offered on your own user page', async ({ page, request }) => {
+  const token = await apiToken(request, users.secretary);
+  const me = await (
+    await request.get('/api/users/me', { headers: { Authorization: `Bearer ${token}` } })
+  ).json();
+
+  await login(page, users.secretary);
+  await page.goto(`/users/${me.user.id}`);
+  await expect(page.getByRole('heading', { name: users.secretary.name })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Reset password' })).toHaveCount(0);
 });

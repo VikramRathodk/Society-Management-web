@@ -72,6 +72,10 @@ export interface UpdateProfileRequest {
   fcmToken?: string;
 }
 
+export interface ResetPasswordRequest {
+  newPassword: string;
+}
+
 export interface ChangePasswordRequest {
   currentPassword: string;
   newPassword: string;

@@ -22,6 +22,7 @@ import { SocietyContextStore } from '../../core/society-context/society-context.
 import { confirmDialog } from '../../shared/confirm-dialog';
 import { EmptyState, PageHeader, Section, StatusPill } from '../../shared/ui';
 import { AssignRoleDialog, AssignRoleDialogData } from './assign-role-dialog';
+import { ResetPasswordDialog, ResetPasswordDialogData } from './reset-password-dialog';
 
 @Component({
   selector: 'app-user-detail',
@@ -75,6 +76,10 @@ export class UserDetail {
   );
   protected readonly canToggleActive = computed(
     () => !this.isSelf() && this.auth.can('USER.ACCOUNT.DELETE', this.societyId()),
+  );
+  // Own password is changed on the profile page, with the current one.
+  protected readonly canResetPassword = computed(
+    () => !this.isSelf() && this.auth.can('USER.ACCOUNT.UPDATE', this.societyId()),
   );
   protected readonly canDelete = computed(
     () => !this.isSelf() && this.auth.canOnPlatform('USER.ACCOUNT.DELETE'),
@@ -156,6 +161,21 @@ export class UserDetail {
         next: () => this.user.update((u) => (u ? { ...u, isActive: active } : u)),
         error: () => {}, // reported by the error interceptor
       });
+  }
+
+  protected resetPassword(): void {
+    const user = this.user();
+    if (!user) return;
+    this.dialog
+      .open<ResetPasswordDialog, ResetPasswordDialogData, boolean>(ResetPasswordDialog, {
+        width: '420px',
+        data: { userId: user.id, userName: user.name },
+      })
+      .afterClosed()
+      .pipe(filter(Boolean))
+      .subscribe(() =>
+        this.snack.open(`Password reset for ${user.name}`, undefined, { duration: 3000 }),
+      );
   }
 
   protected remove(): void {

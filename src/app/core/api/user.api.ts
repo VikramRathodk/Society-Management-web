@@ -9,6 +9,7 @@ import {
   ChangePasswordRequest,
   CreateUserRequest,
   MeResponse,
+  ResetPasswordRequest,
   RoleAssignment,
   UpdateProfileRequest,
   User,
@@ -45,6 +46,13 @@ export class UserApi {
   /** The caller's own password. Errors (wrong current password, ...) are shown on the form. */
   changePassword(body: ChangePasswordRequest) {
     return this.http.post<void>(`${this.baseUrl}/me/password`, body, { context: inlineErrors() });
+  }
+
+  /** Someone else's password, set by an admin. Errors (rank too low, ...) are shown in the dialog. */
+  resetPassword(id: number, body: ResetPasswordRequest) {
+    return this.http.post<void>(`${this.baseUrl}/${id}/password`, body, {
+      context: inlineErrors(),
+    });
   }
 
   deactivate(id: number) {
