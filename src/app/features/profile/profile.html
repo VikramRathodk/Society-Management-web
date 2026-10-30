@@ -28,6 +28,74 @@
       </form>
     </app-section>
 
+    @if (canEdit()) {
+      <app-section title="Password" subtitle="You'll need your current password" padded>
+        <form
+          [formGroup]="passwordForm"
+          #passwordFormDir="ngForm"
+          (ngSubmit)="changePassword(passwordFormDir)"
+        >
+          <mat-form-field appearance="outline">
+            <mat-label>Current password</mat-label>
+            <input
+              matInput
+              formControlName="currentPassword"
+              [type]="hidePasswords() ? 'password' : 'text'"
+              autocomplete="current-password"
+            />
+            <button
+              mat-icon-button
+              matSuffix
+              type="button"
+              (click)="hidePasswords.set(!hidePasswords())"
+              [attr.aria-label]="hidePasswords() ? 'Show passwords' : 'Hide passwords'"
+            >
+              <mat-icon>{{ hidePasswords() ? 'visibility' : 'visibility_off' }}</mat-icon>
+            </button>
+            @if (passwordForm.controls.currentPassword.invalid) {
+              <mat-error>Current password is required</mat-error>
+            }
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>New password</mat-label>
+            <input
+              matInput
+              formControlName="newPassword"
+              [type]="hidePasswords() ? 'password' : 'text'"
+              autocomplete="new-password"
+            />
+            <mat-hint>At least 8 characters</mat-hint>
+            @if (passwordForm.controls.newPassword.hasError('required')) {
+              <mat-error>New password is required</mat-error>
+            } @else if (passwordForm.controls.newPassword.hasError('minlength')) {
+              <mat-error>At least 8 characters</mat-error>
+            } @else if (passwordForm.controls.newPassword.hasError('maxlength')) {
+              <mat-error>At most 72 characters</mat-error>
+            }
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Confirm new password</mat-label>
+            <input
+              matInput
+              formControlName="confirmPassword"
+              [type]="hidePasswords() ? 'password' : 'text'"
+              autocomplete="new-password"
+            />
+          </mat-form-field>
+          @if (passwordForm.hasError('mismatch') && passwordForm.controls.confirmPassword.touched) {
+            <p class="form-error" role="alert">Passwords don't match</p>
+          } @else if (passwordError(); as message) {
+            <p class="form-error" role="alert">{{ message }}</p>
+          }
+          <div class="form-actions">
+            <button mat-flat-button type="submit" [disabled]="changingPassword()">
+              Change password
+            </button>
+          </div>
+        </form>
+      </app-section>
+    }
+
     @if (push.status() !== 'unsupported') {
       <app-section title="Notifications" padded>
         <div class="push">

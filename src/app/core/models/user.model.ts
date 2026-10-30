@@ -71,3 +71,8 @@ export interface UpdateProfileRequest {
   email?: string;
   fcmToken?: string;
 }
+
+export interface ChangePasswordRequest {
+  currentPassword: string;
+  newPassword: string;
+}

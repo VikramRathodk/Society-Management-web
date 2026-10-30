@@ -6,6 +6,7 @@ import { inlineErrors } from '../auth/error.interceptor';
 import {
   Access,
   AssignRoleRequest,
+  ChangePasswordRequest,
   CreateUserRequest,
   MeResponse,
   RoleAssignment,
@@ -39,6 +40,11 @@ export class UserApi {
 
   update(id: number, body: UpdateProfileRequest, context?: HttpContext) {
     return this.http.patch<unknown>(`${this.baseUrl}/${id}`, body, { context });
+  }
+
+  /** The caller's own password. Errors (wrong current password, ...) are shown on the form. */
+  changePassword(body: ChangePasswordRequest) {
+    return this.http.post<void>(`${this.baseUrl}/me/password`, body, { context: inlineErrors() });
   }
 
   deactivate(id: number) {
