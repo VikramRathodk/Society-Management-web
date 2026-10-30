@@ -47,3 +47,6 @@ Thumbs.db
 # Playwright
 /test-results
 /playwright-report
+
+# Firebase config (copy firebase.example.ts to firebase.ts)
+/src/environments/firebase.ts
