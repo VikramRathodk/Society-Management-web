@@ -1,4 +1,4 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpContext } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 
 import { environment } from '../../../environments/environment';
@@ -37,8 +37,8 @@ export class UserApi {
     return this.http.post<User>(this.baseUrl, body, { context: inlineErrors() });
   }
 
-  update(id: number, body: UpdateProfileRequest) {
-    return this.http.patch<unknown>(`${this.baseUrl}/${id}`, body);
+  update(id: number, body: UpdateProfileRequest, context?: HttpContext) {
+    return this.http.patch<unknown>(`${this.baseUrl}/${id}`, body, { context });
   }
 
   deactivate(id: number) {

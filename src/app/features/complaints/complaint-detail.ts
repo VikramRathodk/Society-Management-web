@@ -13,6 +13,7 @@ import { catchError, filter, forkJoin, of, switchMap, tap } from 'rxjs';
 import { ComplaintApi } from '../../core/api/complaint.api';
 import { AuthStore } from '../../core/auth/auth.store';
 import { Complaint, ComplaintActivity } from '../../core/models';
+import { PushService } from '../../core/push';
 import { confirmDialog } from '../../shared/confirm-dialog';
 import { EmptyState, PageHeader, Section, StatusPill } from '../../shared/ui';
 import { timeAgo } from '../visitors/visitor-ui';
@@ -117,6 +118,14 @@ export class ComplaintDetail {
         }
         this.loading.set(false);
       });
+
+    // Someone else changed this complaint: reload in place (the page stays up while it loads).
+    inject(PushService)
+      .messages$.pipe(
+        filter((m) => m.data['complaintId'] === String(this.id())),
+        takeUntilDestroyed(),
+      )
+      .subscribe(() => this.retry());
   }
 
   protected retry(): void {

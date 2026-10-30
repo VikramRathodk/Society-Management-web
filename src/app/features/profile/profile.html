@@ -28,6 +28,30 @@
       </form>
     </app-section>
 
+    @if (push.status() !== 'unsupported') {
+      <app-section title="Notifications" padded>
+        <div class="push">
+          @switch (push.status()) {
+            @case ('on') {
+              <mat-icon>notifications_active</mat-icon>
+              <p>On for this browser. You'll hear about visitors, notices and complaints.</p>
+            }
+            @case ('blocked') {
+              <mat-icon>notifications_off</mat-icon>
+              <p>
+                Blocked in your browser settings. Allow notifications for this site to turn them on.
+              </p>
+            }
+            @default {
+              <mat-icon>notifications_none</mat-icon>
+              <p>Get alerts for visitors at the gate, new notices and complaint updates.</p>
+              <button mat-stroked-button type="button" (click)="push.enable()">Enable</button>
+            }
+          }
+        </div>
+      </app-section>
+    }
+
     <app-section title="My roles">
       <mat-list>
         @for (a of user.roles; track a.id) {

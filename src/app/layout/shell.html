@@ -26,6 +26,17 @@
     <span class="shell-society">{{ society.name }}</span>
   }
 
+  @if (push.status() === 'off') {
+    <button
+      mat-icon-button
+      (click)="push.enable()"
+      matTooltip="Enable notifications"
+      aria-label="Enable notifications"
+    >
+      <mat-icon>notifications_none</mat-icon>
+    </button>
+  }
+
   <button mat-icon-button [matMenuTriggerFor]="themeMenu" aria-label="Theme">
     <mat-icon>{{ themeIcon() }}</mat-icon>
   </button>

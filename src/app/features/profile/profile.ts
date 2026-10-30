@@ -2,6 +2,7 @@ import { Component, computed, effect, inject, signal, untracked } from '@angular
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatListModule } from '@angular/material/list';
 import { MatSnackBar } from '@angular/material/snack-bar';
@@ -10,6 +11,7 @@ import { switchMap } from 'rxjs';
 import { UserApi } from '../../core/api/user.api';
 import { AuthStore } from '../../core/auth/auth.store';
 import { RoleAssignment } from '../../core/models';
+import { PushService } from '../../core/push';
 import { SocietyContextStore } from '../../core/society-context/society-context.store';
 import { PageHeader, Section } from '../../shared/ui';
 
@@ -20,6 +22,7 @@ import { PageHeader, Section } from '../../shared/ui';
     ReactiveFormsModule,
     MatButtonModule,
     MatFormFieldModule,
+    MatIconModule,
     MatInputModule,
     MatListModule,
     PageHeader,
@@ -33,6 +36,7 @@ export class Profile {
   private readonly ctx = inject(SocietyContextStore);
   private readonly snack = inject(MatSnackBar);
   protected readonly auth = inject(AuthStore);
+  protected readonly push = inject(PushService);
 
   protected readonly form = inject(NonNullableFormBuilder).group({
     name: ['', [Validators.required, Validators.pattern(/\S/)]],

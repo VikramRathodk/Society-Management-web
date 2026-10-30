@@ -16,6 +16,7 @@ import {
   filter,
   finalize,
   map,
+  merge,
   of,
   switchMap,
   tap,
@@ -26,6 +27,7 @@ import { VisitorApi, VisitorQuery } from '../../core/api/visitor.api';
 import { AuthStore } from '../../core/auth/auth.store';
 import { HasPermission } from '../../core/auth/has-permission.directive';
 import { Visitor, VisitorStatus } from '../../core/models';
+import { PushService } from '../../core/push';
 import { SocietyContextStore } from '../../core/society-context/society-context.store';
 import { confirmDialog } from '../../shared/confirm-dialog';
 import { exportDialog } from '../../shared/export-dialog';
@@ -131,8 +133,12 @@ export class VisitorList {
         this.loading.set(false);
       });
 
-    // No push in the web app yet: re-fetch what is on screen while the tab is visible.
-    timer(POLL_MS, POLL_MS)
+    // Re-fetch what is on screen while the tab is visible: on a visitor push, and by polling as a
+    // fallback (push may be off or blocked).
+    merge(
+      timer(POLL_MS, POLL_MS),
+      inject(PushService).messages$.pipe(filter((m) => !!m.data['type']?.startsWith('VISITOR_'))),
+    )
       .pipe(
         filter(
           () => !this.loading() && !this.loadingMore() && document.visibilityState === 'visible',

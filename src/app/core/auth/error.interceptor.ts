@@ -10,6 +10,7 @@ import { catchError, throwError } from 'rxjs';
 
 import { ErrorResponse } from '../models';
 import { Notifier } from '../notifier';
+import { PushService } from '../push';
 import { AuthStore } from './auth.store';
 
 /** Set on requests whose caller shows every error inline, so no snackbar is raised (401 still logs out). */
@@ -23,12 +24,14 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
   const auth = inject(AuthStore);
   const router = inject(Router);
   const notifier = inject(Notifier);
+  const push = inject(PushService);
   return next(req).pipe(
     catchError((err: HttpErrorResponse) => {
       // The login form shows its own errors inline.
       if (req.url.includes('/api/auth/')) return throwError(() => err);
 
       if (err.status === 401) {
+        void push.forget();
         auth.logout();
         router.navigate(['/login'], { queryParams: { returnUrl: router.url } });
       } else if (err.status !== 400 && !req.context.get(INLINE_ERRORS)) {

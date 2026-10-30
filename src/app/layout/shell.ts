@@ -9,10 +9,12 @@ import { MatMenuModule } from '@angular/material/menu';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSidenavModule } from '@angular/material/sidenav';
 import { MatToolbarModule } from '@angular/material/toolbar';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { map } from 'rxjs';
 
 import { AuthStore } from '../core/auth/auth.store';
+import { PushService } from '../core/push';
 import { SocietyContextStore } from '../core/society-context/society-context.store';
 import { ThemeMode, ThemeStore } from '../core/theme';
 
@@ -68,6 +70,7 @@ const NAV_ITEMS: NavItem[] = [
     MatSelectModule,
     MatSidenavModule,
     MatToolbarModule,
+    MatTooltipModule,
   ],
   templateUrl: './shell.html',
   styleUrl: './shell.scss',
@@ -77,6 +80,13 @@ export class Shell {
   protected readonly auth = inject(AuthStore);
   protected readonly ctx = inject(SocietyContextStore);
   protected readonly theme = inject(ThemeStore);
+
+  protected readonly push = inject(PushService);
+
+  constructor() {
+    // The shell only renders for a signed-in user, so this runs after login and on reload.
+    this.push.resume();
+  }
 
   protected readonly themes: { mode: ThemeMode; label: string; icon: string }[] = [
     { mode: 'light', label: 'Light', icon: 'light_mode' },
@@ -110,7 +120,8 @@ export class Shell {
     this.router.navigateByUrl(this.router.url, { onSameUrlNavigation: 'reload' });
   }
 
-  protected logout(): void {
+  protected async logout(): Promise<void> {
+    await this.push.unregister(); // needs the JWT, so before auth.logout()
     this.auth.logout();
     this.router.navigate(['/login']);
   }

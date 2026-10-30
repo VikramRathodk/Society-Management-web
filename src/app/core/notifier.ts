@@ -9,9 +9,10 @@ import { Injectable, Injector, inject } from '@angular/core';
 export class Notifier {
   private readonly injector = inject(Injector);
 
-  show(message: string, action?: string, duration = 4000): void {
-    import('@angular/material/snack-bar').then(({ MatSnackBar }) =>
-      this.injector.get(MatSnackBar).open(message, action, { duration }),
-    );
+  show(message: string, action?: string, duration = 4000, onAction?: () => void): void {
+    import('@angular/material/snack-bar').then(({ MatSnackBar }) => {
+      const ref = this.injector.get(MatSnackBar).open(message, action, { duration });
+      if (onAction) ref.onAction().subscribe(onAction);
+    });
   }
 }
