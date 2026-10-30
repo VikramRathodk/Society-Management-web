@@ -2,6 +2,7 @@ import { BreakpointObserver } from '@angular/cdk/layout';
 import { Component, computed, inject } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
+import { MatDialog } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatListModule } from '@angular/material/list';
@@ -11,12 +12,13 @@ import { MatSidenavModule } from '@angular/material/sidenav';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
-import { map } from 'rxjs';
+import { firstValueFrom, map } from 'rxjs';
 
 import { AuthStore } from '../core/auth/auth.store';
 import { PushService } from '../core/push';
 import { SocietyContextStore } from '../core/society-context/society-context.store';
 import { ThemeMode, ThemeStore } from '../core/theme';
+import { confirmDialog } from '../shared/confirm-dialog';
 
 interface NavItem {
   label: string;
@@ -77,6 +79,7 @@ const NAV_ITEMS: NavItem[] = [
 })
 export class Shell {
   private readonly router = inject(Router);
+  private readonly dialog = inject(MatDialog);
   protected readonly auth = inject(AuthStore);
   protected readonly ctx = inject(SocietyContextStore);
   protected readonly theme = inject(ThemeStore);
@@ -121,6 +124,14 @@ export class Shell {
   }
 
   protected async logout(): Promise<void> {
+    const confirmed = await firstValueFrom(
+      confirmDialog(this.dialog, {
+        title: 'Log out',
+        message: 'Are you sure you want to log out?',
+        confirmText: 'Log out',
+      }),
+    );
+    if (!confirmed) return;
     await this.push.unregister(); // needs the JWT, so before auth.logout()
     this.auth.logout();
     this.router.navigate(['/login']);

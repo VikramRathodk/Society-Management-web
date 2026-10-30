@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-import { SeedUser, login, users } from './support';
+import { SeedUser, login, logout, users } from './support';
 
 const NAV = [
   'Dashboard',
@@ -48,7 +48,7 @@ test('a resident typing a guarded URL lands on the forbidden page', async ({ pag
 test('super admin has a society switcher; secretary sees their society name', async ({ page }) => {
   await login(page, users.superAdmin);
   await expect(page.getByRole('combobox', { name: 'Society' })).toBeVisible();
-  await page.getByRole('button', { name: 'Log out' }).click();
+  await logout(page);
 
   await login(page, users.secretary);
   await expect(page.getByRole('combobox', { name: 'Society' })).toHaveCount(0);

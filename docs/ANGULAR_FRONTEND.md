@@ -423,8 +423,10 @@ Actions per row:
 - **Mark entered** when `APPROVED`; **Mark exited** when `ENTERED` (guards).
 - Show an "override" badge when `overridden` is true.
 - **409** means someone else already answered or the status moved on — show the message and re-fetch the row.
-- No push in the web app yet: poll the PENDING list every 10–15 s (`interval` + `switchMap`) on the gate and
-  approvals screens.
+- Poll the PENDING list every 10–15 s (`interval` + `switchMap`) on the gate and approvals screens. Web push
+  (`core/push.ts`) also triggers a re-fetch on `VISITOR_*` messages, but stays best-effort: the bell in the top
+  bar (or the card on *Profile*) asks for permission on click, then the FCM token is PATCHed as `fcmToken`.
+  Logout clears it again.
 
 Log-visitor form (multipart):
 ```ts

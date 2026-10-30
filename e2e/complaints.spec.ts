@@ -1,6 +1,6 @@
 import { Page, expect, test } from '@playwright/test';
 
-import { apiToken, login, users } from './support';
+import { apiToken, login, logout, users } from './support';
 
 const description = `E2E complaint ${Date.now()}: kitchen tap leaking`;
 
@@ -88,7 +88,7 @@ test.describe.serial('complaint lifecycle', () => {
     await move(page, 'Reopen', 'Still dripping');
     await expect(page.locator('.step-title').first()).toHaveText('Reopened by Steve Rogers');
 
-    await page.getByRole('button', { name: 'Log out' }).click();
+    await logout(page);
     await login(page, users.resident1001);
     await openComplaint(page);
     await page.getByRole('button', { name: 'Withdraw' }).click();

@@ -23,6 +23,7 @@ export async function login(page: Page, user: SeedUser): Promise<void> {
 
 export async function logout(page: Page): Promise<void> {
   await page.getByRole('button', { name: 'Log out' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Log out' }).click();
   await expect(page).toHaveURL(/\/login/);
 }
 
