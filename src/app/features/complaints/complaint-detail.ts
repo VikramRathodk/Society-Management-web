@@ -5,7 +5,6 @@ import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
-import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { Router } from '@angular/router';
 import { catchError, filter, forkJoin, of, switchMap, tap } from 'rxjs';
@@ -15,7 +14,7 @@ import { AuthStore } from '../../core/auth/auth.store';
 import { Complaint, ComplaintActivity } from '../../core/models';
 import { PushService } from '../../core/push';
 import { confirmDialog } from '../../shared/confirm-dialog';
-import { EmptyState, PageHeader, Section, StatusPill } from '../../shared/ui';
+import { EmptyState, PageHeader, Section, StatusPill, Skeleton } from '../../shared/ui';
 import { timeAgo } from '../visitors/visitor-ui';
 import {
   COMPLAINT_STATUS,
@@ -34,7 +33,7 @@ import {
     DatePipe,
     MatButtonModule,
     MatIconModule,
-    MatProgressBarModule,
+    Skeleton,
     EmptyState,
     PageHeader,
     Section,

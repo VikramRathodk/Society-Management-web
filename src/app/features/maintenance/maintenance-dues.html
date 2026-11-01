@@ -1,0 +1,124 @@
+<app-page-header title="Maintenance" [subtitle]="subtitle()">
+  @if (access.canExportBills()) {
+    <button mat-stroked-button (click)="export()" [disabled]="busy()">
+      <mat-icon>download</mat-icon>
+      Export
+    </button>
+  }
+  @if (access.canUpdateBills()) {
+    <button mat-stroked-button (click)="remind()" [disabled]="busy() || defaulters() === 0">
+      <mat-icon>notifications_active</mat-icon>
+      Remind defaulters
+    </button>
+  }
+  @if (access.canRecord()) {
+    <button mat-flat-button (click)="record()">
+      <mat-icon>add_card</mat-icon>
+      Record payment
+    </button>
+  }
+</app-page-header>
+
+<app-maintenance-tabs />
+
+<div class="stats">
+  <app-stat-card
+    icon="account_balance_wallet"
+    label="Outstanding"
+    [value]="loading() ? null : inr(totalOutstanding())"
+    tone="primary"
+  />
+  <app-stat-card
+    icon="schedule"
+    label="Overdue"
+    [value]="loading() ? null : inr(totalOverdue())"
+    [tone]="totalOverdue() > 0 ? 'warning' : 'neutral'"
+  />
+  @if (access.committee()) {
+    <app-stat-card
+      icon="group"
+      label="Flats overdue"
+      [value]="loading() ? null : '' + defaulters()"
+    />
+  }
+</div>
+
+@if (access.committee()) {
+  <div class="toolbar">
+    <mat-slide-toggle [checked]="overdueOnly()" (change)="overdueOnly.set($event.checked)">
+      Overdue only
+    </mat-slide-toggle>
+  </div>
+}
+
+@if (loading()) {
+  <app-skeleton variant="list" />
+} @else if (loadError()) {
+  <app-empty-state icon="cloud_off" message="Couldn't load dues.">
+    <button mat-stroked-button (click)="retry()">Try again</button>
+  </app-empty-state>
+} @else if (dues().length === 0) {
+  <app-empty-state
+    icon="task_alt"
+    [message]="
+      overdueOnly()
+        ? 'No flat is overdue.'
+        : access.committee()
+          ? 'Every flat is paid up.'
+          : 'Nothing to pay right now.'
+    "
+  />
+} @else {
+  <div class="list">
+    @for (d of dues(); track d.flatId) {
+      <div class="row">
+        <a class="main" [routerLink]="['/maintenance/bills']" [queryParams]="{ flatId: d.flatId }">
+          <span class="title">
+            Flat {{ flatLabel(d.wingName, d.flatNumber) }}
+            @if (d.overdue > 0) {
+              <app-status-pill tone="warning">Overdue</app-status-pill>
+            }
+          </span>
+          <span class="meta">
+            {{ d.openBills }} open bill{{ d.openBills === 1 ? '' : 's' }} · oldest due
+            {{ dayLabel(d.oldestDueDate) }}
+          </span>
+        </a>
+        <div class="side">
+          <span class="amount">{{ inr(d.outstanding) }}</span>
+          @if (d.overdue > 0) {
+            <span class="meta danger-text">{{ inr(d.overdue) }} overdue</span>
+          }
+          <span class="actions">
+            @if (access.canUpdateBills() && d.overdue > 0) {
+              <button
+                mat-icon-button
+                (click)="remind(d)"
+                [disabled]="busy()"
+                matTooltip="Send reminder"
+                [attr.aria-label]="'Remind flat ' + flatLabel(d.wingName, d.flatNumber)"
+              >
+                <mat-icon>notifications</mat-icon>
+              </button>
+            }
+            @if (access.canRecord()) {
+              <button
+                mat-icon-button
+                (click)="record(d)"
+                matTooltip="Record payment"
+                [attr.aria-label]="'Record payment for flat ' + flatLabel(d.wingName, d.flatNumber)"
+              >
+                <mat-icon>add_card</mat-icon>
+              </button>
+            }
+          </span>
+        </div>
+      </div>
+    }
+  </div>
+  @if (!access.committee()) {
+    <p class="muted">
+      Pay at the society office; the committee records your payment and you get a receipt here.
+    </p>
+  }
+}

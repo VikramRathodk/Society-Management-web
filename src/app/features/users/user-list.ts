@@ -4,7 +4,6 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
-import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSlideToggle, MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatTableModule } from '@angular/material/table';
 import { RouterLink } from '@angular/router';
@@ -16,7 +15,7 @@ import { HasPermission } from '../../core/auth/has-permission.directive';
 import { RoleAssignment, User } from '../../core/models';
 import { SocietyContextStore } from '../../core/society-context/society-context.store';
 import { sortBy } from '../../shared/sort';
-import { Avatar, EmptyState, PageHeader, Section, StatusPill } from '../../shared/ui';
+import { Avatar, EmptyState, PageHeader, Section, StatusPill, Skeleton } from '../../shared/ui';
 
 /** Directory of users in the selected society (or everyone visible when none is selected). */
 @Component({
@@ -27,7 +26,7 @@ import { Avatar, EmptyState, PageHeader, Section, StatusPill } from '../../share
     MatFormFieldModule,
     MatIconModule,
     MatInputModule,
-    MatProgressBarModule,
+    Skeleton,
     MatSlideToggleModule,
     MatTableModule,
     HasPermission,

@@ -5,7 +5,6 @@ import { MatChipsModule } from '@angular/material/chips';
 import { MatDialog } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
-import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSelectModule } from '@angular/material/select';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { catchError, finalize, of, switchMap, tap } from 'rxjs';
@@ -15,7 +14,7 @@ import { HasPermission } from '../../core/auth/has-permission.directive';
 import { Complaint, ComplaintCategory, ComplaintStatus } from '../../core/models';
 import { SocietyContextStore } from '../../core/society-context/society-context.store';
 import { exportDialog } from '../../shared/export-dialog';
-import { EmptyState, PageHeader } from '../../shared/ui';
+import { EmptyState, PageHeader, Skeleton } from '../../shared/ui';
 import { COMPLAINT_CATEGORIES, ComplaintRow } from './complaint-ui';
 
 const PAGE_SIZE = 20;
@@ -37,7 +36,7 @@ interface StatusFilter {
     MatChipsModule,
     MatFormFieldModule,
     MatIconModule,
-    MatProgressBarModule,
+    Skeleton,
     MatSelectModule,
     HasPermission,
     EmptyState,

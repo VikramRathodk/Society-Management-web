@@ -1,0 +1,98 @@
+<app-page-header title="Maintenance" [subtitle]="subtitle()">
+  @if (access.canExportPayments()) {
+    <button mat-stroked-button (click)="export()">
+      <mat-icon>download</mat-icon>
+      Export
+    </button>
+  }
+  @if (access.canRecord()) {
+    <button mat-flat-button (click)="record()">
+      <mat-icon>add_card</mat-icon>
+      Record payment
+    </button>
+  }
+</app-page-header>
+
+<app-maintenance-tabs />
+
+<div class="toolbar">
+  <mat-form-field appearance="outline" subscriptSizing="dynamic">
+    <mat-label>Paid from</mat-label>
+    <input
+      matInput
+      type="date"
+      [value]="from()"
+      [max]="to() || today"
+      (change)="from.set($any($event.target).value)"
+    />
+  </mat-form-field>
+  <mat-form-field appearance="outline" subscriptSizing="dynamic">
+    <mat-label>Paid to</mat-label>
+    <input
+      matInput
+      type="date"
+      [value]="to()"
+      [min]="from()"
+      [max]="today"
+      (change)="to.set($any($event.target).value)"
+    />
+  </mat-form-field>
+  <mat-slide-toggle [checked]="includeVoid()" (change)="includeVoid.set($event.checked)">
+    Show void
+  </mat-slide-toggle>
+  <span class="grow"></span>
+  @if (filtered()) {
+    <button mat-button (click)="clearFilters()">Clear filters</button>
+  }
+</div>
+
+@if (loading()) {
+  <app-skeleton variant="list" />
+} @else if (loadError()) {
+  <app-empty-state icon="cloud_off" message="Couldn't load payments.">
+    <button mat-stroked-button (click)="retry()">Try again</button>
+  </app-empty-state>
+} @else if (payments().length === 0) {
+  <app-empty-state
+    icon="payments"
+    [message]="filtered() ? 'No payments match these filters.' : 'No payments recorded yet.'"
+  />
+} @else {
+  <div class="list">
+    @for (p of payments(); track p.id) {
+      <a class="row" [routerLink]="['/maintenance/payments', p.id]">
+        <span class="main">
+          <span class="title">
+            {{ p.receiptNumber }}
+            @if (p.status === 'VOID') {
+              <app-status-pill [tone]="paymentStatus.VOID.tone">{{
+                paymentStatus.VOID.label
+              }}</app-status-pill>
+            }
+          </span>
+          <span class="meta">
+            Flat {{ flatLabel(p.wingName, p.flatNumber) }} · {{ methodLabel(p.method) }} ·
+            {{ dayLabel(p.paidOn) }}
+          </span>
+        </span>
+        <span class="side">
+          <span class="amount" [class.muted]="p.status === 'VOID'">
+            @if (p.status === 'VOID') {
+              <s>{{ inr(p.amount) }}</s>
+            } @else {
+              {{ inr(p.amount) }}
+            }
+          </span>
+        </span>
+      </a>
+    }
+  </div>
+
+  @if (hasMore()) {
+    <div class="load-more">
+      <button mat-button (click)="loadMore()" [disabled]="loadingMore()">
+        {{ loadingMore() ? 'Loading…' : 'Load older payments' }}
+      </button>
+    </div>
+  }
+}

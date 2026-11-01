@@ -17,7 +17,7 @@
 
 // One panel for the whole log; days are separated by a small sticky label.
 .log {
-  border: 1px solid var(--mat-sys-outline-variant);
+  border: 1px solid var(--app-card-border);
   border-radius: var(--app-radius);
   background: var(--mat-sys-surface-container-lowest);
   overflow: clip; // keeps the rounded corners without breaking the sticky day labels

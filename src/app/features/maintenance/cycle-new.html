@@ -1,0 +1,150 @@
+<app-page-header
+  title="New billing cycle"
+  subtitle="Preview every flat's bill before issuing"
+  back="/maintenance/cycles"
+  backLabel="Back to billing cycles"
+/>
+
+<div class="stack" style="display: flex; flex-direction: column; gap: 16px">
+  <app-section title="Period" padded class="form-card">
+    <form [formGroup]="form" (ngSubmit)="runPreview()" novalidate>
+      <div class="form-row">
+        <mat-form-field appearance="outline">
+          <mat-label>From</mat-label>
+          <input matInput type="date" formControlName="periodStart" />
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>To</mat-label>
+          <input matInput type="date" formControlName="periodEnd" />
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Due by</mat-label>
+          <input matInput type="date" formControlName="dueDate" />
+        </mat-form-field>
+      </div>
+      @if (form.hasError('order')) {
+        <p class="form-error" role="alert">"To" must not be before "From".</p>
+      } @else if (form.hasError('due')) {
+        <p class="form-error" role="alert">The due date must not be before the period starts.</p>
+      }
+      <p class="muted" style="margin: 0 0 16px">
+        Suggested from your billing frequency and due days.
+        @if (access.canConfigure()) {
+          <a class="link" routerLink="/maintenance/settings">Change settings or charges</a>
+        }
+      </p>
+      <div class="form-actions">
+        <a mat-button routerLink="/maintenance/cycles">Cancel</a>
+        <button mat-stroked-button type="submit" [disabled]="loadingPreview()">
+          <mat-icon>visibility</mat-icon>
+          {{ loadingPreview() ? 'Calculating…' : preview() ? 'Refresh preview' : 'Preview bills' }}
+        </button>
+      </div>
+    </form>
+  </app-section>
+
+  @if (error(); as message) {
+    <div class="notice" data-tone="danger" role="alert">
+      <mat-icon>error</mat-icon>
+      <p>{{ message }}</p>
+    </div>
+  }
+
+  @if (preview(); as p) {
+    @if (p.problems.length) {
+      <div class="notice" data-tone="warning" role="alert">
+        <mat-icon>warning</mat-icon>
+        <p>Fix these before issuing; then refresh the preview.</p>
+      </div>
+      <div class="list">
+        @for (problem of p.problems; track problem.flatId) {
+          <div class="row">
+            <span class="main">
+              <span class="title">Flat {{ flatLabel(problem.wingName, problem.flatNumber) }}</span>
+              <span class="meta">{{ problem.message }}</span>
+            </span>
+            @if (access.canSetArea() && problem.message.toLowerCase().includes('area')) {
+              <span class="side">
+                <button
+                  mat-stroked-button
+                  (click)="setArea(problem.flatId, flatLabel(problem.wingName, problem.flatNumber))"
+                >
+                  Set area
+                </button>
+              </span>
+            }
+          </div>
+        }
+      </div>
+    }
+
+    <app-section
+      [title]="'Bills for ' + periodName()"
+      [subtitle]="
+        p.billCount +
+        ' flats · due ' +
+        dayLabel(p.dueDate) +
+        (stale() ? ' · dates changed, refresh the preview' : '')
+      "
+    >
+      <button
+        sectionActions
+        mat-flat-button
+        (click)="issue()"
+        [disabled]="issuing() || stale() || p.problems.length > 0 || p.billCount === 0"
+      >
+        <mat-icon>send</mat-icon>
+        {{ issuing() ? 'Issuing…' : 'Issue ' + p.billCount + ' bills' }}
+      </button>
+      <div class="table-scroll">
+        <table class="grid">
+          <thead>
+            <tr>
+              <th>Flat</th>
+              <th>Charges</th>
+              <th class="num">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (b of p.bills; track b.flatId) {
+              <tr>
+                <td>{{ flatLabel(b.wingName, b.flatNumber) }}</td>
+                <td>
+                  @if (expanded() === b.flatId) {
+                    @for (line of b.lines; track $index) {
+                      <span class="note" style="color: inherit">
+                        {{ line.headName }}: {{ inr(line.amount) }}
+                        @if (line.note) {
+                          <span class="note">{{ line.note }}</span>
+                        }
+                      </span>
+                    }
+                  } @else {
+                    <button mat-button (click)="toggle(b)" style="margin-left: -12px">
+                      {{ b.lines.length }} item{{ b.lines.length === 1 ? '' : 's' }}
+                    </button>
+                  }
+                </td>
+                <td class="num">{{ inr(b.total) }}</td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="3" class="muted">
+                  No flats to bill. Add flats and active charges first.
+                </td>
+              </tr>
+            }
+          </tbody>
+          @if (p.bills.length) {
+            <tfoot>
+              <tr>
+                <td colspan="2">Total</td>
+                <td class="num">{{ inr(p.total) }}</td>
+              </tr>
+            </tfoot>
+          }
+        </table>
+      </div>
+    </app-section>
+  }
+</div>

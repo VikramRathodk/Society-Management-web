@@ -6,7 +6,6 @@ import { MatDialog } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
-import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { Router, RouterLink } from '@angular/router';
@@ -18,7 +17,7 @@ import { Permission, Role } from '../../core/models';
 import { HasUnsavedChanges } from '../../core/unsaved-changes.guard';
 import { confirmDialog } from '../../shared/confirm-dialog';
 import { sortBy } from '../../shared/sort';
-import { EmptyState, PageHeader, Section, StatusPill } from '../../shared/ui';
+import { EmptyState, PageHeader, Section, StatusPill, Skeleton } from '../../shared/ui';
 import { PermissionMatrix } from './permission-matrix';
 import { inheritCandidates, inheritedPermissions } from './role-graph';
 
@@ -31,7 +30,7 @@ import { inheritCandidates, inheritedPermissions } from './role-graph';
     MatFormFieldModule,
     MatIconModule,
     MatInputModule,
-    MatProgressBarModule,
+    Skeleton,
     MatSelectModule,
     EmptyState,
     PageHeader,

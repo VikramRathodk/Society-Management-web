@@ -1,0 +1,260 @@
+<app-page-header
+  class="screen-only"
+  [title]="bill() ? 'Bill ' + bill()!.billNumber : 'Bill'"
+  [subtitle]="bill() ? 'Flat ' + flat() + ' · ' + period() : null"
+  back="/maintenance/bills"
+  backLabel="Back to bills"
+>
+  @if (status(); as s) {
+    <app-status-pill headerMeta [tone]="s.tone">{{ s.label }}</app-status-pill>
+  }
+  @if (isOpen() && access.canUpdateBills()) {
+    <button mat-stroked-button (click)="waive()">
+      <mat-icon>money_off</mat-icon>
+      Waive
+    </button>
+  }
+  @if (bill()) {
+    <button mat-stroked-button (click)="print()">
+      <mat-icon>print</mat-icon>
+      Print bill
+    </button>
+  }
+  @if (isOpen() && access.canRecord()) {
+    <button mat-flat-button (click)="record()">
+      <mat-icon>add_card</mat-icon>
+      Record payment
+    </button>
+  }
+</app-page-header>
+
+@if (loading() && !bill()) {
+  <app-skeleton variant="form" />
+} @else if (loadError() === 'missing') {
+  <app-empty-state icon="search_off" message="This bill doesn't exist or isn't yours to see." />
+} @else if (loadError() === 'failed') {
+  <app-empty-state icon="cloud_off" message="Couldn't load the bill.">
+    <button mat-stroked-button (click)="retry()">Try again</button>
+  </app-empty-state>
+} @else if (bill(); as b) {
+  <!-- The printed bill; hidden on screen, the only thing shown when printing. -->
+  <article class="print-bill" aria-hidden="true">
+    <header class="doc-head">
+      <div>
+        <p class="eyebrow">Maintenance bill</p>
+        <h1>{{ societyName() ?? 'Society' }}</h1>
+      </div>
+      <div class="doc-no">
+        <span>Bill no.</span>
+        <strong>{{ b.billNumber }}</strong>
+      </div>
+    </header>
+
+    <dl class="doc-facts">
+      <dt>Flat</dt>
+      <dd>{{ flat() }}</dd>
+      <dt>Period</dt>
+      <dd>{{ period() }}</dd>
+      <dt>Bill date</dt>
+      <dd>{{ b.createdAt | date: 'd MMM y' }}</dd>
+      <dt>Due by</dt>
+      <dd>
+        <strong>{{ dayLabel(b.dueDate) }}</strong>
+      </dd>
+    </dl>
+
+    <table class="doc-table">
+      <thead>
+        <tr>
+          <th>Particulars</th>
+          <th class="num">Amount</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (line of b.lines ?? []; track $index) {
+          <tr>
+            <td>
+              {{ line.headName }}
+              @if (lineDetail(line); as detail) {
+                <span class="note">{{ detail }}</span>
+              }
+            </td>
+            <td class="num">{{ inr(line.amount) }}</td>
+          </tr>
+        }
+      </tbody>
+      <tfoot>
+        <tr>
+          <td>Total</td>
+          <td class="num">{{ inr(b.total) }}</td>
+        </tr>
+        @if (b.amountPaid > 0) {
+          <tr class="sub">
+            <td>Paid</td>
+            <td class="num">− {{ inr(b.amountPaid) }}</td>
+          </tr>
+        }
+        <tr class="due">
+          <td>
+            {{ b.status === 'WAIVED' || b.status === 'CANCELLED' ? 'Balance' : 'Amount due' }}
+          </td>
+          <td class="num">{{ inr(b.outstanding) }}</td>
+        </tr>
+      </tfoot>
+    </table>
+
+    @if (b.payments?.length) {
+      <p class="doc-note">
+        Payments received:
+        @for (p of b.payments; track p.paymentId; let last = $last) {
+          {{ p.receiptNumber }} ({{ dayLabel(p.paidOn) }}, {{ inr(p.amount) }}){{
+            last ? '.' : ';'
+          }}
+        }
+      </p>
+    }
+    @if (b.status !== 'UNPAID' && b.status !== 'PARTIAL') {
+      <p class="doc-stamp">{{ status()!.label }}</p>
+    }
+    @if (upiLink(); as link) {
+      <section class="doc-upi">
+        <app-qr-code [value]="link" [size]="120" alt="UPI QR code" />
+        <div>
+          <strong>Pay {{ inr(b.outstanding) }} by UPI</strong>
+          <span>Scan with any UPI app, or pay to {{ upiId() }}.</span>
+          <span>Then share the transaction ID with the committee.</span>
+        </div>
+      </section>
+    }
+    <footer class="doc-foot">
+      Please pay by the due date{{ upiLink() ? ' by UPI or' : '' }} at the society office and keep
+      your receipt.
+      @if (b.status === 'UNPAID' || b.status === 'PARTIAL') {
+        Late charges may apply as per the society's rules.
+      }
+      <span>Printed {{ printedOn | date: 'd MMM y' }}</span>
+    </footer>
+  </article>
+
+  <div class="layout screen-only">
+    <div class="stack">
+      <app-section title="Charges">
+        <div class="table-scroll">
+          <table class="grid">
+            <thead>
+              <tr>
+                <th>Item</th>
+                <th class="num">Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (line of b.lines ?? []; track $index) {
+                <tr>
+                  <td>
+                    {{ line.headName }}
+                    @if (lineDetail(line); as detail) {
+                      <span class="note">{{ detail }}</span>
+                    }
+                  </td>
+                  <td class="num">{{ inr(line.amount) }}</td>
+                </tr>
+              }
+            </tbody>
+            <tfoot>
+              <tr>
+                <td>Total</td>
+                <td class="num">{{ inr(b.total) }}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </app-section>
+
+      <app-section title="Payments" [subtitle]="b.payments?.length ? null : 'Nothing paid yet'">
+        @if (b.payments?.length) {
+          <div class="table-scroll">
+            <table class="grid">
+              <thead>
+                <tr>
+                  <th>Receipt</th>
+                  <th>Paid on</th>
+                  <th>Method</th>
+                  <th class="num">Towards this bill</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (p of b.payments; track p.paymentId) {
+                  <tr>
+                    <td>
+                      <a [routerLink]="['/maintenance/payments', p.paymentId]">{{
+                        p.receiptNumber
+                      }}</a>
+                    </td>
+                    <td>{{ dayLabel(p.paidOn) }}</td>
+                    <td>{{ methodLabel(p.method) }}</td>
+                    <td class="num">{{ inr(p.amount) }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </app-section>
+    </div>
+
+    <div class="stack">
+      <app-section title="Summary" padded>
+        <dl class="facts">
+          <dt>Flat</dt>
+          <dd>{{ flat() }}</dd>
+          <dt>Period</dt>
+          <dd>{{ period() }}</dd>
+          <dt>Due</dt>
+          <dd>{{ dayLabel(b.dueDate) }}</dd>
+          <dt>Total</dt>
+          <dd>{{ inr(b.total) }}</dd>
+          <dt>Paid</dt>
+          <dd>{{ inr(b.amountPaid) }}</dd>
+          <dt>Outstanding</dt>
+          <dd [class.danger-text]="b.outstanding > 0">{{ inr(b.outstanding) }}</dd>
+        </dl>
+        @if (b.status !== 'CANCELLED' && b.status !== 'WAIVED') {
+          <div class="progress" style="margin-top: 16px" [attr.aria-label]="paid() + '% paid'">
+            <span [style.width.%]="paid()"></span>
+          </div>
+        }
+        @if (b.statusReason) {
+          <div class="notice" style="margin: 16px 0 0">
+            <mat-icon>info</mat-icon>
+            <p>
+              {{ status()!.label }} by {{ b.statusChangedByName }} on
+              {{ b.statusChangedAt | date: 'd MMM y' }}: {{ b.statusReason }}
+            </p>
+          </div>
+        }
+      </app-section>
+
+      @if (upiLink(); as link) {
+        <app-section title="Pay by UPI" subtitle="Scan with any UPI app" padded>
+          <div class="upi">
+            <app-qr-code
+              [value]="link"
+              [size]="168"
+              [alt]="'UPI QR code to pay ' + inr(b.outstanding)"
+            />
+            <p class="upi-amount">{{ inr(b.outstanding) }}</p>
+            <p class="muted upi-id">to {{ upiId() }}</p>
+            <button mat-stroked-button class="phone-only" (click)="openUpiApp(link)">
+              <mat-icon>open_in_new</mat-icon>
+              Open UPI app
+            </button>
+            <p class="muted upi-hint">
+              After paying, share the UPI transaction ID with the committee. Your bill is updated
+              once they record the payment.
+            </p>
+          </div>
+        </app-section>
+      }
+    </div>
+  </div>
+}

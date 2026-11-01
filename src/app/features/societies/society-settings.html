@@ -6,7 +6,7 @@
 />
 
 @if (loading()) {
-  <mat-progress-bar mode="indeterminate" />
+  <app-skeleton variant="form" />
 } @else if (!society()) {
   <app-empty-state icon="search_off" message="This society could not be found.">
     <a mat-button routerLink="/societies">Back to societies</a>

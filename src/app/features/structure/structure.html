@@ -8,7 +8,7 @@
 </app-page-header>
 
 @if (loading()) {
-  <mat-progress-bar mode="indeterminate" />
+  <app-skeleton variant="building" />
 } @else if (loadError()) {
   <app-empty-state icon="cloud_off" message="Couldn't load the wings.">
     <button mat-stroked-button (click)="retry()">Try again</button>
@@ -18,80 +18,135 @@
 } @else if (wings().length === 0) {
   <app-empty-state icon="domain" message="This society has no wings yet." />
 } @else {
-  <div class="wings">
+  <nav class="wing-tabs" role="tablist" aria-label="Wings">
     @for (wing of wings(); track wing.id) {
-      <mat-expansion-panel (opened)="loadFlats(wing)">
-        <mat-expansion-panel-header>
-          <mat-panel-title>{{ wing.name }}</mat-panel-title>
-          <mat-panel-description>
-            @if (flats().get(wing.id); as wingFlats) {
-              {{ wingFlats.length }} {{ wingFlats.length === 1 ? 'flat' : 'flats' }}
-            }
-            <span class="panel-actions">
-              <button
-                mat-icon-button
-                *hasPermission="'FLAT.STRUCTURE.UPDATE'"
-                (click)="$event.stopPropagation(); renameWing(wing)"
-                matTooltip="Rename wing"
-                [attr.aria-label]="'Rename ' + wing.name"
-              >
-                <mat-icon>edit</mat-icon>
-              </button>
-              <button
-                mat-icon-button
-                *hasPermission="'FLAT.STRUCTURE.DELETE'"
-                (click)="$event.stopPropagation(); deleteWing(wing)"
-                matTooltip="Delete wing"
-                [attr.aria-label]="'Delete ' + wing.name"
-              >
-                <mat-icon>delete</mat-icon>
-              </button>
-            </span>
-          </mat-panel-description>
-        </mat-expansion-panel-header>
+      <button
+        type="button"
+        role="tab"
+        class="wing-tab"
+        [class.active]="wing.id === selectedWingId()"
+        [attr.aria-selected]="wing.id === selectedWingId()"
+        (click)="selectWing(wing)"
+      >
+        <mat-icon>domain</mat-icon>
+        <span class="wing-tab-name">{{ wing.name }}</span>
+        @if (flats().get(wing.id); as list) {
+          <span class="wing-tab-count">{{ list.length }}</span>
+        }
+      </button>
+    }
+  </nav>
 
-        @if (loadingFlats().has(wing.id)) {
-          <mat-progress-bar mode="indeterminate" />
-        } @else if (flats().get(wing.id); as wingFlats) {
-          @if (wingFlats.length === 0) {
-            <p class="no-flats">No flats in this wing yet.</p>
+  @if (selectedWing(); as wing) {
+    <div class="layout" [class.has-panel]="selectedFlat()">
+      <section class="card building-card" role="tabpanel" [attr.aria-label]="wing.name">
+        <header class="building-header">
+          <div class="building-title">
+            <h2>{{ wing.name }}</h2>
+            @if (wingSummary(); as summary) {
+              <p>{{ summary }}</p>
+            }
+          </div>
+
+          @if (available().length > 1) {
+            <mat-button-toggle-group
+              class="overlay-toggle"
+              hideSingleSelectionIndicator
+              [value]="overlay()"
+              (change)="setOverlay($event.value)"
+              aria-label="Colour flats by"
+            >
+              @for (o of available(); track o) {
+                <mat-button-toggle [value]="o" [matTooltip]="'Colour by ' + overlays[o].label">
+                  <mat-icon>{{ overlays[o].icon }}</mat-icon>
+                  <span class="toggle-label">{{ overlays[o].label }}</span>
+                </mat-button-toggle>
+              }
+            </mat-button-toggle-group>
+          }
+
+          <span class="wing-actions">
+            <button
+              mat-icon-button
+              *hasPermission="'FLAT.STRUCTURE.CREATE'"
+              (click)="addFlat(wing)"
+              matTooltip="Add flat"
+              aria-label="Add flat"
+            >
+              <mat-icon>add_home</mat-icon>
+            </button>
+            <button
+              mat-icon-button
+              [matMenuTriggerFor]="wingMenu"
+              [matMenuTriggerData]="{ wing }"
+              aria-label="Wing options"
+            >
+              <mat-icon>more_vert</mat-icon>
+            </button>
+          </span>
+        </header>
+
+        @if (failedFlats().has(wing.id)) {
+          <app-empty-state icon="cloud_off" message="Couldn't load the flats.">
+            <button mat-stroked-button (click)="loadFlats(wing)">Try again</button>
+          </app-empty-state>
+        } @else if (wingFlats(); as list) {
+          @if (list.length === 0) {
+            <app-empty-state icon="add_home" message="No flats in this wing yet.">
+              <button
+                mat-stroked-button
+                *hasPermission="'FLAT.STRUCTURE.CREATE'"
+                (click)="addFlat(wing)"
+              >
+                Add the first flat
+              </button>
+            </app-empty-state>
           } @else {
-            <div class="flat-grid">
-              @for (flat of wingFlats; track flat.id) {
-                @if (canEditFlats()) {
-                  <button
-                    mat-stroked-button
-                    class="flat-tile"
-                    [matMenuTriggerFor]="flatMenu"
-                    [matMenuTriggerData]="{ wing, flat }"
-                  >
-                    {{ flat.flatNumber }}
-                  </button>
-                } @else {
-                  <span class="flat-tile flat-tile--static">{{ flat.flatNumber }}</span>
-                }
+            <div class="building-body">
+              <app-building-grid
+                [flats]="list"
+                [info]="info()"
+                [overlay]="overlay()"
+                [selectedId]="selectedFlatId()"
+                [label]="wing.name + ' flats'"
+                (pick)="pickFlat($event)"
+              />
+              @if (activity().capped && overlay() !== 'residents') {
+                <p class="capped">Counts include the latest 100 items only.</p>
               }
             </div>
           }
-          <button mat-button *hasPermission="'FLAT.STRUCTURE.CREATE'" (click)="addFlat(wing)">
-            <mat-icon>add</mat-icon>
-            Add flat
-          </button>
+        } @else {
+          <app-skeleton variant="tiles" />
         }
-      </mat-expansion-panel>
-    }
-  </div>
+      </section>
+
+      @if (selectedFlat(); as flat) {
+        <aside class="card flat-card" aria-live="polite">
+          <app-flat-panel
+            [wing]="wing"
+            [flat]="flat"
+            [info]="selectedInfo()"
+            [show]="available()"
+            (rename)="renameFlat(wing, flat)"
+            (remove)="deleteFlat(wing, flat)"
+            (closed)="selectedFlatId.set(null)"
+          />
+        </aside>
+      }
+    </div>
+  }
 }
 
-<mat-menu #flatMenu="matMenu">
-  <ng-template matMenuContent let-wing="wing" let-flat="flat">
-    <button mat-menu-item *hasPermission="'FLAT.STRUCTURE.UPDATE'" (click)="renameFlat(wing, flat)">
+<mat-menu #wingMenu="matMenu" xPosition="before">
+  <ng-template matMenuContent let-wing="wing">
+    <button mat-menu-item *hasPermission="'FLAT.STRUCTURE.UPDATE'" (click)="renameWing(wing)">
       <mat-icon>edit</mat-icon>
-      Rename
+      Rename wing
     </button>
-    <button mat-menu-item *hasPermission="'FLAT.STRUCTURE.DELETE'" (click)="deleteFlat(wing, flat)">
+    <button mat-menu-item *hasPermission="'FLAT.STRUCTURE.DELETE'" (click)="deleteWing(wing)">
       <mat-icon>delete</mat-icon>
-      Delete
+      Delete wing
     </button>
   </ng-template>
 </mat-menu>

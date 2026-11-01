@@ -8,7 +8,6 @@ import { MatExpansionModule } from '@angular/material/expansion';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
-import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { Router, RouterLink } from '@angular/router';
@@ -20,7 +19,7 @@ import { AuthStore } from '../../core/auth/auth.store';
 import { Access, RoleAssignment, User } from '../../core/models';
 import { SocietyContextStore } from '../../core/society-context/society-context.store';
 import { confirmDialog } from '../../shared/confirm-dialog';
-import { EmptyState, PageHeader, Section, StatusPill } from '../../shared/ui';
+import { EmptyState, PageHeader, Section, StatusPill, Skeleton } from '../../shared/ui';
 import { AssignRoleDialog, AssignRoleDialogData } from './assign-role-dialog';
 import { ResetPasswordDialog, ResetPasswordDialogData } from './reset-password-dialog';
 
@@ -34,7 +33,7 @@ import { ResetPasswordDialog, ResetPasswordDialogData } from './reset-password-d
     MatFormFieldModule,
     MatIconModule,
     MatInputModule,
-    MatProgressBarModule,
+    Skeleton,
     MatTooltipModule,
     EmptyState,
     PageHeader,

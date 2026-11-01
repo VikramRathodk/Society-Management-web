@@ -1,0 +1,121 @@
+<app-page-header
+  [title]="title()"
+  [subtitle]="cycle() ? cycle()!.billCount + ' bills · due ' + dayLabel(cycle()!.dueDate) : null"
+  back="/maintenance/cycles"
+  backLabel="Back to billing cycles"
+>
+  @if (status(); as s) {
+    <app-status-pill headerMeta [tone]="s.tone">{{ s.label }}</app-status-pill>
+  }
+  @if (cycle() && access.canExportBills()) {
+    <button mat-stroked-button (click)="export()" [disabled]="exporting()">
+      <mat-icon>download</mat-icon>
+      Export
+    </button>
+  }
+  @if (cycle()?.status === 'ISSUED' && access.canUpdateBills()) {
+    <button mat-stroked-button (click)="cancel()" [disabled]="cycle()!.totalPaid > 0">
+      <mat-icon>event_busy</mat-icon>
+      Cancel cycle
+    </button>
+  }
+</app-page-header>
+
+@if (loading() && !cycle()) {
+  <app-skeleton variant="form" />
+} @else if (loadError() === 'missing') {
+  <app-empty-state
+    icon="search_off"
+    message="This billing cycle doesn't exist or isn't yours to see."
+  />
+} @else if (loadError() === 'failed') {
+  <app-empty-state icon="cloud_off" message="Couldn't load the billing cycle.">
+    <button mat-stroked-button (click)="retry()">Try again</button>
+  </app-empty-state>
+} @else if (cycle(); as c) {
+  @if (c.status === 'CANCELLED') {
+    <div class="notice">
+      <mat-icon>info</mat-icon>
+      <p>
+        Cancelled by {{ c.cancelledByName }} on {{ c.cancelledAt | date: 'd MMM y' }}:
+        {{ c.cancelReason }}
+      </p>
+    </div>
+  } @else if (c.totalPaid > 0 && access.canUpdateBills()) {
+    <p class="muted" style="margin: -8px 0 16px">
+      Payments have been recorded on this cycle, so it can't be cancelled.
+    </p>
+  }
+
+  <div class="stats">
+    <app-stat-card icon="receipt_long" label="Billed" [value]="inr(c.totalBilled)" />
+    <app-stat-card icon="savings" label="Collected" [value]="inr(c.totalPaid)" tone="success" />
+    <app-stat-card
+      icon="account_balance_wallet"
+      label="Outstanding"
+      [value]="inr(c.totalOutstanding)"
+      [tone]="c.totalOutstanding > 0 ? 'warning' : 'neutral'"
+    />
+  </div>
+
+  <app-section
+    title="Bills"
+    [subtitle]="
+      (c.status === 'ISSUED' ? collected() + '% collected · ' : '') +
+      'issued by ' +
+      c.issuedByName +
+      ' on ' +
+      (c.issuedAt | date: 'd MMM y')
+    "
+  >
+    <a
+      sectionActions
+      mat-button
+      [routerLink]="['/maintenance/bills']"
+      [queryParams]="{ cycleId: c.id }"
+      >Filter in bills</a
+    >
+    <div class="section-actions">
+      @for (s of statusCounts(); track s.status) {
+        <app-status-pill [tone]="billStatus[s.status].tone">
+          {{ s.count }} {{ billStatus[s.status].label.toLowerCase() }}
+        </app-status-pill>
+      }
+    </div>
+    <div class="table-scroll">
+      <table class="grid">
+        <thead>
+          <tr>
+            <th>Bill</th>
+            <th>Flat</th>
+            <th>Status</th>
+            <th class="num">Total</th>
+            <th class="num">Outstanding</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (b of bills(); track b.id) {
+            <tr>
+              <td>
+                <a [routerLink]="['/maintenance/bills', b.id]">{{ b.billNumber }}</a>
+              </td>
+              <td>{{ flatLabel(b.wingName, b.flatNumber) }}</td>
+              <td>
+                <app-status-pill [tone]="billStatus[b.status].tone">{{
+                  billStatus[b.status].label
+                }}</app-status-pill>
+              </td>
+              <td class="num">{{ inr(b.total) }}</td>
+              <td class="num">{{ inr(b.outstanding) }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    @if (more()) {
+      <p class="muted" style="padding: 12px 20px; margin: 0">
+        Showing the first {{ bills().length }}. Use "Filter in bills" or Export for all of them.
+      </p>
+    }
+  </app-section>
+}

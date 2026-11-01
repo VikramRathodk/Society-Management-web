@@ -119,6 +119,83 @@ export const routes: Routes = [
           import('./features/complaints/complaint-list').then((m) => m.ComplaintList),
       },
       {
+        path: 'maintenance',
+        canMatch: [permissionGuard],
+        data: { permission: 'MAINTENANCE.BILL.VIEW' },
+        children: [
+          {
+            path: '',
+            pathMatch: 'full',
+            title: 'Maintenance dues',
+            loadComponent: () =>
+              import('./features/maintenance/maintenance-dues').then((m) => m.MaintenanceDues),
+          },
+          {
+            path: 'bills/:id',
+            title: 'Bill',
+            loadComponent: () =>
+              import('./features/maintenance/bill-detail').then((m) => m.BillDetail),
+          },
+          {
+            path: 'bills',
+            title: 'Maintenance bills',
+            loadComponent: () => import('./features/maintenance/bill-list').then((m) => m.BillList),
+          },
+          {
+            path: 'payments/:id',
+            title: 'Receipt',
+            canMatch: [permissionGuard],
+            data: { permission: 'MAINTENANCE.PAYMENT.VIEW' },
+            loadComponent: () =>
+              import('./features/maintenance/payment-detail').then((m) => m.PaymentDetail),
+          },
+          {
+            path: 'payments',
+            title: 'Maintenance payments',
+            canMatch: [permissionGuard],
+            data: { permission: 'MAINTENANCE.PAYMENT.VIEW' },
+            loadComponent: () =>
+              import('./features/maintenance/payment-list').then((m) => m.PaymentList),
+          },
+          {
+            path: 'cycles/new',
+            title: 'New billing cycle',
+            canMatch: [permissionGuard],
+            data: { permission: 'MAINTENANCE.BILL.CREATE' },
+            loadComponent: () => import('./features/maintenance/cycle-new').then((m) => m.CycleNew),
+          },
+          {
+            path: 'cycles/:id',
+            title: 'Billing cycle',
+            loadComponent: () =>
+              import('./features/maintenance/cycle-detail').then((m) => m.CycleDetail),
+          },
+          {
+            path: 'cycles',
+            title: 'Billing cycles',
+            loadComponent: () => import('./features/maintenance/cycle-list').then((m) => m.CycleList),
+          },
+          {
+            path: 'opening-balances',
+            title: 'Opening balances',
+            canMatch: [permissionGuard],
+            data: { permission: 'MAINTENANCE.BILL.CREATE' },
+            loadComponent: () =>
+              import('./features/maintenance/opening-balances').then((m) => m.OpeningBalances),
+          },
+          {
+            path: 'settings',
+            title: 'Maintenance settings',
+            canMatch: [permissionGuard],
+            data: { permission: 'MAINTENANCE.CHARGE.VIEW' },
+            loadComponent: () =>
+              import('./features/maintenance/maintenance-settings').then(
+                (m) => m.MaintenanceSettings,
+              ),
+          },
+        ],
+      },
+      {
         path: 'roles/:code',
         title: 'Role',
         canMatch: [permissionGuard],

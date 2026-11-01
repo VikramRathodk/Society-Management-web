@@ -6,7 +6,6 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
-import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { RouterLink } from '@angular/router';
 import { catchError, of, switchMap, tap } from 'rxjs';
@@ -15,7 +14,7 @@ import { SocietyApi } from '../../core/api/society.api';
 import { errorMessage } from '../../core/auth/error.interceptor';
 import { Society } from '../../core/models';
 import { SocietyContextStore } from '../../core/society-context/society-context.store';
-import { EmptyState, PageHeader, Section } from '../../shared/ui';
+import { EmptyState, PageHeader, Section, Skeleton } from '../../shared/ui';
 
 @Component({
   selector: 'app-society-settings',
@@ -26,7 +25,7 @@ import { EmptyState, PageHeader, Section } from '../../shared/ui';
     MatFormFieldModule,
     MatIconModule,
     MatInputModule,
-    MatProgressBarModule,
+    Skeleton,
     EmptyState,
     PageHeader,
     Section,

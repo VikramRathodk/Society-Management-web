@@ -32,4 +32,6 @@ export interface Flat {
   id: number;
   wingId: number;
   flatNumber: string;
+  /** Needed for per-sq-ft maintenance charges. */
+  areaSqft?: number | null;
 }

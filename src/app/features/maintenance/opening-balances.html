@@ -1,0 +1,101 @@
+<app-page-header
+  title="Opening balances"
+  subtitle="What each flat owed before you started billing here"
+  back="/maintenance/cycles"
+  backLabel="Back to billing cycles"
+/>
+
+@if (loading()) {
+  <app-skeleton variant="form" />
+} @else if (loadError()) {
+  <app-empty-state icon="cloud_off" message="Couldn't load the flats.">
+    <button mat-stroked-button (click)="retry()">Try again</button>
+  </app-empty-state>
+} @else if (entries().length === 0) {
+  <app-empty-state icon="domain" message="This society has no flats yet." />
+} @else {
+  <div style="display: flex; flex-direction: column; gap: 16px">
+    <app-section padded class="form-card">
+      <div class="form-row" style="padding-top: 8px">
+        <mat-form-field appearance="outline">
+          <mat-label>Balance as of</mat-label>
+          <input matInput type="date" [(ngModel)]="asOf" [max]="today" />
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Due by</mat-label>
+          <input matInput type="date" [(ngModel)]="dueDate" />
+        </mat-form-field>
+      </div>
+      <p class="muted" style="margin: 0">
+        Leave a flat blank if it owed nothing. Payments recorded later settle these bills first.
+      </p>
+    </app-section>
+
+    <app-section
+      title="Flats"
+      [subtitle]="filled().length + ' with a balance · ' + inr(total()) + ' in total'"
+    >
+      <div class="table-scroll">
+        <table class="grid">
+          <thead>
+            <tr>
+              <th>Flat</th>
+              <th>Amount owed (₹)</th>
+              <th>Note</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (e of entries(); track e.flat.id) {
+              <tr>
+                <td style="vertical-align: middle">{{ e.flat.label }}</td>
+                <td>
+                  <mat-form-field
+                    appearance="outline"
+                    subscriptSizing="dynamic"
+                    style="width: 160px"
+                  >
+                    <input
+                      matInput
+                      inputmode="decimal"
+                      [(ngModel)]="e.amount"
+                      (ngModelChange)="changed()"
+                      [attr.aria-label]="'Amount owed by flat ' + e.flat.label"
+                      [attr.aria-invalid]="invalidAmount(e)"
+                      [class.danger-text]="invalidAmount(e)"
+                      placeholder="0.00"
+                    />
+                  </mat-form-field>
+                </td>
+                <td>
+                  <mat-form-field
+                    appearance="outline"
+                    subscriptSizing="dynamic"
+                    style="width: 100%; min-width: 180px"
+                  >
+                    <input
+                      matInput
+                      maxlength="200"
+                      [(ngModel)]="e.note"
+                      [attr.aria-label]="'Note for flat ' + e.flat.label"
+                      placeholder="Optional"
+                    />
+                  </mat-form-field>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </app-section>
+
+    @if (error(); as message) {
+      <p class="form-error" role="alert">{{ message }}</p>
+    }
+    <div class="form-actions">
+      <a mat-button routerLink="/maintenance/cycles">Cancel</a>
+      <button mat-flat-button (click)="submit()" [disabled]="saving() || filled().length === 0">
+        {{ saving() ? 'Saving…' : 'Save opening balances' }}
+      </button>
+    </div>
+  </div>
+}

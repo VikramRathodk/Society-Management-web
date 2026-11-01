@@ -151,6 +151,11 @@ function isoDate(date: Date): string {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }
 
+/** Saves a CSV (or other blob) response under the server's filename. */
+export function saveResponse(res: HttpResponse<Blob>, fallback = 'export.csv'): void {
+  saveFile(res.body!, fileName(res) ?? fallback);
+}
+
 /** The filename from `Content-Disposition: attachment; filename="..."`, if present. */
 function fileName(res: HttpResponse<Blob>): string | null {
   const header = res.headers.get('Content-Disposition') ?? '';

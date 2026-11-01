@@ -1,0 +1,101 @@
+.receipt {
+  max-width: 720px;
+}
+
+.receipt-head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 20px 20px 0;
+
+  h2 {
+    margin: 2px 0 0;
+    font-family: var(--app-font-display);
+    font-weight: 500;
+  }
+}
+
+.eyebrow {
+  margin: 0;
+  color: var(--mat-sys-on-surface-variant);
+  font: var(--mat-sys-label-medium);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.receipt-no {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  font-variant-numeric: tabular-nums;
+}
+
+.receipt-amount {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 20px;
+  padding: 16px 20px;
+  border-radius: 12px;
+  background: var(--app-success-container);
+
+  .big {
+    font: var(--mat-sys-headline-medium);
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+.void .receipt-amount {
+  background: var(--mat-sys-surface-container-high);
+
+  .big {
+    text-decoration: line-through;
+  }
+}
+
+.stamp {
+  position: absolute;
+  top: 50%;
+  right: 24px;
+  transform: translateY(-50%) rotate(-8deg);
+  padding: 4px 12px;
+  border: 2px solid var(--mat-sys-error);
+  border-radius: 6px;
+  color: var(--mat-sys-error);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+}
+
+.receipt-facts {
+  padding: 0 20px 20px;
+}
+
+// Print just the receipt.
+@media print {
+  .no-print {
+    display: none !important;
+  }
+
+  // The app frame around the page (global: these elements live outside this component).
+  ::ng-deep .shell-toolbar,
+  ::ng-deep .shell-sidenav {
+    display: none !important;
+  }
+
+  ::ng-deep .shell-content {
+    margin-left: 0 !important;
+  }
+
+  .receipt {
+    max-width: none;
+    box-shadow: none;
+  }
+
+  .no-print-link {
+    color: inherit;
+    text-decoration: none;
+  }
+}

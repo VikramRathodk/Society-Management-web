@@ -26,7 +26,7 @@
 </app-page-header>
 
 @if (loading() && !complaint()) {
-  <mat-progress-bar mode="indeterminate" />
+  <app-skeleton variant="form" />
 } @else if (loadError() === 'missing') {
   <app-empty-state
     icon="search_off"

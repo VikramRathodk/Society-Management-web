@@ -6,7 +6,6 @@ import { MatDialog } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
-import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import {
@@ -31,7 +30,7 @@ import { PushService } from '../../core/push';
 import { SocietyContextStore } from '../../core/society-context/society-context.store';
 import { confirmDialog } from '../../shared/confirm-dialog';
 import { exportDialog } from '../../shared/export-dialog';
-import { EmptyState, PageHeader } from '../../shared/ui';
+import { EmptyState, PageHeader, Skeleton } from '../../shared/ui';
 import { VisitorPhotos, VisitorRow, groupByDay } from './visitor-ui';
 
 const PAGE_SIZE = 20;
@@ -53,7 +52,7 @@ interface StatusFilter {
     MatFormFieldModule,
     MatIconModule,
     MatInputModule,
-    MatProgressBarModule,
+    Skeleton,
     MatTooltipModule,
     HasPermission,
     EmptyState,

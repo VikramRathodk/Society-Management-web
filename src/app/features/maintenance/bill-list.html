@@ -1,0 +1,94 @@
+<app-page-header title="Maintenance" [subtitle]="subtitle()" />
+
+<app-maintenance-tabs />
+
+<div class="toolbar">
+  <mat-chip-listbox
+    class="grow"
+    aria-label="Filter by status"
+    [hideSingleSelectionIndicator]="true"
+    (change)="setStatus($event.value ?? null)"
+  >
+    @for (f of statusFilters; track f.label) {
+      <mat-chip-option [value]="f.value" [selected]="status() === f.value">{{
+        f.label
+      }}</mat-chip-option>
+    }
+  </mat-chip-listbox>
+
+  @if (flatId() != null) {
+    <mat-chip-set aria-label="Flat filter">
+      <mat-chip (removed)="clearFlat()">
+        Flat {{ flatName() ?? '#' + flatId() }}
+        <button matChipRemove aria-label="Show every flat">
+          <mat-icon>cancel</mat-icon>
+        </button>
+      </mat-chip>
+    </mat-chip-set>
+  }
+
+  @if (cycles().length) {
+    <mat-form-field appearance="outline" subscriptSizing="dynamic">
+      <mat-label>Billing cycle</mat-label>
+      <mat-select [value]="cycleId()" (selectionChange)="setCycle($event.value)">
+        <mat-option [value]="null">All cycles</mat-option>
+        @for (c of cycles(); track c.id) {
+          <mat-option [value]="c.id">{{ cycleLabel(c) }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+  }
+</div>
+
+@if (loading()) {
+  <app-skeleton variant="list" />
+} @else if (loadError()) {
+  <app-empty-state icon="cloud_off" message="Couldn't load bills.">
+    <button mat-stroked-button (click)="retry()">Try again</button>
+  </app-empty-state>
+} @else if (bills().length === 0) {
+  <app-empty-state
+    icon="receipt_long"
+    [message]="
+      status() || cycleId() || flatId() ? 'No bills match these filters.' : 'No bills yet.'
+    "
+  />
+} @else {
+  <div class="list">
+    @for (b of bills(); track b.id) {
+      <a class="row" [routerLink]="['/maintenance/bills', b.id]">
+        <span class="main">
+          <span class="title">
+            {{ b.billNumber }}
+            <app-status-pill [tone]="billStatus[b.status].tone">{{
+              billStatus[b.status].label
+            }}</app-status-pill>
+          </span>
+          <span class="meta">
+            Flat {{ flatLabel(b.wingName, b.flatNumber) }} ·
+            {{
+              b.cycleKind === 'OPENING_BALANCE'
+                ? 'Opening balance'
+                : periodLabel(b.periodStart, b.periodEnd)
+            }}
+            · due {{ dayLabel(b.dueDate) }}
+          </span>
+        </span>
+        <span class="side">
+          <span class="amount">{{ inr(b.total) }}</span>
+          @if (b.outstanding > 0 && b.outstanding < b.total) {
+            <span class="meta">{{ inr(b.outstanding) }} left</span>
+          }
+        </span>
+      </a>
+    }
+  </div>
+
+  @if (hasMore()) {
+    <div class="load-more">
+      <button mat-button (click)="loadMore()" [disabled]="loadingMore()">
+        {{ loadingMore() ? 'Loading…' : 'Load older bills' }}
+      </button>
+    </div>
+  }
+}

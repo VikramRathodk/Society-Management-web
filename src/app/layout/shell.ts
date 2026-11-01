@@ -19,6 +19,7 @@ import { PushService } from '../core/push';
 import { SocietyContextStore } from '../core/society-context/society-context.store';
 import { ThemeMode, ThemeStore } from '../core/theme';
 import { confirmDialog } from '../shared/confirm-dialog';
+import { Command, CommandPaletteService } from './command-palette';
 
 interface NavItem {
   label: string;
@@ -49,6 +50,12 @@ const NAV_ITEMS: NavItem[] = [
     permission: 'COMPLAINT.TICKET.VIEW',
   },
   {
+    label: 'Maintenance',
+    icon: 'receipt_long',
+    link: '/maintenance',
+    permission: 'MAINTENANCE.BILL.VIEW',
+  },
+  {
     label: 'Roles',
     icon: 'admin_panel_settings',
     link: '/roles',
@@ -74,6 +81,7 @@ const NAV_ITEMS: NavItem[] = [
     MatToolbarModule,
     MatTooltipModule,
   ],
+  host: { '(document:keydown)': 'onKeydown($event)' },
   templateUrl: './shell.html',
   styleUrl: './shell.scss',
 })
@@ -85,6 +93,8 @@ export class Shell {
   protected readonly theme = inject(ThemeStore);
 
   protected readonly push = inject(PushService);
+  private readonly palette = inject(CommandPaletteService);
+  protected readonly modKey = /Mac|iPhone|iPad/.test(navigator.platform) ? '⌘' : 'Ctrl';
 
   constructor() {
     // The shell only renders for a signed-in user, so this runs after login and on reload.
@@ -116,6 +126,125 @@ export class Shell {
           : this.auth.can(item.permission, this.ctx.selectedSocietyId())),
     ),
   );
+
+  /** Quick actions, shown when the user may perform them. */
+  private readonly actions = computed<Command[]>(() => {
+    const societyId = this.ctx.selectedSocietyId();
+    const can = (p: string) => this.auth.can(p, societyId);
+    const go = (link: string) => () => this.router.navigateByUrl(link);
+    const list: Command[] = [];
+    if (can('VISITOR.ENTRY.CREATE'))
+      list.push({
+        id: 'act:visitor',
+        group: 'Actions',
+        label: 'Log visitor',
+        icon: 'person_add',
+        keywords: 'new visitor gate entry',
+        run: go('/visitors/new'),
+      });
+    if (can('COMPLAINT.TICKET.CREATE'))
+      list.push({
+        id: 'act:complaint',
+        group: 'Actions',
+        label: 'Raise complaint',
+        icon: 'add_comment',
+        keywords: 'new complaint ticket issue',
+        run: go('/complaints/new'),
+      });
+    if (can('MAINTENANCE.PAYMENT.CREATE'))
+      list.push({
+        id: 'act:payment',
+        group: 'Actions',
+        label: 'Record maintenance payment',
+        icon: 'add_card',
+        keywords: 'receipt pay dues maintenance cash cheque upi',
+        run: go('/maintenance/payments?record=1'),
+      });
+    if (can('MAINTENANCE.BILL.CREATE'))
+      list.push({
+        id: 'act:cycle',
+        group: 'Actions',
+        label: 'Issue maintenance bills',
+        icon: 'post_add',
+        keywords: 'billing cycle new bills maintenance',
+        run: go('/maintenance/cycles/new'),
+      });
+    if (can('USER.ACCOUNT.CREATE'))
+      list.push({
+        id: 'act:user',
+        group: 'Actions',
+        label: 'New user',
+        icon: 'group_add',
+        keywords: 'add resident create user',
+        run: go('/users/new'),
+      });
+    list.push({
+      id: 'act:profile',
+      group: 'Actions',
+      label: 'My profile',
+      icon: 'account_circle',
+      keywords: 'password account',
+      run: go('/profile'),
+    });
+    for (const t of this.themes) {
+      if (t.mode !== this.theme.mode())
+        list.push({
+          id: 'theme:' + t.mode,
+          group: 'Actions',
+          label: t.label + ' theme',
+          icon: t.icon,
+          keywords: 'theme appearance mode',
+          run: () => this.theme.set(t.mode),
+        });
+    }
+    for (const s of this.ctx.societies()) {
+      if (s.id !== societyId)
+        list.push({
+          id: 'society:' + s.id,
+          group: 'Actions',
+          label: 'Switch to ' + s.name,
+          icon: 'swap_horiz',
+          keywords: 'society change',
+          run: () => this.selectSociety(s.id),
+        });
+    }
+    list.push({
+      id: 'act:logout',
+      group: 'Actions',
+      label: 'Log out',
+      icon: 'logout',
+      keywords: 'sign out',
+      run: () => void this.logout(),
+    });
+    return list;
+  });
+
+  protected openPalette(): void {
+    const pages = this.navItems().map<Command>((item) => ({
+      id: 'page:' + item.link,
+      group: 'Pages',
+      label: item.label,
+      icon: item.icon,
+      hint: 'Page',
+      run: () => this.router.navigateByUrl(item.link),
+    }));
+    this.palette.open([...pages, ...this.actions()]);
+  }
+
+  /** Ctrl/⌘+K anywhere, or / when not typing, opens the palette. */
+  protected onKeydown(event: KeyboardEvent): void {
+    const target = event.target as HTMLElement | null;
+    const typing =
+      !!target && (/^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName) || target.isContentEditable);
+    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
+      event.preventDefault();
+      if (this.palette.isOpen) return;
+      this.openPalette();
+    } else if (event.key === '/' && !typing && !this.palette.isOpen) {
+      event.preventDefault();
+      this.openPalette();
+    }
+  }
 
   protected selectSociety(societyId: number): void {
     this.ctx.select(societyId);

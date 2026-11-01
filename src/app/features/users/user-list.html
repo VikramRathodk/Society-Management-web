@@ -12,7 +12,7 @@
 </mat-form-field>
 
 @if (loading()) {
-  <mat-progress-bar mode="indeterminate" />
+  <app-skeleton variant="list" />
 } @else if (loadError()) {
   <app-empty-state icon="cloud_off" message="Couldn't load users.">
     <button mat-stroked-button (click)="retry()">Try again</button>

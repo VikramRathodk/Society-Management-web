@@ -1,0 +1,108 @@
+<app-page-header
+  class="no-print"
+  [title]="payment() ? 'Receipt ' + payment()!.receiptNumber : 'Receipt'"
+  [subtitle]="payment() ? 'Flat ' + flat() : null"
+  back="/maintenance/payments"
+  backLabel="Back to payments"
+>
+  @if (status(); as s) {
+    <app-status-pill headerMeta [tone]="s.tone">{{ s.label }}</app-status-pill>
+  }
+  @if (payment()?.status === 'RECORDED' && access.canVoid()) {
+    <button mat-stroked-button (click)="voidPayment()">
+      <mat-icon>block</mat-icon>
+      Void
+    </button>
+  }
+  @if (payment()) {
+    <button mat-flat-button (click)="print()">
+      <mat-icon>print</mat-icon>
+      Print
+    </button>
+  }
+</app-page-header>
+
+@if (loading() && !payment()) {
+  <app-skeleton variant="form" />
+} @else if (loadError() === 'missing') {
+  <app-empty-state icon="search_off" message="This payment doesn't exist or isn't yours to see." />
+} @else if (loadError() === 'failed') {
+  <app-empty-state icon="cloud_off" message="Couldn't load the payment.">
+    <button mat-stroked-button (click)="retry()">Try again</button>
+  </app-empty-state>
+} @else if (payment(); as p) {
+  @if (p.status === 'VOID') {
+    <div class="notice no-print" data-tone="danger">
+      <mat-icon>block</mat-icon>
+      <p>
+        Voided by {{ p.voidedByName }} on {{ p.voidedAt | date: 'd MMM y, h:mm a' }}:
+        {{ p.voidReason }}
+      </p>
+    </div>
+  }
+
+  <app-section class="receipt" [class.void]="p.status === 'VOID'">
+    <div class="receipt-head">
+      <div>
+        <p class="eyebrow">Maintenance payment receipt</p>
+        <h2>{{ societyName() ?? 'Society' }}</h2>
+      </div>
+      <div class="receipt-no">
+        <span class="muted">Receipt</span>
+        <strong>{{ p.receiptNumber }}</strong>
+      </div>
+    </div>
+
+    <div class="receipt-amount">
+      <span class="muted">Amount received</span>
+      <span class="big">{{ inr(p.amount) }}</span>
+      @if (p.status === 'VOID') {
+        <span class="stamp">VOID</span>
+      }
+    </div>
+
+    <dl class="facts receipt-facts">
+      <dt>Flat</dt>
+      <dd>{{ flat() }}</dd>
+      <dt>Paid on</dt>
+      <dd>{{ dayLabel(p.paidOn) }}</dd>
+      <dt>Method</dt>
+      <dd>{{ methodLabel(p.method) }}</dd>
+      @if (p.reference) {
+        <dt>Reference</dt>
+        <dd>{{ p.reference }}</dd>
+      }
+      @if (p.note) {
+        <dt>Note</dt>
+        <dd>{{ p.note }}</dd>
+      }
+      <dt>Recorded by</dt>
+      <dd>{{ p.recordedByName }} · {{ p.recordedAt | date: 'd MMM y, h:mm a' }}</dd>
+    </dl>
+
+    @if (p.allocations?.length) {
+      <div class="table-scroll">
+        <table class="grid">
+          <thead>
+            <tr>
+              <th>Applied to bill</th>
+              <th class="num">Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (a of p.allocations; track a.billId) {
+              <tr>
+                <td>
+                  <a class="no-print-link" [routerLink]="['/maintenance/bills', a.billId]">{{
+                    a.billNumber
+                  }}</a>
+                </td>
+                <td class="num">{{ inr(a.amount) }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </app-section>
+}

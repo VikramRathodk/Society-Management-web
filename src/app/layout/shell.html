@@ -10,6 +10,12 @@
   </a>
   <span class="shell-spacer"></span>
 
+  <button type="button" class="search-trigger" (click)="openPalette()" aria-label="Search (Ctrl+K)">
+    <mat-icon>search</mat-icon>
+    <span class="search-text">Search…</span>
+    <kbd>{{ modKey }} K</kbd>
+  </button>
+
   @if (ctx.societies().length > 1) {
     <mat-form-field class="society-switcher" appearance="outline" subscriptSizing="dynamic">
       <mat-select

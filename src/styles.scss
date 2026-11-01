@@ -18,24 +18,31 @@ html {
         theme-type: color-scheme,
       ),
       typography: (
+        // Inter for the interface; Fraunces (a soft serif) for display, headline and large titles.
         plain-family: 'Inter, Roboto, sans-serif',
-        brand-family: 'Inter, Roboto, sans-serif',
+        brand-family: 'Fraunces, Georgia, serif',
       ),
       density: 0,
     )
   );
 
-  // The generated neutrals carry a lot of the brown's hue (light tones read peach). Use calmer,
-  // nearly neutral warm greys for every surface; brown stays the accent.
+  // Warm "paper" surfaces: cream in light mode, espresso in dark. Brown stays the accent; cards
+  // are separated from the page by tone (plus a hairline and a soft shadow), not heavy borders.
   @include mat.theme-overrides(
     (
-      background: light-dark(#fbfaf9, #161311),
-      surface: light-dark(#fbfaf9, #161311),
-      surface-container-lowest: light-dark(#ffffff, #120f0d),
-      surface-container-low: light-dark(#f6f4f2, #1c1815),
-      surface-container: light-dark(#f0edea, #221e1b),
-      surface-container-high: light-dark(#eae6e3, #2c2724),
-      surface-container-highest: light-dark(#e4dfdb, #37312d),
+      background: light-dark(#f6f1ea, #13100d),
+      surface: light-dark(#f6f1ea, #13100d),
+      surface-container-lowest: light-dark(#fffdf9, #1c1815),
+      surface-container-low: light-dark(#f6f1ea, #13100d),
+      surface-container: light-dark(#efe8df, #231e1a),
+      surface-container-high: light-dark(#e9e1d7, #2c2622),
+      surface-container-highest: light-dark(#e2d9ce, #37302b),
+      outline-variant: light-dark(#ddd2c5, #3e3631),
+      // Terracotta instead of Material's stock red, so errors stay in the same warm family.
+      error: light-dark(#a8402c, #ffb59f),
+      on-error: light-dark(#ffffff, #5c1a0c),
+      error-container: light-dark(#fbe0d7, #4a1f15),
+      on-error-container: light-dark(#5c1a0c, #ffdbd0),
     )
   );
 
@@ -46,13 +53,22 @@ html {
   --app-warning-container: light-dark(#fde8c8, #4a3412);
   --app-page: var(--mat-sys-surface-container-low);
   --app-radius: 16px;
+  --app-font-display: 'Fraunces', Georgia, serif;
+  // Cards and panels: a barely-there hairline plus a soft warm shadow (no shadow in dark mode).
+  --app-card-border: light-dark(rgb(90 60 35 / 0.09), rgb(255 235 215 / 0.07));
+  --app-card-shadow:
+    0 1px 2px light-dark(rgb(70 45 25 / 0.05), transparent),
+    0 4px 16px -6px light-dark(rgb(70 45 25 / 0.08), transparent);
+  --app-card-shadow-hover:
+    0 2px 4px light-dark(rgb(70 45 25 / 0.06), transparent),
+    0 12px 28px -10px light-dark(rgb(70 45 25 / 0.18), rgb(0 0 0 / 0.55));
 
   // Minimal, flat chrome: the page is a soft tint, cards sit on it in the lightest surface.
   @include mat.card-overrides(
     (
       outlined-container-color: var(--mat-sys-surface-container-lowest),
       outlined-container-shape: var(--app-radius),
-      outlined-outline-color: var(--mat-sys-outline-variant),
+      outlined-outline-color: var(--app-card-border),
     )
   );
   @include mat.toolbar-overrides(
@@ -82,6 +98,13 @@ html {
       container-shape: 20px,
     )
   );
+  // Active nav item: a soft brown pill.
+  @include mat.list-overrides(
+    (
+      active-indicator-color: var(--mat-sys-primary-container),
+      active-indicator-shape: 12px,
+    )
+  );
   @include mat.sidenav-overrides(
     (
       container-background-color: var(--app-page),
@@ -106,6 +129,90 @@ body {
   color: var(--mat-sys-on-surface);
   font: var(--mat-sys-body-medium);
   -webkit-font-smoothing: antialiased;
+  // Inter's straight-sided "l" and open digits read cleaner in dense tables.
+  font-feature-settings: 'cv11', 'ss01';
+}
+
+// Serif headings with optical sizing; tighter tracking reads better at large sizes.
+h1,
+h2,
+.mat-mdc-dialog-title {
+  font-optical-sizing: auto;
+  letter-spacing: -0.015em;
+}
+
+::selection {
+  background: var(--mat-sys-primary-container);
+  color: var(--mat-sys-on-primary-container);
+}
+
+:focus-visible {
+  outline-color: var(--mat-sys-primary);
+}
+
+// Thin, warm scrollbars instead of the default grey slabs.
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--mat-sys-surface-container-highest) transparent;
+}
+
+// Command palette dialog: rounder, no inner padding, a softer backdrop.
+.command-palette-panel {
+  --mat-dialog-container-shape: 18px;
+  --mat-dialog-container-elevation-shadow: 0 24px 64px -16px rgb(30 18 8 / 0.45);
+
+  .mat-mdc-dialog-surface {
+    overflow: hidden;
+  }
+}
+
+.cdk-overlay-backdrop.command-palette-backdrop {
+  background: rgb(30 20 12 / 0.35);
+  backdrop-filter: blur(2px);
+}
+
+// Skeleton shimmer (see <app-skeleton> in shared/ui.ts). Global so any component can draw a bar.
+.sk-bar {
+  display: block;
+  height: 14px;
+  border-radius: 6px;
+  background: linear-gradient(
+      90deg,
+      transparent 0%,
+      light-dark(rgb(255 255 255 / 0.55), rgb(255 255 255 / 0.05)) 50%,
+      transparent 100%
+    )
+    var(--mat-sys-surface-container-high);
+  background-size: 200% 100%;
+  background-repeat: no-repeat;
+  animation: sk-shimmer 1.4s ease-in-out infinite;
+}
+
+.stat-value .sk-bar {
+  display: inline-block;
+  height: 0.8em;
+  vertical-align: middle;
+}
+
+@keyframes sk-shimmer {
+  from {
+    background-position: 150% 0;
+  }
+  to {
+    background-position: -50% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sk-bar {
+    animation: none;
+  }
+}
+
+// Numbers in tables and stats line up.
+.mat-mdc-table,
+.tabular {
+  font-variant-numeric: tabular-nums;
 }
 
 // <mat-icon> uses the "material-icons" class by default; render it with Material Symbols Rounded

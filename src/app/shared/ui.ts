@@ -2,6 +2,7 @@
  * Small presentational building blocks shared across pages. Add new ones here rather than in
  * separate files; they only use theme tokens (--mat-sys-*, --app-*), so light and dark both work.
  */
+import { NgTemplateOutlet } from '@angular/common';
 import { Component, booleanAttribute, computed, input } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -109,7 +110,11 @@ export class StatusPill {
       <span class="stat-icon"
         ><mat-icon>{{ icon() }}</mat-icon></span
       >
-      <span class="stat-value">{{ value() ?? '…' }}</span>
+      @if (value() !== null) {
+        <span class="stat-value">{{ value() }}</span>
+      } @else {
+        <span class="stat-value"><span class="sk-bar" style="width: 2.2em"></span></span>
+      }
       <span class="stat-label">{{ label() }}</span>
     </a>
   `,
@@ -123,18 +128,29 @@ export class StatusPill {
       height: 100%;
       box-sizing: border-box;
       padding: 16px 18px;
-      border: 1px solid var(--mat-sys-outline-variant);
+      border: 1px solid var(--app-card-border);
       border-radius: var(--app-radius);
       background: var(--mat-sys-surface-container-lowest);
+      box-shadow: var(--app-card-shadow);
       color: inherit;
       text-decoration: none;
       transition:
-        border-color 120ms,
-        transform 120ms;
+        box-shadow 180ms ease,
+        transform 180ms ease;
     }
-    .stat:hover,
-    .stat:focus-visible {
-      border-color: var(--mat-sys-outline);
+    a.stat[href]:hover,
+    a.stat[href]:focus-visible {
+      box-shadow: var(--app-card-shadow-hover);
+      transform: translateY(-2px);
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .stat {
+        transition: none;
+      }
+      a.stat[href]:hover,
+      a.stat[href]:focus-visible {
+        transform: none;
+      }
     }
     .stat-icon {
       grid-row: span 2;
@@ -148,8 +164,10 @@ export class StatusPill {
     }
     .stat-value {
       font: var(--mat-sys-headline-medium);
-      font-weight: 600;
+      font-weight: 500;
       line-height: 1.1;
+      letter-spacing: -0.02em;
+      font-variant-numeric: lining-nums tabular-nums;
     }
     .stat-label {
       color: var(--mat-sys-on-surface-variant);
@@ -168,7 +186,12 @@ export class StatusPill {
       color: var(--app-warning);
     }
     [data-tone='warning'] {
-      border-color: color-mix(in srgb, var(--app-warning) 45%, transparent);
+      border-color: color-mix(in srgb, var(--app-warning) 35%, transparent);
+      background: color-mix(
+        in srgb,
+        var(--app-warning-container) 35%,
+        var(--mat-sys-surface-container-lowest)
+      );
     }
   `,
 })
@@ -207,9 +230,10 @@ export class StatCard {
   styles: `
     :host {
       display: block;
-      border: 1px solid var(--mat-sys-outline-variant);
+      border: 1px solid var(--app-card-border);
       border-radius: var(--app-radius);
       background: var(--mat-sys-surface-container-lowest);
+      box-shadow: var(--app-card-shadow);
       overflow: hidden;
     }
     header {
@@ -217,12 +241,14 @@ export class StatCard {
       align-items: center;
       justify-content: space-between;
       gap: 12px;
-      padding: 14px 16px 10px 20px;
+      padding: 16px 16px 10px 20px;
     }
     h2 {
       margin: 0;
-      font: var(--mat-sys-title-medium);
-      font-weight: 600;
+      font-family: var(--app-font-display);
+      font-size: 1.15rem;
+      font-weight: 500;
+      line-height: 1.4;
     }
     p {
       margin: 2px 0 0;
@@ -290,9 +316,9 @@ export class Section {
     }
     h1 {
       margin: 0;
-      font: var(--mat-sys-headline-small);
-      font-weight: 600;
-      letter-spacing: -0.01em;
+      font: var(--mat-sys-headline-medium);
+      font-weight: 500;
+      letter-spacing: -0.02em;
     }
     p {
       margin: 4px 0 0;
@@ -349,5 +375,189 @@ export class Avatar {
       .slice(0, 2)
       .map((part) => part[0].toUpperCase())
       .join(''),
+  );
+}
+
+export type SkeletonVariant = 'rows' | 'list' | 'form' | 'building' | 'tiles';
+
+/**
+ * Shimmering placeholder in the shape of the content that's loading, instead of a spinner.
+ *   rows     – list rows only, for inside an <app-section>
+ *   list     – rows in their own card (list pages)
+ *   form     – two cards of fields (detail pages)
+ *   building – wing tabs + floor grid (structure page); tiles – just the grid
+ * The shimmer itself (`.sk-bar`) is a global class in styles.scss so other components can use it.
+ */
+@Component({
+  selector: 'app-skeleton',
+  template: `
+    <span class="sk-label">Loading…</span>
+    @switch (variant()) {
+      @case ('form') {
+        <div class="sk-cards">
+          @for (card of [0, 1]; track card) {
+            <div class="sk-card sk-pad">
+              <span class="sk-bar sk-title" style="width: 40%"></span>
+              @for (field of fieldRows(); track field) {
+                <span class="sk-bar sk-field"></span>
+              }
+              <span class="sk-bar sk-button"></span>
+            </div>
+          }
+        </div>
+      }
+      @case ('building') {
+        <div class="sk-tabs">
+          @for (tab of [0, 1, 2]; track tab) {
+            <span class="sk-bar sk-tab"></span>
+          }
+        </div>
+        <div class="sk-card sk-pad">
+          <span class="sk-bar sk-title" style="width: 30%"></span>
+          <ng-container *ngTemplateOutlet="tiles" />
+        </div>
+      }
+      @case ('tiles') {
+        <div class="sk-pad"><ng-container *ngTemplateOutlet="tiles" /></div>
+      }
+      @default {
+        <div [class.sk-card]="variant() === 'list'">
+          @for (row of rowList(); track row) {
+            <div class="sk-row">
+              <span class="sk-bar sk-avatar"></span>
+              <span class="sk-lines">
+                <span class="sk-bar" [style.width.%]="60 - (row % 3) * 12"></span>
+                <span class="sk-bar sk-small" [style.width.%]="38 - (row % 2) * 10"></span>
+              </span>
+              <span class="sk-bar sk-pill"></span>
+            </div>
+          }
+        </div>
+      }
+    }
+
+    <ng-template #tiles>
+      @for (floor of [0, 1, 2, 3]; track floor) {
+        <div class="sk-floor">
+          <span class="sk-bar sk-floor-label"></span>
+          @for (unit of [0, 1, 2, 3]; track unit) {
+            <span class="sk-bar sk-unit"></span>
+          }
+        </div>
+      }
+    </ng-template>
+  `,
+  imports: [NgTemplateOutlet],
+  host: { 'aria-busy': 'true', role: 'status' },
+  styles: `
+    :host {
+      display: block;
+    }
+    .sk-label {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+      white-space: nowrap;
+    }
+    .sk-card {
+      border: 1px solid var(--app-card-border);
+      border-radius: var(--app-radius);
+      background: var(--mat-sys-surface-container-lowest);
+      box-shadow: var(--app-card-shadow);
+      overflow: hidden;
+    }
+    .sk-pad {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      padding: 20px;
+    }
+    .sk-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr));
+      gap: 16px;
+    }
+    .sk-row {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 14px 20px;
+    }
+    .sk-row + .sk-row {
+      border-top: 1px solid var(--mat-sys-surface-container-high);
+    }
+    .sk-lines {
+      display: flex;
+      flex: 1;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .sk-avatar {
+      flex: none;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+    }
+    .sk-small {
+      height: 10px;
+    }
+    .sk-pill {
+      flex: none;
+      width: 64px;
+      height: 22px;
+      border-radius: 11px;
+    }
+    .sk-title {
+      height: 20px;
+    }
+    .sk-field {
+      height: 52px;
+      border-radius: 8px;
+    }
+    .sk-button {
+      align-self: flex-end;
+      width: 96px;
+      height: 36px;
+      border-radius: 18px;
+    }
+    .sk-tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    .sk-tab {
+      width: 104px;
+      height: 40px;
+      border-radius: 20px;
+    }
+    .sk-floor {
+      display: flex;
+      gap: 6px;
+    }
+    .sk-floor-label {
+      flex: none;
+      width: 24px;
+      height: 52px;
+      margin-right: 6px;
+    }
+    .sk-unit {
+      flex: 1;
+      height: 52px;
+      border-radius: 10px;
+    }
+  `,
+})
+export class Skeleton {
+  readonly variant = input<SkeletonVariant>('list');
+  /** Rows to draw for the list variants, or fields per card for `form`. */
+  readonly count = input<number | null>(null);
+
+  protected readonly rowList = computed(() =>
+    Array.from({ length: this.count() ?? (this.variant() === 'rows' ? 3 : 6) }, (_, i) => i),
+  );
+  protected readonly fieldRows = computed(() =>
+    Array.from({ length: this.count() ?? 3 }, (_, i) => i),
   );
 }

@@ -1,0 +1,215 @@
+// The printable bill: hidden on screen, alone on the page when printing.
+.print-bill {
+  display: none;
+}
+
+@media print {
+  .screen-only {
+    display: none !important;
+  }
+
+  // The app frame around the page (global: these elements live outside this component).
+  ::ng-deep .shell-toolbar,
+  ::ng-deep .shell-sidenav {
+    display: none !important;
+  }
+
+  ::ng-deep .shell-content {
+    margin-left: 0 !important;
+  }
+
+  .print-bill {
+    display: block;
+    max-width: 720px;
+    margin: 0 auto;
+    color: #000;
+    font-size: 11pt;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .doc-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 16px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid #000;
+
+    h1 {
+      margin: 2px 0 0;
+      font-family: var(--app-font-display);
+      font-size: 20pt;
+      font-weight: 500;
+    }
+  }
+
+  .eyebrow {
+    margin: 0;
+    font-size: 9pt;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .doc-no {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+
+    strong {
+      font-size: 13pt;
+    }
+  }
+
+  .doc-facts {
+    display: grid;
+    grid-template-columns: max-content 1fr max-content 1fr;
+    gap: 6px 16px;
+    margin: 16px 0;
+
+    dt {
+      color: #555;
+    }
+
+    dd {
+      margin: 0;
+    }
+  }
+
+  .doc-table {
+    width: 100%;
+    border-collapse: collapse;
+
+    th,
+    td {
+      padding: 8px 4px;
+      text-align: left;
+      vertical-align: top;
+      border-bottom: 1px solid #ccc;
+    }
+
+    th {
+      border-bottom: 1px solid #000;
+      font-size: 9pt;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .num {
+      text-align: right;
+      white-space: nowrap;
+    }
+
+    .note {
+      display: block;
+      color: #555;
+      font-size: 9pt;
+    }
+
+    tfoot td {
+      font-weight: 600;
+    }
+
+    tfoot .sub td {
+      font-weight: 400;
+    }
+
+    tfoot .due td {
+      border-top: 2px solid #000;
+      border-bottom: none;
+      font-size: 13pt;
+    }
+  }
+
+  .doc-note {
+    margin: 16px 0 0;
+    font-size: 10pt;
+  }
+
+  .doc-stamp {
+    display: inline-block;
+    margin: 16px 0 0;
+    padding: 2px 12px;
+    border: 2px solid #000;
+    border-radius: 4px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .doc-foot {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    margin-top: 32px;
+    padding-top: 8px;
+    border-top: 1px solid #ccc;
+    color: #555;
+    font-size: 9pt;
+
+    span {
+      white-space: nowrap;
+    }
+  }
+}
+
+// Pay-by-UPI panel on screen.
+.upi {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  text-align: center;
+
+  app-qr-code {
+    padding: 8px;
+    border-radius: 12px;
+    background: #fff; // QR codes need a light background in dark mode too
+  }
+
+  p {
+    margin: 0;
+  }
+
+  .upi-amount {
+    margin-top: 8px;
+    font: var(--mat-sys-title-large);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .upi-id {
+    word-break: break-all;
+  }
+
+  button {
+    margin-top: 8px;
+  }
+
+  .upi-hint {
+    margin-top: 8px;
+    font: var(--mat-sys-body-small);
+  }
+}
+
+@media print {
+  .doc-upi {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-top: 20px;
+    padding: 12px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    break-inside: avoid;
+
+    div {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      font-size: 10pt;
+    }
+
+    strong {
+      font-size: 12pt;
+    }
+  }
+}

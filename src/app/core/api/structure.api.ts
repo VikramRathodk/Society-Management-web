@@ -41,8 +41,10 @@ export class StructureApi {
     return this.http.get<Flat>(`${this.baseUrl}/flats/${id}`);
   }
 
-  updateFlat(id: number, flatNumber: string) {
-    return this.http.patch<Flat>(`${this.baseUrl}/flats/${id}`, { flatNumber });
+  updateFlat(id: number, flatNumber: string, areaSqft?: number | null) {
+    // The backend keeps the saved area when areaSqft is left out.
+    const body = areaSqft == null ? { flatNumber } : { flatNumber, areaSqft };
+    return this.http.patch<Flat>(`${this.baseUrl}/flats/${id}`, body);
   }
 
   deleteFlat(id: number) {

@@ -1,0 +1,187 @@
+<app-page-header title="Maintenance" [subtitle]="subtitle()" />
+
+<app-maintenance-tabs />
+
+@if (loading()) {
+  <app-skeleton variant="form" />
+} @else if (loadError()) {
+  <app-empty-state icon="cloud_off" message="Couldn't load the maintenance settings.">
+    <button mat-stroked-button (click)="retry()">Try again</button>
+  </app-empty-state>
+} @else {
+  <div class="layout">
+    <app-section
+      title="Charges"
+      subtitle="What every flat is billed each cycle. Turned-off charges are skipped."
+    >
+      @if (access.canConfigure()) {
+        <button sectionActions mat-stroked-button (click)="addHead()">
+          <mat-icon>add</mat-icon>
+          Add charge
+        </button>
+      }
+      @if (heads().length === 0) {
+        <app-empty-state icon="request_quote" message="No charges yet. Add one to start billing." />
+      } @else {
+        <div>
+          @for (h of heads(); track h.id) {
+            <div class="row">
+              <span class="main">
+                <span class="title" [class.muted]="!h.active">
+                  {{ h.name }}
+                  @if (!h.active) {
+                    <app-status-pill outline>Off</app-status-pill>
+                  }
+                </span>
+                <span class="meta">{{ describe(h) }}</span>
+              </span>
+              @if (access.canConfigure()) {
+                <span class="actions">
+                  <mat-slide-toggle
+                    [checked]="h.active"
+                    (change)="toggleActive(h)"
+                    [attr.aria-label]="'Bill ' + h.name"
+                    [matTooltip]="h.active ? 'Billed' : 'Not billed'"
+                  />
+                  <button
+                    mat-icon-button
+                    (click)="editHead(h)"
+                    [attr.aria-label]="'Edit ' + h.name"
+                  >
+                    <mat-icon>edit</mat-icon>
+                  </button>
+                  <button
+                    mat-icon-button
+                    (click)="deleteHead(h)"
+                    [attr.aria-label]="'Delete ' + h.name"
+                  >
+                    <mat-icon>delete</mat-icon>
+                  </button>
+                </span>
+              }
+            </div>
+          }
+        </div>
+      }
+    </app-section>
+
+    <app-section title="Billing rules" padded>
+      <form [formGroup]="form" (ngSubmit)="save()" novalidate>
+        <mat-form-field appearance="outline" style="width: 100%">
+          <mat-label>Bill every</mat-label>
+          <mat-select formControlName="billingFrequency">
+            @for (f of frequencies; track f.value) {
+              <mat-option [value]="f.value">{{ f.label }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline" subscriptSizing="dynamic" style="width: 100%">
+          <mat-label>Due after</mat-label>
+          <input matInput type="number" min="0" max="365" formControlName="dueDays" />
+          <span matTextSuffix>days</span>
+          <mat-hint>From the start of the period</mat-hint>
+          @if (form.controls.dueDays.invalid) {
+            <mat-error>0 to 365 days</mat-error>
+          }
+        </mat-form-field>
+        <mat-slide-toggle formControlName="roundToRupee" style="display: block; margin: 8px 0 20px">
+          Round bills to the nearest rupee
+        </mat-slide-toggle>
+
+        <div
+          class="muted"
+          style="font: var(--mat-sys-label-large); margin-bottom: 8px"
+          id="late-label"
+        >
+          Late fee
+        </div>
+        <mat-button-toggle-group
+          formControlName="lateFeeType"
+          aria-labelledby="late-label"
+          [hideSingleSelectionIndicator]="true"
+          style="flex-wrap: wrap"
+        >
+          @for (t of lateFeeTypes; track t.value) {
+            <mat-button-toggle [value]="t.value">{{ t.label }}</mat-button-toggle>
+          }
+        </mat-button-toggle-group>
+        <p class="muted" style="margin: 8px 0 16px; font: var(--mat-sys-body-small)">
+          {{ lateFeeHint() }}
+        </p>
+
+        @if (lateFeeType() !== 'NONE') {
+          <mat-form-field appearance="outline" style="width: 100%">
+            <mat-label>{{
+              lateFeeType() === 'FIXED' ? 'Fee per overdue bill' : 'Interest a year'
+            }}</mat-label>
+            @if (lateFeeType() === 'FIXED') {
+              <span matTextPrefix>₹&nbsp;</span>
+            }
+            <input
+              matInput
+              type="number"
+              inputmode="decimal"
+              min="0"
+              step="0.01"
+              formControlName="lateFeeValue"
+            />
+            @if (lateFeeType() === 'SIMPLE_INTEREST') {
+              <span matTextSuffix>%</span>
+            }
+          </mat-form-field>
+        }
+        <mat-form-field appearance="outline" subscriptSizing="dynamic" style="width: 100%">
+          <mat-label>Grace period</mat-label>
+          <input matInput type="number" min="0" max="365" formControlName="graceDays" />
+          <span matTextSuffix>days</span>
+          <mat-hint>A bill counts as overdue this many days after its due date</mat-hint>
+          @if (form.controls.graceDays.invalid) {
+            <mat-error>0 to 365 days</mat-error>
+          }
+        </mat-form-field>
+
+        <div class="muted" style="font: var(--mat-sys-label-large); margin: 16px 0 8px">
+          Pay by UPI
+        </div>
+        <mat-form-field appearance="outline" subscriptSizing="dynamic" style="width: 100%">
+          <mat-label>Society UPI ID</mat-label>
+          <input matInput formControlName="upiId" placeholder="e.g. starktower@okhdfc" />
+          <mat-hint>Shown as a QR code on unpaid bills. Leave empty to hide it.</mat-hint>
+          @if (form.controls.upiId.invalid) {
+            <mat-error>Should look like name&#64;bank, e.g. starktower&#64;okhdfc</mat-error>
+          }
+        </mat-form-field>
+        <mat-form-field
+          appearance="outline"
+          subscriptSizing="dynamic"
+          style="width: 100%; margin-top: 12px"
+        >
+          <mat-label>Payee name (optional)</mat-label>
+          <input matInput formControlName="upiPayeeName" maxlength="100" />
+          <mat-hint>What UPI apps show; the society's name if empty</mat-hint>
+        </mat-form-field>
+
+        @if (error(); as message) {
+          <p class="form-error" role="alert">{{ message }}</p>
+        }
+        @if (settings(); as s) {
+          <p class="muted" style="margin: 8px 0 16px; font: var(--mat-sys-body-small)">
+            @if (s.updatedAt) {
+              Last changed by {{ s.updatedByName }}.
+            } @else {
+              Using the defaults; nothing saved yet.
+            }
+            Changes apply to cycles issued afterwards.
+          </p>
+        }
+        @if (access.canConfigure()) {
+          <div class="form-actions">
+            <button mat-flat-button type="submit" [disabled]="saving() || form.pristine">
+              {{ saving() ? 'Saving…' : 'Save rules' }}
+            </button>
+          </div>
+        }
+      </form>
+    </app-section>
+  </div>
+}

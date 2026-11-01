@@ -15,7 +15,7 @@ import { AuthStore } from '../../core/auth/auth.store';
 import { HasPermission } from '../../core/auth/has-permission.directive';
 import { Complaint, Notice, Visitor, VisitorStatus } from '../../core/models';
 import { SocietyContextStore } from '../../core/society-context/society-context.store';
-import { Section, StatCard, Tone } from '../../shared/ui';
+import { Section, Skeleton, StatCard, Tone } from '../../shared/ui';
 import { ComplaintRow } from '../complaints/complaint-ui';
 import { VisitorPhotos, VisitorRow, timeAgo } from '../visitors/visitor-ui';
 
@@ -49,6 +49,7 @@ interface Card {
   selector: 'app-dashboard',
   imports: [
     DatePipe,
+    Skeleton,
     RouterLink,
     MatButtonModule,
     MatIconModule,

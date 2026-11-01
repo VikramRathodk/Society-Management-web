@@ -1,0 +1,67 @@
+<app-page-header title="Maintenance" [subtitle]="subtitle()">
+  @if (access.canIssue() && !loading() && !hasOpening()) {
+    <a mat-stroked-button routerLink="/maintenance/opening-balances">
+      <mat-icon>history</mat-icon>
+      Opening balances
+    </a>
+  }
+  @if (access.canIssue()) {
+    <a mat-flat-button routerLink="/maintenance/cycles/new">
+      <mat-icon>post_add</mat-icon>
+      New billing cycle
+    </a>
+  }
+</app-page-header>
+
+<app-maintenance-tabs />
+
+@if (loading()) {
+  <app-skeleton variant="list" />
+} @else if (loadError() === 'forbidden') {
+  <app-empty-state icon="lock" message="Only the committee can see billing cycles." />
+} @else if (loadError() === 'failed') {
+  <app-empty-state icon="cloud_off" message="Couldn't load billing cycles.">
+    <button mat-stroked-button (click)="retry()">Try again</button>
+  </app-empty-state>
+} @else if (cycles().length === 0) {
+  <app-empty-state icon="event_note" message="No bills issued yet.">
+    @if (access.canIssue()) {
+      <a mat-flat-button routerLink="/maintenance/cycles/new">Issue the first bills</a>
+    }
+  </app-empty-state>
+} @else {
+  <div class="list">
+    @for (c of cycles(); track c.id) {
+      <a class="row" [routerLink]="['/maintenance/cycles', c.id]">
+        <span class="main">
+          <span class="title" [class.muted]="c.status === 'CANCELLED'">
+            {{ title(c) }}
+            @if (c.status === 'CANCELLED') {
+              <app-status-pill [tone]="cycleStatus.CANCELLED.tone">{{
+                cycleStatus.CANCELLED.label
+              }}</app-status-pill>
+            }
+          </span>
+          <span class="meta">
+            {{ c.billCount }} bill{{ c.billCount === 1 ? '' : 's' }} · due {{ dayLabel(c.dueDate) }}
+          </span>
+          @if (c.status === 'ISSUED') {
+            <div
+              class="progress"
+              style="margin-top: 6px; max-width: 320px"
+              [attr.aria-label]="paidPercent(c.totalPaid, c.totalBilled) + '% collected'"
+            >
+              <span [style.width.%]="paidPercent(c.totalPaid, c.totalBilled)"></span>
+            </div>
+          }
+        </span>
+        <span class="side">
+          <span class="amount">{{ inr(c.totalBilled) }}</span>
+          @if (c.status === 'ISSUED') {
+            <span class="meta">{{ inr(c.totalPaid) }} collected</span>
+          }
+        </span>
+      </a>
+    }
+  </div>
+}

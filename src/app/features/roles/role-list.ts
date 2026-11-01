@@ -2,7 +2,6 @@ import { Component, inject, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
-import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatTableModule } from '@angular/material/table';
 import { Router, RouterLink } from '@angular/router';
 import { filter, finalize } from 'rxjs';
@@ -11,7 +10,7 @@ import { RoleApi } from '../../core/api/role.api';
 import { HasPermission } from '../../core/auth/has-permission.directive';
 import { Role } from '../../core/models';
 import { sortBy } from '../../shared/sort';
-import { EmptyState, PageHeader, Section, StatusPill } from '../../shared/ui';
+import { EmptyState, PageHeader, Section, StatusPill, Skeleton } from '../../shared/ui';
 import { RoleCreateDialog, RoleCreateDialogData } from './role-create-dialog';
 
 @Component({
@@ -20,7 +19,7 @@ import { RoleCreateDialog, RoleCreateDialogData } from './role-create-dialog';
     RouterLink,
     MatButtonModule,
     MatIconModule,
-    MatProgressBarModule,
+    Skeleton,
     MatTableModule,
     HasPermission,
     EmptyState,

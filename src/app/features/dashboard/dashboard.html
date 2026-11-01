@@ -48,7 +48,11 @@
       @for (v of waiting(); track v.id) {
         <app-visitor-row [visitor]="v" compact />
       } @empty {
-        <p class="quiet">{{ loading() ? 'Loading…' : 'Nobody is waiting at the gate.' }}</p>
+        @if (loading()) {
+          <app-skeleton variant="rows" [count]="3" />
+        } @else {
+          <p class="quiet">Nobody is waiting at the gate.</p>
+        }
       }
     </app-section>
 
@@ -57,7 +61,11 @@
       @for (v of recent(); track v.id) {
         <app-visitor-row [visitor]="v" compact />
       } @empty {
-        <p class="quiet">{{ loading() ? 'Loading…' : 'No visitors yet.' }}</p>
+        @if (loading()) {
+          <app-skeleton variant="rows" [count]="3" />
+        } @else {
+          <p class="quiet">No visitors yet.</p>
+        }
       }
     </app-section>
   </div>
@@ -74,7 +82,11 @@
             <span class="notice-meta">{{ n.postedByName }} · {{ timeAgo(n.createdAt) }}</span>
           </a>
         } @empty {
-          <p class="quiet">{{ loading() ? 'Loading…' : 'No notices yet.' }}</p>
+          @if (loading()) {
+            <app-skeleton variant="rows" [count]="3" />
+          } @else {
+            <p class="quiet">No notices yet.</p>
+          }
         }
       </app-section>
     }
@@ -89,7 +101,11 @@
             <app-complaint-row [complaint]="c" compact />
           </a>
         } @empty {
-          <p class="quiet">{{ loading() ? 'Loading…' : 'No open complaints.' }}</p>
+          @if (loading()) {
+            <app-skeleton variant="rows" [count]="3" />
+          } @else {
+            <p class="quiet">No open complaints.</p>
+          }
         }
       </app-section>
     }

@@ -10,7 +10,7 @@
 </app-page-header>
 
 @if (loading()) {
-  <mat-progress-bar mode="indeterminate" />
+  <app-skeleton variant="list" />
 } @else if (loadError()) {
   <app-empty-state icon="cloud_off" message="Couldn't load societies.">
     <button mat-stroked-button (click)="load()">Try again</button>

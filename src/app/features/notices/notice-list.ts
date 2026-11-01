@@ -5,7 +5,6 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
-import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { catchError, filter, finalize, of, switchMap, tap } from 'rxjs';
 
@@ -15,7 +14,7 @@ import { HasPermission } from '../../core/auth/has-permission.directive';
 import { Notice } from '../../core/models';
 import { SocietyContextStore } from '../../core/society-context/society-context.store';
 import { confirmDialog } from '../../shared/confirm-dialog';
-import { Avatar, EmptyState, PageHeader } from '../../shared/ui';
+import { Avatar, EmptyState, PageHeader, Skeleton } from '../../shared/ui';
 import { timeAgo } from '../visitors/visitor-ui';
 import { noticeDialog } from './notice-dialog';
 
@@ -29,7 +28,7 @@ const PAGE_SIZE = 20;
     MatButtonModule,
     MatIconModule,
     MatMenuModule,
-    MatProgressBarModule,
+    Skeleton,
     HasPermission,
     Avatar,
     EmptyState,

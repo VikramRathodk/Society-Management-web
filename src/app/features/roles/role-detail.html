@@ -13,7 +13,7 @@
 </app-page-header>
 
 @if (loading()) {
-  <mat-progress-bar mode="indeterminate" />
+  <app-skeleton variant="form" />
 } @else if (role(); as r) {
   <div class="cards">
     <app-section title="Details" padded>

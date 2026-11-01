@@ -1,45 +1,165 @@
-mat-panel-description {
-  align-items: center;
-  justify-content: space-between;
-}
+@use '@angular/material' as mat;
 
-.panel-actions {
+// Wing picker: a scrollable row of pills.
+.wing-tabs {
   display: flex;
-  margin-left: auto;
-}
-
-.flat-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(88px, 1fr));
   gap: 8px;
-  margin-bottom: 8px;
+  margin: 0 -4px 16px;
+  padding: 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
 }
 
-.flat-tile {
-  min-width: 0;
-}
-
-.flat-tile--static {
-  display: flex;
+.wing-tab {
+  display: inline-flex;
+  flex: none;
   align-items: center;
-  justify-content: center;
+  gap: 8px;
   height: 40px;
-  border: 1px solid var(--mat-sys-outline-variant);
+  padding: 0 14px 0 12px;
+  border: 1px solid var(--app-card-border);
   border-radius: 20px;
-}
-
-.no-flats {
-  margin: 0 0 8px;
+  background: var(--mat-sys-surface-container-lowest);
   color: var(--mat-sys-on-surface-variant);
+  font: var(--mat-sys-label-large);
+  cursor: pointer;
+  transition:
+    background-color 160ms ease,
+    color 160ms ease;
+
+  mat-icon {
+    width: 18px;
+    height: 18px;
+    font-size: 18px;
+  }
+
+  &:hover {
+    background: var(--mat-sys-surface-container);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--mat-sys-primary);
+    outline-offset: 2px;
+  }
+
+  &.active {
+    border-color: transparent;
+    background: var(--mat-sys-primary);
+    color: var(--mat-sys-on-primary);
+  }
 }
 
-// Each wing is its own rounded panel (no accordion, so corners don't merge).
-.wings {
+.wing-tab-count {
+  min-width: 20px;
+  padding: 0 6px;
+  border-radius: 10px;
+  background: color-mix(in srgb, currentColor 14%, transparent);
+  font: var(--mat-sys-label-small);
+  line-height: 20px;
+  text-align: center;
+}
+
+// Building on the left, flat details on the right (stacked on narrow screens).
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+
+  &.has-panel {
+    @media (min-width: 960px) {
+      grid-template-columns: minmax(0, 1fr) 340px;
+    }
+  }
+}
+
+.card {
+  border: 1px solid var(--app-card-border);
+  border-radius: var(--app-radius);
+  background: var(--mat-sys-surface-container-lowest);
+  box-shadow: var(--app-card-shadow);
+  overflow: hidden;
+}
+
+.flat-card {
+  @media (min-width: 960px) {
+    position: sticky;
+    top: 16px;
+  }
+}
+
+.building-header {
   display: flex;
-  flex-direction: column;
-  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 12px 12px 20px;
 }
 
-.wings mat-expansion-panel {
-  border: 1px solid var(--mat-sys-outline-variant);
+.building-title {
+  flex: 1;
+  min-width: 140px;
+
+  h2 {
+    margin: 0;
+    font: var(--mat-sys-headline-small);
+    font-weight: 500;
+  }
+
+  p {
+    margin: 2px 0 0;
+    color: var(--mat-sys-on-surface-variant);
+    font: var(--mat-sys-body-small);
+  }
+}
+
+.overlay-toggle {
+  @include mat.button-toggle-density(-3);
+  @include mat.button-toggle-overrides(
+    (
+      shape: 20px,
+      selected-state-background-color: var(--mat-sys-primary-container),
+      selected-state-text-color: var(--mat-sys-on-primary-container),
+      divider-color: var(--app-card-border),
+    )
+  );
+
+  border-color: var(--app-card-border);
+
+  mat-icon {
+    width: 18px;
+    height: 18px;
+    margin-right: 6px;
+    font-size: 18px;
+    vertical-align: -4px;
+  }
+}
+
+.wing-actions {
+  display: flex;
+}
+
+.building-body {
+  padding: 8px 20px 20px;
+}
+
+.capped {
+  margin: 8px 0 0;
+  color: var(--mat-sys-on-surface-variant);
+  font: var(--mat-sys-body-small);
+  text-align: right;
+}
+
+@media (max-width: 599.98px) {
+  .toggle-label {
+    display: none;
+  }
+
+  .overlay-toggle mat-icon {
+    margin-right: 0;
+  }
+
+  .building-body {
+    padding: 4px 12px 16px;
+  }
 }

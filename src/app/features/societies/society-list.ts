@@ -2,7 +2,6 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
-import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
@@ -15,7 +14,7 @@ import { Society } from '../../core/models';
 import { SocietyContextStore } from '../../core/society-context/society-context.store';
 import { confirmDialog } from '../../shared/confirm-dialog';
 import { sortBy } from '../../shared/sort';
-import { EmptyState, PageHeader, Section } from '../../shared/ui';
+import { EmptyState, PageHeader, Section, Skeleton } from '../../shared/ui';
 import { SocietyCreateDialog } from './society-create-dialog';
 
 @Component({
@@ -24,7 +23,7 @@ import { SocietyCreateDialog } from './society-create-dialog';
     RouterLink,
     MatButtonModule,
     MatIconModule,
-    MatProgressBarModule,
+    Skeleton,
     MatTableModule,
     MatTooltipModule,
     HasPermission,
