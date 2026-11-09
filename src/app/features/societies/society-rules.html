@@ -1,0 +1,92 @@
+@if (loading()) {
+  <app-skeleton variant="form" />
+} @else if (groups(); as groups) {
+  @for (group of groups; track group.key) {
+    <app-section
+      [title]="group.label"
+      subtitle="Rules for this society"
+      padded
+      class="settings-card"
+    >
+      <form [formGroup]="formOf(group)" (ngSubmit)="save(group)">
+        @for (s of group.settings; track s.key) {
+          <div class="setting">
+            @switch (s.type) {
+              @case ('BOOLEAN') {
+                <mat-slide-toggle [formControlName]="s.key">{{ s.label }}</mat-slide-toggle>
+                <p class="description">{{ s.description }}</p>
+              }
+              @case ('INTEGER') {
+                <mat-form-field appearance="outline">
+                  <mat-label>{{ s.label }}</mat-label>
+                  <input
+                    matInput
+                    type="number"
+                    [formControlName]="s.key"
+                    [attr.min]="s.min"
+                    [attr.max]="s.max"
+                  />
+                  <mat-hint>{{ s.description }}</mat-hint>
+                  <mat-error>{{ limitText(s) }}</mat-error>
+                </mat-form-field>
+              }
+              @case ('CHOICE') {
+                <mat-form-field appearance="outline">
+                  <mat-label>{{ s.label }}</mat-label>
+                  <mat-select [formControlName]="s.key">
+                    @for (option of s.options; track option) {
+                      <mat-option [value]="option">{{ option }}</mat-option>
+                    }
+                  </mat-select>
+                  <mat-hint>{{ s.description }}</mat-hint>
+                </mat-form-field>
+              }
+              @default {
+                <mat-form-field appearance="outline">
+                  <mat-label>{{ s.label }}</mat-label>
+                  <input matInput [formControlName]="s.key" [attr.maxlength]="s.maxLength" />
+                  <mat-hint>{{ s.description }}</mat-hint>
+                  <mat-error>At most {{ s.maxLength }} characters</mat-error>
+                </mat-form-field>
+              }
+            }
+            <div class="meta">
+              @if (s.customized) {
+                <span>
+                  Changed{{ s.updatedAt ? ' on ' + (s.updatedAt | date: 'd MMM y') : '' }} · default
+                  is {{ valueText(s, s.defaultValue) }}
+                </span>
+                <button
+                  mat-button
+                  type="button"
+                  [disabled]="saving() !== null"
+                  (click)="reset(group, s)"
+                >
+                  Reset to default
+                </button>
+              } @else {
+                <span>Default</span>
+              }
+            </div>
+          </div>
+        }
+
+        @if (errors()[group.key]; as message) {
+          <p class="form-error" role="alert">{{ message }}</p>
+        }
+
+        <div class="form-actions">
+          <button
+            mat-flat-button
+            type="submit"
+            [disabled]="formOf(group).pristine || saving() !== null"
+          >
+            Save
+          </button>
+        </div>
+      </form>
+    </app-section>
+  }
+} @else {
+  <app-empty-state icon="tune" message="The society's rules could not be loaded." />
+}

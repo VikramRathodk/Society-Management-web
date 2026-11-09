@@ -15,6 +15,7 @@ import { errorMessage } from '../../core/auth/error.interceptor';
 import { Society } from '../../core/models';
 import { SocietyContextStore } from '../../core/society-context/society-context.store';
 import { EmptyState, PageHeader, Section, Skeleton } from '../../shared/ui';
+import { SocietyRules } from './society-rules';
 
 @Component({
   selector: 'app-society-settings',
@@ -29,6 +30,7 @@ import { EmptyState, PageHeader, Section, Skeleton } from '../../shared/ui';
     EmptyState,
     PageHeader,
     Section,
+    SocietyRules,
   ],
   templateUrl: './society-settings.html',
   styleUrl: './society-settings.scss',
