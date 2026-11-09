@@ -128,7 +128,11 @@
             [flat]="flat"
             [info]="selectedInfo()"
             [show]="available()"
-            (rename)="renameFlat(wing, flat)"
+            [canCreateUser]="canCreateUser()"
+            [canAssignRole]="canAssignRole()"
+            (addNewResident)="addNewResident(wing, flat)"
+            (addExistingResident)="addExistingResident(wing, flat)"
+            (edit)="editFlat(wing, flat)"
             (remove)="deleteFlat(wing, flat)"
             (closed)="selectedFlatId.set(null)"
           />

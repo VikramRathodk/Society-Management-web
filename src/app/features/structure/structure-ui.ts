@@ -2,18 +2,33 @@
  * Building-view pieces for the Structure page: floor grouping, the floor × flat grid and the flat
  * detail panel. Add further structure UI here rather than in new files.
  */
-import { Component, computed, input, output } from '@angular/core';
+import { HttpErrorResponse } from '@angular/common/http';
+import { Component, computed, inject, input, output, signal } from '@angular/core';
+import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
+import {
+  MAT_DIALOG_DATA,
+  MatDialog,
+  MatDialogModule,
+  MatDialogRef,
+} from '@angular/material/dialog';
+import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
+import { MatInputModule } from '@angular/material/input';
+import { MatMenuModule } from '@angular/material/menu';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { Observable, filter } from 'rxjs';
 
+import { errorMessage } from '../../core/auth/error.interceptor';
 import { HasPermission } from '../../core/auth/has-permission.directive';
 import { Complaint, Flat, ResidentType, Visitor, Wing } from '../../core/models';
 import { sortBy } from '../../shared/sort';
 import { Avatar } from '../../shared/ui';
 import { ComplaintRow } from '../complaints/complaint-ui';
 import { VisitorRow } from '../visitors/visitor-ui';
+
+const AREA_FORMAT = new Intl.NumberFormat('en-IN', { maximumFractionDigits: 2 });
 
 /** What the grid colours each flat by. */
 export type Overlay = 'residents' | 'complaints' | 'visitors';
@@ -346,6 +361,7 @@ const RESIDENT_TYPE: Record<ResidentType, string> = {
     RouterLink,
     MatButtonModule,
     MatIconModule,
+    MatMenuModule,
     MatTooltipModule,
     HasPermission,
     Avatar,
@@ -357,14 +373,15 @@ const RESIDENT_TYPE: Record<ResidentType, string> = {
       <div>
         <p class="eyebrow">{{ wing().name }} · {{ floorText() }}</p>
         <h2>Flat {{ flat().flatNumber }}</h2>
+        <p class="area">{{ areaText() }}</p>
       </div>
       <span class="header-actions">
         <button
           mat-icon-button
           *hasPermission="'FLAT.STRUCTURE.UPDATE'"
-          (click)="rename.emit()"
-          matTooltip="Rename flat"
-          aria-label="Rename flat"
+          (click)="edit.emit()"
+          matTooltip="Edit flat"
+          aria-label="Edit flat"
         >
           <mat-icon>edit</mat-icon>
         </button>
@@ -387,6 +404,26 @@ const RESIDENT_TYPE: Record<ResidentType, string> = {
       <section>
         <h3>
           Residents <span class="count">{{ residents().length }}</span>
+          @if (canCreateUser() || canAssignRole()) {
+            <button mat-button class="add-resident" [matMenuTriggerFor]="addMenu">
+              <mat-icon>person_add</mat-icon>
+              Add resident
+            </button>
+            <mat-menu #addMenu="matMenu" xPosition="before">
+              @if (canCreateUser()) {
+                <button mat-menu-item (click)="addNewResident.emit()">
+                  <mat-icon>person_add</mat-icon>
+                  New user
+                </button>
+              }
+              @if (canAssignRole()) {
+                <button mat-menu-item (click)="addExistingResident.emit()">
+                  <mat-icon>how_to_reg</mat-icon>
+                  Existing user
+                </button>
+              }
+            </mat-menu>
+          }
         </h3>
         @for (r of residents(); track r.userId) {
           <a class="resident" [routerLink]="['/users', r.userId]" [class.inactive]="!r.isActive">
@@ -455,6 +492,11 @@ const RESIDENT_TYPE: Record<ResidentType, string> = {
       font: var(--mat-sys-headline-small);
       font-weight: 500;
     }
+    .area {
+      margin: 2px 0 0;
+      color: var(--mat-sys-on-surface-variant);
+      font: var(--mat-sys-body-small);
+    }
     .header-actions {
       display: flex;
       flex: none;
@@ -470,6 +512,9 @@ const RESIDENT_TYPE: Record<ResidentType, string> = {
       padding: 8px 20px;
       color: var(--mat-sys-on-surface-variant);
       font: var(--mat-sys-title-small);
+    }
+    .add-resident {
+      margin-left: auto;
     }
     .count {
       padding: 0 7px;
@@ -525,7 +570,13 @@ export class FlatPanel {
   readonly info = input.required<FlatInfo>();
   /** Which sections the viewer may see. */
   readonly show = input.required<readonly Overlay[]>();
-  readonly rename = output<void>();
+  /** "Add resident" → "New user": creates an account with a role on this flat. */
+  readonly canCreateUser = input(false);
+  /** "Add resident" → "Existing user": gives someone already registered a role on this flat. */
+  readonly canAssignRole = input(false);
+  readonly addNewResident = output<void>();
+  readonly addExistingResident = output<void>();
+  readonly edit = output<void>();
   readonly remove = output<void>();
   readonly closed = output<void>();
 
@@ -535,8 +586,130 @@ export class FlatPanel {
     if (floor === null) return 'Unnumbered floor';
     return floor === 0 ? 'Ground floor' : `Floor ${floor}`;
   });
+  protected readonly areaText = computed(() => {
+    const area = this.flat().areaSqft;
+    return area == null ? 'Area not set' : `${AREA_FORMAT.format(area)} sq ft`;
+  });
   /** Active first, then by name. */
   protected readonly residents = computed(() =>
     sortBy(this.info().residents, (r) => `${r.isActive ? 0 : 1}${r.name}`),
   );
+}
+
+// ---- Flat dialog ----
+
+/** Up to 6 digits and 2 decimals, matching the backend's limits. */
+const AREA = /^\d{1,6}(\.\d{1,2})?$/;
+
+export interface FlatDialogData {
+  title: string;
+  confirmText?: string;
+  /** The flat being edited; omitted when adding one. */
+  flat?: Flat;
+  /** Called with the trimmed number and the area (null when left empty). */
+  save: (flatNumber: string, areaSqft: number | null) => Observable<Flat>;
+}
+
+/** Flat number and carpet area, for adding or editing a flat. */
+@Component({
+  selector: 'app-flat-dialog',
+  imports: [
+    ReactiveFormsModule,
+    MatButtonModule,
+    MatDialogModule,
+    MatFormFieldModule,
+    MatInputModule,
+  ],
+  template: `
+    <h2 mat-dialog-title>{{ data.title }}</h2>
+    <form [formGroup]="form" (ngSubmit)="submit()">
+      <mat-dialog-content>
+        <mat-form-field appearance="outline">
+          <mat-label>Flat number</mat-label>
+          <input matInput formControlName="flatNumber" cdkFocusInitial />
+          @if (form.controls.flatNumber.invalid) {
+            <mat-error>Flat number is required</mat-error>
+          }
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Area</mat-label>
+          <input matInput formControlName="area" inputmode="decimal" />
+          <span matTextSuffix>sq ft</span>
+          @if (form.controls.area.hasError('required')) {
+            <mat-error>A saved area can be changed but not removed</mat-error>
+          } @else if (form.controls.area.invalid) {
+            <mat-error>Enter a positive number with up to 2 decimals</mat-error>
+          } @else {
+            <mat-hint>Used by per-sq-ft maintenance charges</mat-hint>
+          }
+        </mat-form-field>
+        @if (error(); as message) {
+          <p class="dialog-error" role="alert">{{ message }}</p>
+        }
+      </mat-dialog-content>
+      <mat-dialog-actions align="end">
+        <button mat-button type="button" mat-dialog-close>Cancel</button>
+        <button mat-flat-button type="submit" [disabled]="saving()">
+          {{ data.confirmText ?? 'Save' }}
+        </button>
+      </mat-dialog-actions>
+    </form>
+  `,
+  styles: `
+    mat-form-field {
+      width: 100%;
+    }
+    .dialog-error {
+      margin: 0;
+      color: var(--mat-sys-error);
+    }
+  `,
+})
+export class FlatDialog {
+  private readonly ref = inject<MatDialogRef<FlatDialog, Flat>>(MatDialogRef);
+  protected readonly data = inject<FlatDialogData>(MAT_DIALOG_DATA);
+
+  private readonly savedArea = this.data.flat?.areaSqft ?? null;
+  protected readonly form = inject(NonNullableFormBuilder).group({
+    flatNumber: [this.data.flat?.flatNumber ?? '', [Validators.required, Validators.pattern(/\S/)]],
+    // The backend keeps the saved area when none is sent, so once set it can't be cleared here.
+    area: [
+      this.savedArea == null ? '' : String(this.savedArea),
+      this.savedArea == null
+        ? [Validators.pattern(AREA), Validators.min(0.01)]
+        : [Validators.required, Validators.pattern(AREA), Validators.min(0.01)],
+    ],
+  });
+  protected readonly saving = signal(false);
+  protected readonly error = signal<string | null>(null);
+
+  protected submit(): void {
+    if (this.form.invalid || this.saving()) return;
+    const flatNumber = this.form.controls.flatNumber.value.trim();
+    const areaText = this.form.controls.area.value.trim();
+    const area = areaText === '' ? null : Number(areaText);
+    const flat = this.data.flat;
+    if (flat && flat.flatNumber === flatNumber && (flat.areaSqft ?? null) === area) {
+      this.ref.close();
+      return;
+    }
+    this.saving.set(true);
+    this.error.set(null);
+    this.data.save(flatNumber, area).subscribe({
+      next: (result) => this.ref.close(result),
+      error: (err: HttpErrorResponse) => {
+        this.saving.set(false);
+        // Other statuses are already reported by the error interceptor.
+        if (err.status === 400) this.error.set(errorMessage(err));
+      },
+    });
+  }
+}
+
+/** Opens the dialog and emits the saved flat; completes without emitting if cancelled. */
+export function flatDialog(dialog: MatDialog, data: FlatDialogData): Observable<Flat> {
+  return dialog
+    .open<FlatDialog, FlatDialogData, Flat>(FlatDialog, { data, width: '400px' })
+    .afterClosed()
+    .pipe(filter((result): result is Flat => result !== undefined));
 }

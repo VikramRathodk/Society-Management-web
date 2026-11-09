@@ -3,13 +3,19 @@ import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-i
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
-import { catchError, forkJoin, of, switchMap, tap } from 'rxjs';
+import { catchError, forkJoin, map, of, switchMap, tap } from 'rxjs';
 
 import { RoleApi } from '../../core/api/role.api';
 import { StructureApi } from '../../core/api/structure.api';
 import { InvitationApi } from '../../core/api/invitation.api';
 import { AssignRoleRequest, AssignableRole, Flat, ResidentType, Wing } from '../../core/models';
 import { sortBy } from '../../shared/sort';
+
+/** A flat to start the role fields on. */
+export interface FlatPreset {
+  wingId: number;
+  flatId: number;
+}
 
 /**
  * Role picker shared by "create user" and "assign role". Offers only roles the caller may assign
@@ -31,6 +37,11 @@ export class RoleFields {
   readonly societyId = input<number | null>(null);
   /** Also offer platform-wide roles; the caller decides from its own permissions. */
   readonly includePlatform = input(false);
+  /**
+   * Starts on a resident role for this flat ("Add resident" on the Structure page). The fields stay
+   * editable.
+   */
+  readonly preset = input<FlatPreset | null>(null);
 
   readonly form = this.fb.group({
     role: ['', Validators.required],
@@ -89,6 +100,11 @@ export class RoleFields {
         this.roles.set(sortBy([...byCode.values()], (r) => r.name));
         this.rolesLoaded.set(true);
         if (!byCode.has(this.form.controls.role.value)) this.form.controls.role.setValue('');
+        if (this.preset() && !this.form.controls.role.value) {
+          const flatRoles = this.roles().filter((r) => r.requiresFlat);
+          const role = flatRoles.find((r) => r.code === 'RESIDENT') ?? flatRoles[0];
+          if (role) this.form.controls.role.setValue(role.code);
+        }
       });
 
     effect(() => {
@@ -104,11 +120,22 @@ export class RoleFields {
           this.form.controls.flatId.setValue(null);
         }),
         switchMap((wingId) =>
-          wingId == null ? of([]) : this.structureApi.flats(wingId).pipe(catchError(() => of([]))),
+          wingId == null
+            ? of({ wingId, flats: [] as Flat[] })
+            : this.structureApi.flats(wingId).pipe(
+                catchError(() => of([] as Flat[])),
+                map((flats) => ({ wingId, flats })),
+              ),
         ),
         takeUntilDestroyed(),
       )
-      .subscribe((flats) => this.flats.set(sortBy(flats, (f) => f.flatNumber)));
+      .subscribe(({ wingId, flats }) => {
+        this.flats.set(sortBy(flats, (f) => f.flatNumber));
+        const preset = this.preset();
+        if (preset && preset.wingId === wingId && flats.some((f) => f.id === preset.flatId)) {
+          this.form.controls.flatId.setValue(preset.flatId);
+        }
+      });
   }
 
   /** The chosen role as a request body; societyId is only sent for society-scoped roles. */
@@ -139,7 +166,14 @@ export class RoleFields {
     this.flats.set([]);
     if (needed && societyId != null) {
       this.structureApi.wings(societyId).subscribe({
-        next: (wings) => this.wings.set(sortBy(wings, (w) => w.name)),
+        next: (wings) => {
+          this.wings.set(sortBy(wings, (w) => w.name));
+          const preset = this.preset();
+          const { wingId } = this.form.controls;
+          if (preset && wingId.value == null && wings.some((w) => w.id === preset.wingId)) {
+            wingId.setValue(preset.wingId);
+          }
+        },
         error: () => {}, // reported by the error interceptor
       });
     }

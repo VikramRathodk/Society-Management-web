@@ -7,16 +7,18 @@ import { RouterLink } from '@angular/router';
 import { Observable, catchError, forkJoin, map, of, switchMap, tap } from 'rxjs';
 
 import { ComplaintApi } from '../../core/api/complaint.api';
+import { MaintenanceApi } from '../../core/api/maintenance.api';
 import { NoticeApi } from '../../core/api/notice.api';
 import { StructureApi } from '../../core/api/structure.api';
 import { UserApi } from '../../core/api/user.api';
 import { VisitorApi } from '../../core/api/visitor.api';
 import { AuthStore } from '../../core/auth/auth.store';
 import { HasPermission } from '../../core/auth/has-permission.directive';
-import { Complaint, Notice, Visitor, VisitorStatus } from '../../core/models';
+import { Complaint, FlatDues, Notice, Visitor, VisitorStatus } from '../../core/models';
 import { SocietyContextStore } from '../../core/society-context/society-context.store';
 import { Section, Skeleton, StatCard, Tone } from '../../shared/ui';
 import { ComplaintRow } from '../complaints/complaint-ui';
+import { MaintenanceAccess, inr } from '../maintenance/maintenance-ui';
 import { VisitorPhotos, VisitorRow, timeAgo } from '../visitors/visitor-ui';
 
 /** The API caps a page at 100 and returns no totals, so larger counts show as "100+". */
@@ -33,6 +35,7 @@ interface DashboardData {
   wings?: number | null;
   openComplaints?: Complaint[] | null;
   notices?: Notice[] | null;
+  dues?: FlatDues[] | null;
 }
 
 interface Card {
@@ -69,6 +72,8 @@ export class Dashboard {
   private readonly structureApi = inject(StructureApi);
   private readonly complaintApi = inject(ComplaintApi);
   private readonly noticeApi = inject(NoticeApi);
+  private readonly maintenanceApi = inject(MaintenanceApi);
+  private readonly maintenance = inject(MaintenanceAccess);
   protected readonly auth = inject(AuthStore);
   protected readonly ctx = inject(SocietyContextStore);
 
@@ -84,6 +89,9 @@ export class Dashboard {
   );
   protected readonly canViewNotices = computed(
     () => this.can('NOTICE.POST.VIEW') && this.ctx.selectedSocietyId() != null,
+  );
+  protected readonly canViewDues = computed(
+    () => this.can('MAINTENANCE.BILL.VIEW') && this.ctx.selectedSocietyId() != null,
   );
   protected readonly timeAgo = timeAgo;
 
@@ -134,6 +142,18 @@ export class Dashboard {
         link: '/complaints',
         queryParams: { status: 'OPEN' },
         tone: open > 0 ? 'warning' : 'neutral',
+      });
+    }
+    if (this.canViewDues()) {
+      // The backend scopes dues to the viewer: every flat for the committee, a resident's own flat.
+      const dues = d.dues;
+      const overdue = sum(dues, (f) => f.overdue);
+      cards.push({
+        label: this.maintenance.committee() ? 'Outstanding dues' : 'Your dues',
+        icon: 'account_balance_wallet',
+        value: loading ? null : dues == null ? '—' : inr(sum(dues, (f) => f.outstanding)),
+        link: '/maintenance',
+        tone: overdue > 0 ? 'warning' : 'neutral',
       });
     }
     if (this.can('USER.ACCOUNT.VIEW')) {
@@ -210,6 +230,9 @@ export class Dashboard {
     if (this.can('NOTICE.POST.VIEW') && societyId != null) {
       requests.notices = settle(this.noticeApi.list(societyId, 0, NOTICES, { silent: true }));
     }
+    if (this.can('MAINTENANCE.BILL.VIEW') && societyId != null) {
+      requests.dues = settle(this.maintenanceApi.dues(societyId, false, { silent: true }));
+    }
     return Object.keys(requests).length ? forkJoin(requests) : of({});
   }
 }
@@ -217,6 +240,11 @@ export class Dashboard {
 function display(count: number | null | undefined): string {
   if (count == null) return '—';
   return count >= MAX ? `${MAX}+` : String(count);
+}
+
+function sum<T>(items: readonly T[] | null | undefined, value: (item: T) => number): number {
+  // Rounded to paise so float sums like 0.1 + 0.2 don't show stray digits.
+  return Math.round((items ?? []).reduce((total, item) => total + value(item), 0) * 100) / 100;
 }
 
 function isToday(iso: string | null): boolean {

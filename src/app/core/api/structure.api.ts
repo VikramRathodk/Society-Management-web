@@ -33,8 +33,9 @@ export class StructureApi {
     return this.http.get<Flat[]>(`${this.baseUrl}/wings/${wingId}/flats`);
   }
 
-  createFlat(wingId: number, flatNumber: string) {
-    return this.http.post<Flat>(`${this.baseUrl}/wings/${wingId}/flats`, { flatNumber });
+  createFlat(wingId: number, flatNumber: string, areaSqft?: number | null) {
+    const body = areaSqft == null ? { flatNumber } : { flatNumber, areaSqft };
+    return this.http.post<Flat>(`${this.baseUrl}/wings/${wingId}/flats`, body);
   }
 
   getFlat(id: number) {

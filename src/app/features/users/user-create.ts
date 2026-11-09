@@ -5,14 +5,20 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
-import { Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, ParamMap, Router, RouterLink } from '@angular/router';
 
 import { UserApi } from '../../core/api/user.api';
 import { AuthStore } from '../../core/auth/auth.store';
 import { errorMessage } from '../../core/auth/error.interceptor';
 import { SocietyContextStore } from '../../core/society-context/society-context.store';
 import { PageHeader, Section } from '../../shared/ui';
-import { RoleFields } from './role-fields';
+import { FlatPreset, RoleFields } from './role-fields';
+
+function presetFrom(params: ParamMap): FlatPreset | null {
+  const wingId = Number(params.get('wingId'));
+  const flatId = Number(params.get('flatId'));
+  return wingId > 0 && flatId > 0 ? { wingId, flatId } : null;
+}
 
 /** Create a user together with their first role (guide section 7.1). */
 @Component({
@@ -34,6 +40,8 @@ import { RoleFields } from './role-fields';
 export class UserCreate {
   private readonly api = inject(UserApi);
   private readonly router = inject(Router);
+  /** `?wingId=&flatId=` from "Add resident" on the Structure page. */
+  protected readonly preset = presetFrom(inject(ActivatedRoute).snapshot.queryParamMap);
   protected readonly ctx = inject(SocietyContextStore);
   protected readonly includePlatformRoles = inject(AuthStore).canOnPlatform('USER.ACCOUNT.CREATE');
 
