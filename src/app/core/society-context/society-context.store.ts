@@ -61,21 +61,30 @@ export class SocietyContextStore {
     }
     const ids = this.societyIds();
     if (!ids.length) return of([]);
-    // Everyone else works in the societies they hold roles in; names need view permission there.
+    // Everyone else works in the societies they hold roles in. With view permission the society is
+    // fetched; otherwise (e.g. residents) its name comes with the user's own roles.
     return forkJoin(
       ids.map((id) =>
         this.auth.can(VIEW_SOCIETY, id)
           ? this.societyApi.get(id).pipe(
               map(toOption),
-              catchError(() => of(placeholder(id))),
+              catchError(() => of(this.fromRoles(id))),
             )
-          : of(placeholder(id)),
+          : of(this.fromRoles(id)),
       ),
     ).pipe(map(sortByName));
   }
 
   private accessFallback(): SocietyOption[] {
-    return this.societyIds().map(placeholder);
+    return this.societyIds().map((id) => this.fromRoles(id));
+  }
+
+  /** The name from the user's own roles (members always get it), or "Society #id" if there is none. */
+  private fromRoles(id: number): SocietyOption {
+    const name = this.auth
+      .user()
+      ?.roles?.find((r) => r.societyId === id && r.societyName)?.societyName;
+    return name ? { id, name } : placeholder(id);
   }
 
   private societyIds(): number[] {

@@ -30,6 +30,8 @@ export interface RoleAssignment {
   role: string;
   roleName: string;
   societyId: number | null;
+  /** Always given for the user's own roles, even without permission to view the society. */
+  societyName: string | null;
   flatId: number | null;
   residentType: ResidentType | null;
 }

@@ -4,7 +4,7 @@ import { TestBed } from '@angular/core/testing';
 import { firstValueFrom } from 'rxjs';
 
 import { AuthStore } from '../auth/auth.store';
-import { Access } from '../models';
+import { Access, RoleAssignment } from '../models';
 import { SocietyContextStore } from './society-context.store';
 
 const VIEW = 'SOCIETY.SETTINGS.VIEW';
@@ -12,6 +12,7 @@ const VIEW = 'SOCIETY.SETTINGS.VIEW';
 describe('SocietyContextStore', () => {
   let http: HttpTestingController;
   let access: Access | null;
+  let roles: Partial<RoleAssignment>[];
 
   /** Signs in through the real AuthStore so `access` drives its permission checks. */
   async function setup(): Promise<SocietyContextStore> {
@@ -23,7 +24,7 @@ describe('SocietyContextStore', () => {
       TestBed.inject(AuthStore).login({ phone: '9000000616', password: 'Pass@123' }),
     );
     http.expectOne('/api/auth/login').flush({ token: 'jwt', access });
-    http.expectOne('/api/users/me').flush({ user: { id: 7, name: 'Test' }, access });
+    http.expectOne('/api/users/me').flush({ user: { id: 7, name: 'Test', roles }, access });
     await signedIn;
     return TestBed.inject(SocietyContextStore);
   }
@@ -31,6 +32,7 @@ describe('SocietyContextStore', () => {
   beforeEach(() => {
     localStorage.clear();
     access = null;
+    roles = [];
   });
 
   afterEach(() => http.verify());
@@ -65,6 +67,18 @@ describe('SocietyContextStore', () => {
       { id: 1, name: 'Avengers Tower' },
       { id: 3, name: 'Society #3' },
     ]);
+  });
+
+  it("names a society from the user's own roles when they can't view it", async () => {
+    access = {
+      platformRoles: [],
+      platformPermissions: [],
+      societies: [{ societyId: 3, roles: ['RESIDENT'], permissions: [] }],
+    };
+    roles = [{ role: 'RESIDENT', societyId: 3, societyName: 'Stark Tower', flatId: 9 }];
+    const ctx = await setup();
+    await firstValueFrom(ctx.load());
+    expect(ctx.societies()).toEqual([{ id: 3, name: 'Stark Tower' }]);
   });
 
   it('keeps a stored selection that is still valid', async () => {
