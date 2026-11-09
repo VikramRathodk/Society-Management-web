@@ -7,6 +7,7 @@ import {
   AcceptInvitationRequest,
   AssignableRole,
   CreateInvitationRequest,
+  FlatInviteOption,
   Invitation,
   InvitationPreview,
   InvitationStatus,
@@ -21,6 +22,13 @@ export class InvitationApi {
   /** Roles the caller may invite people to in this society. */
   roles(societyId: number) {
     return this.http.get<AssignableRole[]>(`${this.base}/societies/${societyId}/invitations/roles`);
+  }
+
+  /** The signed-in resident's flats they may invite people to (empty when not allowed). */
+  flatOptions(societyId: number) {
+    return this.http.get<FlatInviteOption[]>(
+      `${this.base}/societies/${societyId}/invitations/flat-options`,
+    );
   }
 
   create(societyId: number, body: CreateInvitationRequest) {
@@ -50,6 +58,15 @@ export class InvitationApi {
   /** A new link and QR code; the old link stops working. */
   resend(id: number) {
     return this.http.post<IssuedInvitation>(`${this.base}/invitations/${id}/resend`, null);
+  }
+
+  /** A resident's invitation: its link starts working. */
+  approve(id: number) {
+    return this.http.post<Invitation>(`${this.base}/invitations/${id}/approve`, null);
+  }
+
+  reject(id: number) {
+    return this.http.post<Invitation>(`${this.base}/invitations/${id}/reject`, null);
   }
 
   revoke(id: number) {

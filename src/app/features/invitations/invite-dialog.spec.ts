@@ -4,6 +4,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { MATERIAL_ANIMATIONS } from '@angular/material/core';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 
+import { FlatInviteOption } from '../../core/models';
 import { InviteDialog } from './invite-dialog';
 import { issued } from './invitation-test-data';
 
@@ -24,7 +25,11 @@ describe('InviteDialog', () => {
     input.dispatchEvent(new Event('input'));
   };
 
-  async function setup(data: { societyId: number; issued?: ReturnType<typeof issued> }) {
+  async function setup(data: {
+    societyId: number;
+    issued?: ReturnType<typeof issued>;
+    flatOptions?: FlatInviteOption[];
+  }) {
     TestBed.configureTestingModule({
       imports: [InviteDialog],
       providers: [
@@ -110,5 +115,67 @@ describe('InviteDialog', () => {
     await setup({ societyId: 4, issued: issued() });
     expect(el().querySelector('h2')?.textContent).toContain('Invitation ready');
     expect(button('Invite another')).toBeUndefined();
+  });
+
+  const ownFlat: FlatInviteOption = {
+    flatId: 9,
+    flatLabel: 'A-101',
+    role: 'RESIDENT',
+    roleName: 'Resident',
+    residentTypes: ['FAMILY', 'TENANT'],
+    needsApproval: true,
+  };
+
+  it('lets a resident invite to their own flat without choosing a role', async () => {
+    await setup({ societyId: 4, flatOptions: [ownFlat] });
+    http.expectNone((r) => r.url.endsWith('/invitations/roles'));
+    expect(el().querySelector('h2')?.textContent).toContain('Invite to your flat');
+    expect(el().querySelector('app-role-fields')).toBeNull();
+    expect(el().textContent).toContain('approves it before the link works');
+
+    type('Name', 'Pepper');
+    type('Phone', '9876543210');
+    (
+      fixture.componentInstance as unknown as {
+        form: { controls: { residentType: { setValue(v: string): void } } };
+      }
+    ).form.controls.residentType.setValue('FAMILY');
+    fixture.detectChanges();
+    (el().querySelector('button[type="submit"]') as HTMLButtonElement).click();
+
+    const req = http.expectOne((r) => r.method === 'POST');
+    expect(req.request.body).toEqual({
+      name: 'Pepper',
+      phone: '9876543210',
+      role: 'RESIDENT',
+      flatId: 9,
+      residentType: 'FAMILY',
+    });
+    req.flush(issued({ name: 'Pepper', status: 'AWAITING_APPROVAL', residentType: 'FAMILY' }));
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(el().querySelector('[role="status"]')?.textContent).toContain(
+      'works once a committee member approves',
+    );
+  });
+
+  it('needs a resident type before sending', async () => {
+    await setup({ societyId: 4, flatOptions: [ownFlat] });
+    type('Name', 'Pepper');
+    type('Phone', '9876543210');
+    fixture.detectChanges();
+    (el().querySelector('button[type="submit"]') as HTMLButtonElement).click();
+    http.expectNone((r) => r.method === 'POST');
+  });
+
+  it("picks a tenant's only type for them", async () => {
+    await setup({ societyId: 4, flatOptions: [{ ...ownFlat, residentTypes: ['TENANT'] }] });
+    type('Name', 'Happy');
+    type('Phone', '9876543210');
+    fixture.detectChanges();
+    (el().querySelector('button[type="submit"]') as HTMLButtonElement).click();
+    const req = http.expectOne((r) => r.method === 'POST');
+    expect(req.request.body.residentType).toBe('TENANT');
+    req.flush(issued());
   });
 });

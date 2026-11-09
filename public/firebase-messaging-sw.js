@@ -15,6 +15,10 @@ function routeFor(data) {
       return data.complaintId ? `/complaints/${data.complaintId}` : '/complaints';
     case 'INVITATION_RECEIVED':
       return '/dashboard';
+    case 'INVITATION_NEEDS_APPROVAL':
+      return '/invitations?status=AWAITING_APPROVAL';
+    case 'INVITATION_APPROVED':
+    case 'INVITATION_REJECTED':
     case 'INVITATION_ACCEPTED':
       return '/invitations';
     default:

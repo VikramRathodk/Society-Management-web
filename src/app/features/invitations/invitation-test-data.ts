@@ -21,6 +21,8 @@ export function invitation(overrides: Partial<Invitation> = {}): Invitation {
     expiresAt: '2026-11-16T10:00:00Z',
     closedAt: null,
     acceptedUserId: null,
+    approvedAt: null,
+    approvedByName: null,
     ...overrides,
   };
 }

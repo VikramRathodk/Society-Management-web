@@ -19,6 +19,7 @@ import { PushService } from '../core/push';
 import { SocietyContextStore } from '../core/society-context/society-context.store';
 import { ThemeMode, ThemeStore } from '../core/theme';
 import { inviteDialog } from '../features/invitations/invite-dialog';
+import { canOpenInvitations } from '../features/invitations/invitation-ui';
 import { PendingInvitations } from '../features/invitations/pending-invitations';
 import { confirmDialog } from '../shared/confirm-dialog';
 import { Command, CommandPaletteService } from './command-palette';
@@ -30,6 +31,8 @@ interface NavItem {
   /** Hidden unless the user holds this permission (in the selected society, or platform-wide). */
   permission?: string;
   platform?: boolean;
+  /** Instead of a permission: shown when this returns true for the selected society. */
+  visible?: (auth: AuthStore, societyId: number | null) => boolean;
 }
 
 /** Add an entry here as each feature route lands. */
@@ -43,7 +46,7 @@ const NAV_ITEMS: NavItem[] = [
   },
   { label: 'Structure', icon: 'domain', link: '/structure', permission: 'FLAT.DIRECTORY.VIEW' },
   { label: 'Users', icon: 'group', link: '/users', permission: 'USER.ACCOUNT.VIEW' },
-  { label: 'Invitations', icon: 'mail', link: '/invitations', permission: 'USER.INVITE.VIEW' },
+  { label: 'Invitations', icon: 'mail', link: '/invitations', visible: canOpenInvitations },
   { label: 'Visitors', icon: 'badge', link: '/visitors', permission: 'VISITOR.ENTRY.VIEW' },
   { label: 'Notices', icon: 'campaign', link: '/notices', permission: 'NOTICE.POST.VIEW' },
   {
@@ -121,15 +124,16 @@ export class Shell {
     { initialValue: false },
   );
 
-  protected readonly navItems = computed(() =>
-    NAV_ITEMS.filter(
-      (item) =>
-        !item.permission ||
-        (item.platform
-          ? this.auth.canOnPlatform(item.permission)
-          : this.auth.can(item.permission, this.ctx.selectedSocietyId())),
-    ),
-  );
+  protected readonly navItems = computed(() => {
+    const societyId = this.ctx.selectedSocietyId();
+    return NAV_ITEMS.filter((item) => {
+      if (item.visible) return item.visible(this.auth, societyId);
+      if (!item.permission) return true;
+      return item.platform
+        ? this.auth.canOnPlatform(item.permission)
+        : this.auth.can(item.permission, societyId);
+    });
+  });
 
   /** Quick actions, shown when the user may perform them. */
   private readonly actions = computed<Command[]>(() => {

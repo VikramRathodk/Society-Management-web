@@ -2,10 +2,17 @@
   @if (canInvite()) {
     <button mat-flat-button (click)="invite()">
       <mat-icon>person_add</mat-icon>
-      Invite someone
+      {{ staff() ? 'Invite someone' : 'Invite to my flat' }}
     </button>
   }
 </app-page-header>
+
+@if (!staff() && !seesAll() && flatOptions().length === 0 && !loading()) {
+  <p class="note">
+    Inviting family or tenants to your flat isn't open to you here: the society may have turned it
+    off, or only owners and tenants can invite.
+  </p>
+}
 
 <div class="toolbar">
   <mat-chip-listbox
@@ -33,7 +40,9 @@
     [message]="status() ? 'No invitations with this status.' : 'No invitations yet.'"
   >
     @if (canInvite() && !status()) {
-      <button mat-stroked-button (click)="invite()">Invite someone</button>
+      <button mat-stroked-button (click)="invite()">
+        {{ staff() ? 'Invite someone' : 'Invite to my flat' }}
+      </button>
     }
   </app-empty-state>
 } @else {
@@ -55,9 +64,24 @@
             } @else if (i.closedAt) {
               · {{ statusInfo[i.status].label.toLowerCase() }} on {{ dayLabel(i.closedAt) }}
             }
+            @if (i.approvedByName) {
+              · approved by {{ i.approvedByName }}
+            }
           </div>
         </div>
-        @if (canInvite() && (i.status === 'PENDING' || i.status === 'EXPIRED')) {
+        @if (i.status === 'AWAITING_APPROVAL' && canApprove()) {
+          <div class="actions">
+            <button mat-stroked-button (click)="reject(i)" [disabled]="busy() === i.id">
+              Reject
+            </button>
+            <button mat-flat-button (click)="approve(i)" [disabled]="busy() === i.id">
+              Approve
+            </button>
+          </div>
+        } @else if (
+          canManage(i) &&
+          (i.status === 'PENDING' || i.status === 'AWAITING_APPROVAL' || i.status === 'EXPIRED')
+        ) {
           <div class="actions">
             <button
               mat-stroked-button
@@ -68,7 +92,7 @@
               <mat-icon>qr_code_2</mat-icon>
               {{ i.status === 'EXPIRED' ? 'Renew link' : 'Show QR' }}
             </button>
-            @if (i.status === 'PENDING') {
+            @if (i.status !== 'EXPIRED') {
               <button
                 mat-icon-button
                 (click)="revoke(i)"

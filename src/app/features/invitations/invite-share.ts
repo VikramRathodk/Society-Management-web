@@ -30,9 +30,15 @@ import {
       <div class="details">
         <p class="who">{{ i.name }}</p>
         <p class="muted">{{ invitedAs(i) }} · {{ i.phone }}</p>
-        <p class="muted">
-          Scan with a phone camera, or share the link. Valid until {{ dayLabel(i.expiresAt) }}.
-        </p>
+        @if (i.status === 'AWAITING_APPROVAL') {
+          <p class="approval" role="status">
+            You can share it now; it works once a committee member approves it.
+          </p>
+        } @else {
+          <p class="muted">
+            Scan with a phone camera, or share the link. Valid until {{ dayLabel(i.expiresAt) }}.
+          </p>
+        }
         <p class="link" data-testid="invite-link">{{ issued().inviteUrl }}</p>
       </div>
     </div>
@@ -75,6 +81,13 @@ import {
     }
     .muted {
       color: var(--mat-sys-on-surface-variant);
+      font: var(--mat-sys-body-small);
+    }
+    .approval {
+      padding: 6px 10px;
+      border-radius: 8px;
+      background: var(--app-warning-container);
+      color: var(--app-warning);
       font: var(--mat-sys-body-small);
     }
     .link {

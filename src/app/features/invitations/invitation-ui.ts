@@ -1,4 +1,9 @@
+import { inject } from '@angular/core';
+import { CanMatchFn, Router } from '@angular/router';
+
+import { AuthStore } from '../../core/auth/auth.store';
 import { Invitation, InvitationStatus, IssuedInvitation, ResidentType } from '../../core/models';
+import { SocietyContextStore } from '../../core/society-context/society-context.store';
 import { Tone } from '../../shared/ui';
 
 export const INVITATION_STATUS: Record<InvitationStatus, { label: string; tone: Tone }> = {
@@ -14,12 +19,34 @@ export const INVITATION_STATUS: Record<InvitationStatus, { label: string; tone: 
 /** The filter chips on the invitations page, in order. */
 export const STATUS_FILTERS: { value: InvitationStatus | null; label: string }[] = [
   { value: null, label: 'All' },
+  { value: 'AWAITING_APPROVAL', label: 'Awaiting approval' },
   { value: 'PENDING', label: 'Pending' },
   { value: 'ACCEPTED', label: 'Accepted' },
   { value: 'EXPIRED', label: 'Expired' },
   { value: 'DECLINED', label: 'Declined' },
+  { value: 'REJECTED', label: 'Rejected' },
   { value: 'REVOKED', label: 'Cancelled' },
 ];
+
+/** `?status=` from a link (e.g. an approval push), if it is a known status. */
+export function statusParam(value: string | null): InvitationStatus | null {
+  return value && value in INVITATION_STATUS ? (value as InvitationStatus) : null;
+}
+
+/**
+ * The Invitations page is for society-wide viewers (all invitations) and for residents (the ones they
+ * sent). The backend decides what each sees; this only decides whether to offer the page.
+ */
+export function canOpenInvitations(auth: AuthStore, societyId: number | null): boolean {
+  return (
+    auth.can('USER.INVITE.VIEW', societyId) ||
+    (auth.user()?.roles.some((r) => r.societyId === societyId && r.flatId != null) ?? false)
+  );
+}
+
+export const invitationsGuard: CanMatchFn = () =>
+  canOpenInvitations(inject(AuthStore), inject(SocietyContextStore).selectedSocietyId()) ||
+  inject(Router).createUrlTree(['/forbidden']);
 
 export function residentTypeLabel(type: ResidentType | null): string {
   return type ? type.charAt(0) + type.slice(1).toLowerCase() : '';
@@ -43,9 +70,14 @@ export function dayLabel(iso: string): string {
 export function inviteMessage(issued: IssuedInvitation): string {
   const i = issued.invitation;
   const flat = i.flatLabel ? ` (flat ${i.flatLabel})` : '';
+  // An invitation awaiting approval starts its expiry only when approved.
+  const when =
+    i.status === 'AWAITING_APPROVAL'
+      ? "it works once the society's committee approves it"
+      : `valid until ${dayLabel(i.expiresAt)}`;
   return (
     `Hi ${i.name}, you're invited to join ${i.societyName} as ${i.roleName}${flat}. ` +
-    `Open this link to accept: ${issued.inviteUrl} (valid until ${dayLabel(i.expiresAt)})`
+    `Open this link to accept: ${issued.inviteUrl} (${when})`
   );
 }
 

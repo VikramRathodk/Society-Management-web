@@ -3,6 +3,7 @@ import { Routes } from '@angular/router';
 import { authGuard, guestGuard } from './core/auth/auth.guard';
 import { permissionGuard, societyPermissionGuard } from './core/auth/permission.guard';
 import { unsavedChangesGuard } from './core/unsaved-changes.guard';
+import { invitationsGuard } from './features/invitations/invitation-ui';
 
 // `title` is shown in the browser tab as "<title> · Society Management" (see AppTitleStrategy).
 export const routes: Routes = [
@@ -82,8 +83,8 @@ export const routes: Routes = [
       {
         path: 'invitations',
         title: 'Invitations',
-        canMatch: [permissionGuard],
-        data: { permission: 'USER.INVITE.VIEW' },
+        // Committee and above see all invitations; residents the ones they sent.
+        canMatch: [invitationsGuard],
         loadComponent: () =>
           import('./features/invitations/invitation-list').then((m) => m.InvitationList),
       },

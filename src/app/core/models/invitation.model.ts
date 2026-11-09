@@ -22,6 +22,20 @@ export interface Invitation {
   expiresAt: string;
   closedAt: string | null;
   acceptedUserId: number | null;
+  approvedAt: string | null;
+  approvedByName: string | null;
+}
+
+/** A flat the signed-in resident may invite people to, and as which resident types. */
+export interface FlatInviteOption {
+  flatId: number;
+  /** "A-101" */
+  flatLabel: string;
+  role: string;
+  roleName: string;
+  residentTypes: ResidentType[];
+  /** The committee approves it before the link works. */
+  needsApproval: boolean;
 }
 
 /** A freshly made link (create or resend). The token is never shown again: resend for a new one. */

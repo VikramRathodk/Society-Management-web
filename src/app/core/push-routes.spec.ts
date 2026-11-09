@@ -9,6 +9,11 @@ describe('pushRoute', () => {
     expect(pushRoute({ type: 'COMPLAINT_STATUS_CHANGED', complaintId: '9' })).toBe('/complaints/9');
     expect(pushRoute({ type: 'INVITATION_RECEIVED', invitationId: '3' })).toBe('/dashboard');
     expect(pushRoute({ type: 'INVITATION_ACCEPTED', invitationId: '3' })).toBe('/invitations');
+    expect(pushRoute({ type: 'INVITATION_NEEDS_APPROVAL', invitationId: '3' })).toBe(
+      '/invitations?status=AWAITING_APPROVAL',
+    );
+    expect(pushRoute({ type: 'INVITATION_APPROVED', invitationId: '3' })).toBe('/invitations');
+    expect(pushRoute({ type: 'INVITATION_REJECTED', invitationId: '3' })).toBe('/invitations');
     expect(pushRoute({ type: 'SOMETHING_NEW' })).toBe('/');
   });
 });

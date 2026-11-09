@@ -10,18 +10,26 @@ import {
 } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
+import { MatSelectModule } from '@angular/material/select';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Observable } from 'rxjs';
 
 import { InvitationApi } from '../../core/api/invitation.api';
 import { errorMessage } from '../../core/auth/error.interceptor';
-import { IssuedInvitation } from '../../core/models';
+import { FlatInviteOption, IssuedInvitation, ResidentType } from '../../core/models';
 import { RoleFields } from '../users/role-fields';
 import { InviteShare } from './invite-share';
+import { residentTypeLabel } from './invitation-ui';
 
 export interface InviteDialogData {
   societyId: number;
   /** Open straight on the QR of this link (after "Show QR" resent it). */
   issued?: IssuedInvitation;
+  /**
+   * Resident mode: invite onto one of these flats (from /invitations/flat-options) instead of choosing
+   * any role.
+   */
+  flatOptions?: FlatInviteOption[];
 }
 
 /** Step 1: who and which role. Step 2: the QR code and ways to share the link. */
@@ -33,6 +41,7 @@ export interface InviteDialogData {
     MatDialogModule,
     MatFormFieldModule,
     MatInputModule,
+    MatSelectModule,
     RoleFields,
     InviteShare,
   ],
@@ -49,7 +58,7 @@ export interface InviteDialogData {
         <button mat-flat-button [mat-dialog-close]="issued">Done</button>
       </mat-dialog-actions>
     } @else {
-      <h2 mat-dialog-title>Invite someone</h2>
+      <h2 mat-dialog-title>{{ flatOptions.length ? 'Invite to your flat' : 'Invite someone' }}</h2>
       <mat-dialog-content>
         <form [formGroup]="form" (ngSubmit)="submit()" id="invite-form">
           <mat-form-field appearance="outline">
@@ -67,7 +76,34 @@ export interface InviteDialogData {
               <mat-error>10 to 14 digits, optionally starting with +</mat-error>
             }
           </mat-form-field>
-          <app-role-fields [societyId]="data.societyId" source="invite" />
+          @if (flatOptions.length) {
+            @if (flatOptions.length > 1) {
+              <mat-form-field appearance="outline">
+                <mat-label>Flat</mat-label>
+                <mat-select formControlName="flat">
+                  @for (o of flatOptions; track o.flatId) {
+                    <mat-option [value]="o">{{ o.flatLabel }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+            }
+            <mat-form-field appearance="outline">
+              <mat-label>Joins {{ form.controls.flat.value?.flatLabel }} as</mat-label>
+              <mat-select formControlName="residentType">
+                @for (t of form.controls.flat.value?.residentTypes ?? []; track t) {
+                  <mat-option [value]="t">{{ residentTypeLabel(t) }}</mat-option>
+                }
+              </mat-select>
+              @if (form.controls.flat.value?.needsApproval) {
+                <mat-hint>A committee member approves it before the link works.</mat-hint>
+              }
+              @if (form.controls.residentType.invalid) {
+                <mat-error>Choose who they are</mat-error>
+              }
+            </mat-form-field>
+          } @else {
+            <app-role-fields [societyId]="data.societyId" source="invite" />
+          }
         </form>
         @if (error(); as message) {
           <p class="dialog-error" role="alert">{{ message }}</p>
@@ -100,23 +136,44 @@ export class InviteDialog {
   private readonly roleFields = viewChild(RoleFields);
   protected readonly data = inject<InviteDialogData>(MAT_DIALOG_DATA);
 
-  protected readonly form = inject(NonNullableFormBuilder).group({
+  protected readonly flatOptions = this.data.flatOptions ?? [];
+  protected readonly residentTypeLabel = residentTypeLabel;
+
+  private readonly fb = inject(NonNullableFormBuilder);
+  protected readonly form = this.fb.group({
     name: ['', [Validators.required, Validators.pattern(/\S/), Validators.maxLength(255)]],
     phone: ['', [Validators.required, Validators.pattern(/^\s*\+?[0-9]{10,14}\s*$/)]],
+    // Resident mode only.
+    flat: this.fb.control<FlatInviteOption | null>(this.flatOptions[0] ?? null),
+    residentType: this.fb.control<ResidentType | null>(
+      onlyType(this.flatOptions[0]),
+      this.flatOptions.length ? Validators.required : null,
+    ),
   });
   protected readonly issued = signal<IssuedInvitation | null>(this.data.issued ?? null);
   protected readonly saving = signal(false);
   protected readonly error = signal<string | null>(null);
 
+  constructor() {
+    // A flat whose resident offers one type (a tenant's flat: tenants only) needs no choice.
+    this.form.controls.flat.valueChanges
+      .pipe(takeUntilDestroyed())
+      .subscribe((flat) => this.form.controls.residentType.setValue(onlyType(flat)));
+  }
+
   protected submit(): void {
-    const roleForm = this.roleFields()?.form;
-    if (this.form.invalid || !roleForm || roleForm.invalid || this.saving()) {
+    const residentMode = this.flatOptions.length > 0;
+    const roleForm = residentMode ? null : (this.roleFields()?.form ?? null);
+    if (this.form.invalid || (!residentMode && (!roleForm || roleForm.invalid)) || this.saving()) {
       this.form.markAllAsTouched();
       roleForm?.markAllAsTouched();
       return;
     }
-    const { role, flatId, residentType } = this.roleFields()!.request();
-    const { name, phone } = this.form.getRawValue();
+    const { name, phone, flat, residentType: type } = this.form.getRawValue();
+    const { role, flatId, residentType } =
+      residentMode && flat
+        ? { role: flat.role, flatId: flat.flatId, residentType: type ?? undefined }
+        : this.roleFields()!.request();
     this.saving.set(true);
     this.error.set(null);
     this.api
@@ -140,9 +197,16 @@ export class InviteDialog {
   }
 
   protected another(): void {
-    this.form.reset();
+    this.form.reset({
+      flat: this.flatOptions[0] ?? null,
+      residentType: onlyType(this.flatOptions[0]),
+    });
     this.issued.set(null);
   }
+}
+
+function onlyType(option: FlatInviteOption | null | undefined): ResidentType | null {
+  return option?.residentTypes.length === 1 ? option.residentTypes[0] : null;
 }
 
 /** Opens the invite dialog; emits the last link made (if any) when it closes. */
