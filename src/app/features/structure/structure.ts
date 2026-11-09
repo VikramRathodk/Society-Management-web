@@ -21,6 +21,7 @@ import { confirmDialog } from '../../shared/confirm-dialog';
 import { nameDialog } from '../../shared/name-dialog';
 import { sortBy } from '../../shared/sort';
 import { EmptyState, PageHeader, Skeleton } from '../../shared/ui';
+import { addResidentDialog } from '../users/add-resident-dialog';
 import {
   BuildingGrid,
   EMPTY_INFO,
@@ -28,6 +29,7 @@ import {
   FlatPanel,
   OVERLAYS,
   Overlay,
+  flatDialog,
   groupByFloor,
 } from './structure-ui';
 
@@ -156,6 +158,9 @@ export class Structure {
     for (const v of visitors) entry(v.flatId).visitors.push(v);
     return map;
   });
+
+  protected readonly canCreateUser = computed(() => this.can('USER.ACCOUNT.CREATE'));
+  protected readonly canAssignRole = computed(() => this.can('USER.ROLE.ASSIGN'));
 
   protected readonly selectedInfo = computed(() => {
     const flat = this.selectedFlat();
@@ -369,28 +374,50 @@ export class Structure {
   }
 
   protected addFlat(wing: Wing): void {
-    nameDialog(this.dialog, {
+    flatDialog(this.dialog, {
       title: `Add flat to ${wing.name}`,
-      label: 'Flat number',
       confirmText: 'Add',
-      save: (flatNumber) => this.api.createFlat(wing.id, flatNumber),
+      save: (flatNumber, area) => this.api.createFlat(wing.id, flatNumber, area),
     }).subscribe((flat) => {
       this.setFlats(wing.id, [...(this.flats().get(wing.id) ?? []), flat]);
       this.selectedFlatId.set(flat.id);
     });
   }
 
-  protected renameFlat(wing: Wing, flat: Flat): void {
-    nameDialog(this.dialog, {
-      title: 'Rename flat',
-      label: 'Flat number',
-      value: flat.flatNumber,
-      save: (flatNumber) => this.api.updateFlat(flat.id, flatNumber),
+  protected editFlat(wing: Wing, flat: Flat): void {
+    flatDialog(this.dialog, {
+      title: `Edit flat ${flat.flatNumber}`,
+      flat,
+      save: (flatNumber, area) => this.api.updateFlat(flat.id, flatNumber, area),
     }).subscribe((updated) =>
       this.setFlats(
         wing.id,
         (this.flats().get(wing.id) ?? []).map((f) => (f.id === updated.id ? updated : f)),
       ),
+    );
+  }
+
+  /** Opens "New user" with a resident role on this flat filled in. */
+  protected addNewResident(wing: Wing, flat: Flat): void {
+    this.router.navigate(['/users/new'], { queryParams: { wingId: wing.id, flatId: flat.id } });
+  }
+
+  /** Gives a registered user a resident role on this flat, then shows them in the panel. */
+  protected addExistingResident(wing: Wing, flat: Flat): void {
+    const societyId = this.ctx.selectedSocietyId();
+    if (societyId == null) return;
+    addResidentDialog(this.dialog, {
+      societyId,
+      flatLabel: `${wing.name} · ${flat.flatNumber}`,
+      preset: { wingId: wing.id, flatId: flat.id },
+      users: this.activity().users,
+    }).subscribe(({ user, assignment }) =>
+      this.activity.update((a) => ({
+        ...a,
+        users: a.users.map((u) =>
+          u.id === user.id ? { ...u, roles: [...u.roles, assignment] } : u,
+        ),
+      })),
     );
   }
 

@@ -62,6 +62,7 @@
     <app-role-fields
       [societyId]="ctx.selectedSocietyId()"
       [includePlatform]="includePlatformRoles"
+      [preset]="preset"
     />
   </app-section>
 
@@ -70,7 +71,7 @@
   }
 
   <div class="form-actions">
-    <a mat-button routerLink="/users">Cancel</a>
+    <a mat-button [routerLink]="preset ? '/structure' : '/users'">Cancel</a>
     <button mat-flat-button type="submit" [disabled]="saving()">Create user</button>
   </div>
 </form>

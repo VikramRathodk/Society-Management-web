@@ -198,9 +198,10 @@ export class MaintenanceApi {
   // ---- Dues ----
 
   /** Flats with something outstanding, by wing and flat number. Residents get their own flat. */
-  dues(societyId: number, overdueOnly = false) {
+  dues(societyId: number, overdueOnly = false, options: { silent?: boolean } = {}) {
     return this.http.get<FlatDues[]>(`${this.society(societyId)}/dues`, {
       params: { overdueOnly },
+      context: options.silent ? inlineErrors() : undefined,
     });
   }
 

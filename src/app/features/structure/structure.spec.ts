@@ -1,7 +1,9 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { MATERIAL_ANIMATIONS } from '@angular/material/core';
+import { MatDialog } from '@angular/material/dialog';
+import { Router, provideRouter } from '@angular/router';
 
 import { AuthStore } from '../../core/auth/auth.store';
 import { SocietyContextStore } from '../../core/society-context/society-context.store';
@@ -63,6 +65,8 @@ describe('Structure', () => {
         provideRouter([]),
         provideHttpClient(),
         provideHttpClientTesting(),
+        // Without animations dialogs close (and report their result) synchronously.
+        { provide: MATERIAL_ANIMATIONS, useValue: { animationsDisabled: true } },
         {
           provide: AuthStore,
           useValue: { can: (p: string) => permissions.includes(p), canOnPlatform: () => false },
@@ -74,7 +78,10 @@ describe('Structure', () => {
     await fixture.whenStable();
   }
 
-  afterEach(() => http.verify());
+  afterEach(() => {
+    TestBed.inject(MatDialog).closeAll();
+    http.verify();
+  });
 
   async function flushWings(societyId: number): Promise<void> {
     http.expectOne(`/api/societies/${societyId}/wings`).flush([
@@ -127,6 +134,138 @@ describe('Structure', () => {
       await fixture.whenStable();
       await flushWings(2);
       await flushFlats(10);
+    });
+  });
+
+  describe('editing a flat', () => {
+    beforeEach(() => setup(['FLAT.DIRECTORY.VIEW', 'FLAT.STRUCTURE.UPDATE']));
+
+    const dialog = () => document.querySelector<HTMLElement>('app-flat-dialog')!;
+    const input = (index: number) => dialog().querySelectorAll('input')[index];
+
+    async function pickFlat101(): Promise<void> {
+      await flushWings(1);
+      await flushFlats(10);
+      el().querySelector<HTMLElement>('[aria-label="Flat 101"]')!.click();
+      await fixture.whenStable();
+    }
+
+    it('shows the area in the flat panel', async () => {
+      await pickFlat101();
+      expect(el().querySelector('app-flat-panel .area')?.textContent).toContain('Area not set');
+    });
+
+    it('saves a new area along with the flat number', async () => {
+      await pickFlat101();
+      el().querySelector<HTMLElement>('[aria-label="Edit flat"]')!.click();
+      await fixture.whenStable();
+      expect(input(0).value).toBe('101');
+      input(1).value = '1050.5';
+      input(1).dispatchEvent(new Event('input'));
+      dialog().querySelector('form')!.dispatchEvent(new Event('submit'));
+      await fixture.whenStable();
+
+      const req = http.expectOne('/api/flats/1');
+      expect(req.request.method).toBe('PATCH');
+      expect(req.request.body).toEqual({ flatNumber: '101', areaSqft: 1050.5 });
+      req.flush({ id: 1, wingId: 10, flatNumber: '101', areaSqft: 1050.5 });
+      await fixture.whenStable();
+      // The dialog reports its result after it has closed, which schedules another render.
+      await fixture.whenStable();
+      expect(el().querySelector('app-flat-panel .area')?.textContent).toContain('1,050.5 sq ft');
+    });
+  });
+
+  describe('adding a resident', () => {
+    const overlay = () => document.querySelector<HTMLElement>('.cdk-overlay-container')!;
+    const clickText = async (selector: string, text: string) => {
+      [...overlay().querySelectorAll<HTMLElement>(selector)]
+        .find((e) => e.textContent?.includes(text))!
+        .click();
+      await fixture.whenStable();
+    };
+    const pepper = {
+      id: 42,
+      name: 'Pepper Potts',
+      phone: '9000000042',
+      email: null,
+      isActive: true,
+      roles: [],
+    };
+
+    async function openFlat101(): Promise<void> {
+      http.expectOne('/api/users?societyId=1').flush([pepper]);
+      await flushWings(1);
+      await flushFlats(10);
+      el().querySelector<HTMLElement>('[aria-label^="Flat 101"]')!.click();
+      await fixture.whenStable();
+    }
+
+    it('opens New user with the flat filled in', async () => {
+      await setup(['FLAT.DIRECTORY.VIEW', 'USER.ACCOUNT.VIEW', 'USER.ACCOUNT.CREATE']);
+      await openFlat101();
+      const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+      el().querySelector<HTMLElement>('.add-resident')!.click();
+      await fixture.whenStable();
+      // Only "New user": this viewer may not assign roles to existing users.
+      expect(overlay().querySelectorAll('[mat-menu-item]').length).toBe(1);
+      await clickText('[mat-menu-item]', 'New user');
+      expect(navigate).toHaveBeenCalledWith(['/users/new'], {
+        queryParams: { wingId: 10, flatId: 1 },
+      });
+    });
+
+    it('gives an existing user a resident role and lists them on the flat', async () => {
+      await setup(['FLAT.DIRECTORY.VIEW', 'USER.ACCOUNT.VIEW', 'USER.ROLE.ASSIGN']);
+      await openFlat101();
+      expect(el().querySelector('app-flat-panel')?.textContent).toContain('Nobody is registered');
+
+      el().querySelector<HTMLElement>('.add-resident')!.click();
+      await fixture.whenStable();
+      await clickText('[mat-menu-item]', 'Existing user');
+
+      http
+        .expectOne('/api/roles/assignable?societyId=1')
+        .flush([{ code: 'RESIDENT', name: 'Resident', scopeLevel: 'SOCIETY', requiresFlat: true }]);
+      await fixture.whenStable();
+      http.expectOne('/api/societies/1/wings').flush([{ id: 10, societyId: 1, name: 'Wing A' }]);
+      await fixture.whenStable();
+      http.expectOne('/api/wings/10/flats').flush([{ id: 1, wingId: 10, flatNumber: '101' }]);
+      await fixture.whenStable();
+
+      const search = document.querySelector<HTMLInputElement>('app-add-resident-dialog input')!;
+      search.focus();
+      search.value = 'pep';
+      search.dispatchEvent(new Event('input'));
+      await fixture.whenStable();
+      await clickText('mat-option', 'Pepper Potts');
+
+      const selects = document.querySelectorAll<HTMLElement>('app-add-resident-dialog mat-select');
+      selects[selects.length - 1].click(); // resident type
+      await fixture.whenStable();
+      await clickText('mat-option', 'Tenant');
+
+      await clickText('app-add-resident-dialog button', 'Add');
+      const req = http.expectOne('/api/users/42/roles');
+      expect(req.request.body).toEqual({
+        role: 'RESIDENT',
+        societyId: 1,
+        flatId: 1,
+        residentType: 'TENANT',
+      });
+      req.flush({
+        id: 7,
+        role: 'RESIDENT',
+        roleName: 'Resident',
+        societyId: 1,
+        flatId: 1,
+        residentType: 'TENANT',
+      });
+      await fixture.whenStable();
+      await fixture.whenStable();
+      expect(el().querySelector('app-flat-panel .resident-name')?.textContent).toContain(
+        'Pepper Potts',
+      );
     });
   });
 

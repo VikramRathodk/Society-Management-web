@@ -39,7 +39,10 @@ describe('Dashboard', () => {
   let fixture: ComponentFixture<Dashboard>;
   let http: HttpTestingController;
 
-  async function setup(permissions: string[]): Promise<void> {
+  async function setup(
+    permissions: string[],
+    roles: { societyId: number; flatId: number | null }[] = [],
+  ): Promise<void> {
     localStorage.clear();
     localStorage.setItem('sm.societyId', '1');
     TestBed.configureTestingModule({
@@ -53,7 +56,7 @@ describe('Dashboard', () => {
           useValue: {
             can: (p: string) => permissions.includes(p),
             canOnPlatform: () => false,
-            user: () => ({ name: 'Happy Hogan', roles: [] }),
+            user: () => ({ name: 'Happy Hogan', roles }),
           },
         },
       ],
@@ -111,5 +114,35 @@ describe('Dashboard', () => {
     http.expectOne('/api/societies/1/wings').flush(null, { status: 500, statusText: 'Error' });
     await fixture.whenStable();
     expect(values()).toEqual(['0', '0', '0', '100+', '—']);
+  });
+
+  const dues = (flatId: number, outstanding: number, overdue: number) => ({
+    flatId,
+    wingName: 'A',
+    flatNumber: String(100 + flatId),
+    openBills: 1,
+    outstanding,
+    overdue,
+    oldestDueDate: '2026-10-10',
+  });
+
+  it('totals every flat’s dues for the committee and flags overdue ones', async () => {
+    await setup(['MAINTENANCE.BILL.VIEW'], [{ societyId: 1, flatId: null }]);
+    expect(labels()).toEqual(['Outstanding dues']);
+    http
+      .expectOne('/api/societies/1/maintenance/dues?overdueOnly=false')
+      .flush([dues(1, 2500.1, 0), dues(2, 1000.2, 1000.2)]);
+    await fixture.whenStable();
+    expect(values()).toEqual(['₹3,500.30']);
+    const card = (fixture.nativeElement as HTMLElement).querySelector('app-stat-card')!;
+    expect(card.outerHTML).toContain('warning');
+  });
+
+  it('shows a resident their own dues', async () => {
+    await setup(['MAINTENANCE.BILL.VIEW'], [{ societyId: 1, flatId: 9 }]);
+    expect(labels()).toEqual(['Your dues']);
+    http.expectOne('/api/societies/1/maintenance/dues?overdueOnly=false').flush([]);
+    await fixture.whenStable();
+    expect(values()).toEqual(['₹0.00']);
   });
 });
