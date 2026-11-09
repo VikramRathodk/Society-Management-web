@@ -1,0 +1,158 @@
+<main class="invite-page">
+  <section class="card">
+    <div class="brand-mark" aria-hidden="true"><mat-icon>apartment</mat-icon></div>
+
+    @if (load() === null) {
+      <div class="loading"><mat-spinner diameter="32" /></div>
+    } @else if (preview(); as p) {
+      <p class="eyebrow">You're invited</p>
+      <h1>{{ p.societyName }}</h1>
+      <p class="lead">
+        {{ p.invitedByName }} invited <strong>{{ p.name }}</strong> to join as
+        <strong>{{ p.roleName }}</strong
+        >.
+      </p>
+
+      <dl class="facts">
+        @if (p.flatLabel) {
+          <div>
+            <dt>Flat</dt>
+            <dd>
+              {{ p.flatLabel }}{{ p.residentType ? ' · ' + residentTypeLabel(p.residentType) : '' }}
+            </dd>
+          </div>
+        }
+        <div>
+          <dt>Phone</dt>
+          <dd>{{ p.maskedPhone }}</dd>
+        </div>
+        @if (p.status === 'PENDING') {
+          <div>
+            <dt>Valid until</dt>
+            <dd>{{ dayLabel(p.expiresAt) }}</dd>
+          </div>
+        }
+      </dl>
+
+      @if (closedMessage(); as message) {
+        <p class="notice" role="status">{{ message }}</p>
+        @if (!auth.isAuthenticated()) {
+          <button mat-stroked-button class="wide" type="button" (click)="signIn()">Sign in</button>
+        }
+      } @else if (auth.isAuthenticated()) {
+        <p class="hint">
+          Signed in as <strong>{{ auth.user()?.name }}</strong>
+          @if (auth.user()?.phone; as phone) {
+            ({{ phone }})
+          }
+        </p>
+        @if (error(); as message) {
+          <p class="error" role="alert"><mat-icon>error</mat-icon>{{ message }}</p>
+        }
+        <button
+          mat-flat-button
+          class="wide"
+          type="button"
+          (click)="acceptSignedIn()"
+          [disabled]="busy()"
+        >
+          Accept invitation
+        </button>
+        <div class="secondary">
+          <button mat-button type="button" (click)="switchAccount()" [disabled]="busy()">
+            Use another account
+          </button>
+          <button mat-button type="button" (click)="decline()" [disabled]="busy()">Decline</button>
+        </div>
+      } @else if (p.hasAccount) {
+        <p class="hint">
+          You already have an account with this phone number. Sign in to accept the invitation.
+        </p>
+        @if (error(); as message) {
+          <p class="error" role="alert"><mat-icon>error</mat-icon>{{ message }}</p>
+        }
+        <button mat-flat-button class="wide" type="button" (click)="signIn()">
+          Sign in to accept
+        </button>
+        <div class="secondary">
+          <button mat-button type="button" (click)="decline()" [disabled]="busy()">Decline</button>
+        </div>
+      } @else {
+        <p class="hint">
+          Create your account to accept. You'll sign in with {{ p.maskedPhone }} and this password.
+        </p>
+        <form [formGroup]="form" (ngSubmit)="signUp()" novalidate>
+          <mat-form-field appearance="outline">
+            <mat-label>Your name</mat-label>
+            <input matInput formControlName="name" autocomplete="name" />
+            @if (form.controls.name.invalid) {
+              <mat-error>Name is required</mat-error>
+            }
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Password</mat-label>
+            <input
+              matInput
+              formControlName="password"
+              [type]="hidePassword() ? 'password' : 'text'"
+              autocomplete="new-password"
+            />
+            <button
+              mat-icon-button
+              matSuffix
+              type="button"
+              (click)="hidePassword.set(!hidePassword())"
+              [attr.aria-label]="hidePassword() ? 'Show password' : 'Hide password'"
+            >
+              <mat-icon>{{ hidePassword() ? 'visibility' : 'visibility_off' }}</mat-icon>
+            </button>
+            <mat-hint>At least 8 characters</mat-hint>
+            @if (form.controls.password.hasError('required')) {
+              <mat-error>Choose a password</mat-error>
+            } @else if (form.controls.password.invalid) {
+              <mat-error>8 to 72 characters</mat-error>
+            }
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Confirm password</mat-label>
+            <input
+              matInput
+              formControlName="confirm"
+              [type]="hidePassword() ? 'password' : 'text'"
+              autocomplete="new-password"
+            />
+            @if (form.controls.confirm.hasError('required')) {
+              <mat-error>Type the password again</mat-error>
+            }
+          </mat-form-field>
+          @if (form.hasError('mismatch') && form.controls.confirm.touched) {
+            <p class="error" role="alert"><mat-icon>error</mat-icon>The passwords don't match</p>
+          }
+          @if (error(); as message) {
+            <p class="error" role="alert"><mat-icon>error</mat-icon>{{ message }}</p>
+          }
+          <button mat-flat-button class="wide" type="submit" [disabled]="busy()">
+            @if (busy()) {
+              <mat-spinner diameter="20" />
+            } @else {
+              Create account and join
+            }
+          </button>
+        </form>
+        <div class="secondary">
+          <button mat-button type="button" (click)="decline()" [disabled]="busy()">Decline</button>
+        </div>
+      }
+    } @else {
+      <h1>Invitation not found</h1>
+      @if (load(); as l) {
+        @if ('error' in l) {
+          <p class="lead">{{ l.error }}</p>
+        }
+      }
+      <button mat-stroked-button class="wide" type="button" (click)="signIn()">
+        Go to sign in
+      </button>
+    }
+  </section>
+</main>

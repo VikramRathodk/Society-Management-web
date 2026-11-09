@@ -1,0 +1,55 @@
+.toolbar {
+  margin-bottom: 16px;
+}
+
+.list {
+  border: 1px solid var(--app-card-border);
+  border-radius: var(--app-radius);
+  background: var(--mat-sys-surface-container-lowest);
+  overflow: hidden;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 14px 16px;
+
+  & + & {
+    border-top: 1px solid var(--mat-sys-surface-container-high);
+  }
+}
+
+.main {
+  flex: 1 1 280px;
+  min-width: 0;
+}
+
+.title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 2px;
+}
+
+.name {
+  font: var(--mat-sys-title-small);
+}
+
+.meta {
+  color: var(--mat-sys-on-surface-variant);
+  font: var(--mat-sys-body-small);
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.load-more {
+  display: flex;
+  justify-content: center;
+  margin-top: 12px;
+}

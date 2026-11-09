@@ -12,6 +12,13 @@ export const routes: Routes = [
     canMatch: [guestGuard],
     loadComponent: () => import('./features/auth/login/login').then((m) => m.Login),
   },
+  // Public: where invitation links and QR codes land, signed in or not.
+  {
+    path: 'invite/:token',
+    title: 'Invitation',
+    loadComponent: () =>
+      import('./features/invitations/accept-invitation').then((m) => m.AcceptInvitation),
+  },
   {
     path: '',
     canMatch: [authGuard],
@@ -71,6 +78,14 @@ export const routes: Routes = [
         canMatch: [permissionGuard],
         data: { permission: 'USER.ACCOUNT.VIEW' },
         loadComponent: () => import('./features/users/user-list').then((m) => m.UserList),
+      },
+      {
+        path: 'invitations',
+        title: 'Invitations',
+        canMatch: [permissionGuard],
+        data: { permission: 'USER.INVITE.VIEW' },
+        loadComponent: () =>
+          import('./features/invitations/invitation-list').then((m) => m.InvitationList),
       },
       {
         path: 'visitors/new',
@@ -173,7 +188,8 @@ export const routes: Routes = [
           {
             path: 'cycles',
             title: 'Billing cycles',
-            loadComponent: () => import('./features/maintenance/cycle-list').then((m) => m.CycleList),
+            loadComponent: () =>
+              import('./features/maintenance/cycle-list').then((m) => m.CycleList),
           },
           {
             path: 'opening-balances',

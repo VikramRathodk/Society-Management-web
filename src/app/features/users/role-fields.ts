@@ -7,6 +7,7 @@ import { catchError, forkJoin, of, switchMap, tap } from 'rxjs';
 
 import { RoleApi } from '../../core/api/role.api';
 import { StructureApi } from '../../core/api/structure.api';
+import { InvitationApi } from '../../core/api/invitation.api';
 import { AssignRoleRequest, AssignableRole, Flat, ResidentType, Wing } from '../../core/models';
 import { sortBy } from '../../shared/sort';
 
@@ -23,6 +24,7 @@ import { sortBy } from '../../shared/sort';
 export class RoleFields {
   private readonly roleApi = inject(RoleApi);
   private readonly structureApi = inject(StructureApi);
+  private readonly invitationApi = inject(InvitationApi);
   private readonly fb = inject(NonNullableFormBuilder);
 
   /** Society the role is for; null when only platform roles apply. */
@@ -49,6 +51,12 @@ export class RoleFields {
   protected readonly flats = signal<Flat[]>([]);
   protected readonly residentTypes: ResidentType[] = ['OWNER', 'FAMILY', 'TENANT'];
 
+  /**
+   * Which society roles to offer: those the caller may assign (default), or those they may invite
+   * people to (GET /api/societies/{id}/invitations/roles), which COMMITTEE members also get.
+   */
+  readonly source = input<'assign' | 'invite'>('assign');
+
   private readonly roleCode = toSignal(this.form.controls.role.valueChanges, {
     initialValue: this.form.controls.role.value,
   });
@@ -66,7 +74,10 @@ export class RoleFields {
         switchMap(({ societyId, includePlatform }) =>
           forkJoin([
             societyId != null
-              ? this.roleApi.assignable(societyId).pipe(catchError(() => of([])))
+              ? (untracked(this.source) === 'invite'
+                  ? this.invitationApi.roles(societyId)
+                  : this.roleApi.assignable(societyId)
+                ).pipe(catchError(() => of([])))
               : of([]),
             includePlatform ? this.roleApi.assignable().pipe(catchError(() => of([]))) : of([]),
           ]),

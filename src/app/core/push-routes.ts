@@ -15,6 +15,10 @@ export function pushRoute(data: PushData): string {
     case 'COMPLAINT_RAISED':
     case 'COMPLAINT_STATUS_CHANGED':
       return data['complaintId'] ? `/complaints/${data['complaintId']}` : '/complaints';
+    case 'INVITATION_RECEIVED':
+      return '/dashboard'; // the pending-invitations banner is on every page
+    case 'INVITATION_ACCEPTED':
+      return '/invitations';
     default:
       return '/';
   }

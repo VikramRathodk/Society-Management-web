@@ -1,0 +1,95 @@
+<app-page-header title="Invitations" [subtitle]="subtitle()">
+  @if (canInvite()) {
+    <button mat-flat-button (click)="invite()">
+      <mat-icon>person_add</mat-icon>
+      Invite someone
+    </button>
+  }
+</app-page-header>
+
+<div class="toolbar">
+  <mat-chip-listbox
+    aria-label="Filter by status"
+    [hideSingleSelectionIndicator]="true"
+    (change)="setStatus($event.value ?? null)"
+  >
+    @for (f of filters; track f.label) {
+      <mat-chip-option [value]="f.value" [selected]="status() === f.value">{{
+        f.label
+      }}</mat-chip-option>
+    }
+  </mat-chip-listbox>
+</div>
+
+@if (loading()) {
+  <app-skeleton variant="list" />
+} @else if (loadError()) {
+  <app-empty-state icon="cloud_off" message="Couldn't load invitations.">
+    <button mat-stroked-button (click)="retry()">Try again</button>
+  </app-empty-state>
+} @else if (invitations().length === 0) {
+  <app-empty-state
+    icon="mail"
+    [message]="status() ? 'No invitations with this status.' : 'No invitations yet.'"
+  >
+    @if (canInvite() && !status()) {
+      <button mat-stroked-button (click)="invite()">Invite someone</button>
+    }
+  </app-empty-state>
+} @else {
+  <div class="list">
+    @for (i of invitations(); track i.id) {
+      <div class="item">
+        <div class="main">
+          <div class="title">
+            <span class="name">{{ i.name }}</span>
+            <app-status-pill [tone]="statusInfo[i.status].tone">{{
+              statusInfo[i.status].label
+            }}</app-status-pill>
+          </div>
+          <div class="meta">{{ invitedAs(i) }} · {{ i.phone }}</div>
+          <div class="meta">
+            Invited by {{ i.invitedByName }} on {{ dayLabel(i.createdAt) }}
+            @if (i.status === 'PENDING') {
+              · valid until {{ dayLabel(i.expiresAt) }}
+            } @else if (i.closedAt) {
+              · {{ statusInfo[i.status].label.toLowerCase() }} on {{ dayLabel(i.closedAt) }}
+            }
+          </div>
+        </div>
+        @if (canInvite() && (i.status === 'PENDING' || i.status === 'EXPIRED')) {
+          <div class="actions">
+            <button
+              mat-stroked-button
+              (click)="showQr(i)"
+              [disabled]="busy() === i.id"
+              [matTooltip]="i.status === 'EXPIRED' ? 'Make a new link that works again' : ''"
+            >
+              <mat-icon>qr_code_2</mat-icon>
+              {{ i.status === 'EXPIRED' ? 'Renew link' : 'Show QR' }}
+            </button>
+            @if (i.status === 'PENDING') {
+              <button
+                mat-icon-button
+                (click)="revoke(i)"
+                [disabled]="busy() === i.id"
+                matTooltip="Cancel invitation"
+                [attr.aria-label]="'Cancel the invitation for ' + i.name"
+              >
+                <mat-icon>block</mat-icon>
+              </button>
+            }
+          </div>
+        }
+      </div>
+    }
+  </div>
+
+  @if (hasMore()) {
+    <div class="load-more">
+      <button mat-button (click)="loadMore()" [disabled]="loadingMore()">
+        {{ loadingMore() ? 'Loading…' : 'Load older invitations' }}
+      </button>
+    </div>
+  }
+}

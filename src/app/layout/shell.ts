@@ -18,6 +18,8 @@ import { AuthStore } from '../core/auth/auth.store';
 import { PushService } from '../core/push';
 import { SocietyContextStore } from '../core/society-context/society-context.store';
 import { ThemeMode, ThemeStore } from '../core/theme';
+import { inviteDialog } from '../features/invitations/invite-dialog';
+import { PendingInvitations } from '../features/invitations/pending-invitations';
 import { confirmDialog } from '../shared/confirm-dialog';
 import { Command, CommandPaletteService } from './command-palette';
 
@@ -41,6 +43,7 @@ const NAV_ITEMS: NavItem[] = [
   },
   { label: 'Structure', icon: 'domain', link: '/structure', permission: 'FLAT.DIRECTORY.VIEW' },
   { label: 'Users', icon: 'group', link: '/users', permission: 'USER.ACCOUNT.VIEW' },
+  { label: 'Invitations', icon: 'mail', link: '/invitations', permission: 'USER.INVITE.VIEW' },
   { label: 'Visitors', icon: 'badge', link: '/visitors', permission: 'VISITOR.ENTRY.VIEW' },
   { label: 'Notices', icon: 'campaign', link: '/notices', permission: 'NOTICE.POST.VIEW' },
   {
@@ -80,6 +83,7 @@ const NAV_ITEMS: NavItem[] = [
     MatSidenavModule,
     MatToolbarModule,
     MatTooltipModule,
+    PendingInvitations,
   ],
   host: { '(document:keydown)': 'onKeydown($event)' },
   templateUrl: './shell.html',
@@ -168,6 +172,15 @@ export class Shell {
         icon: 'post_add',
         keywords: 'billing cycle new bills maintenance',
         run: go('/maintenance/cycles/new'),
+      });
+    if (can('USER.INVITE.CREATE') && societyId != null)
+      list.push({
+        id: 'act:invite',
+        group: 'Actions',
+        label: 'Invite someone',
+        icon: 'person_add',
+        keywords: 'invitation invite resident member qr link join',
+        run: () => inviteDialog(this.dialog, { societyId }).subscribe(),
       });
     if (can('USER.ACCOUNT.CREATE'))
       list.push({
