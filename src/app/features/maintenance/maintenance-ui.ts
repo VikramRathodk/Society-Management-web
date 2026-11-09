@@ -22,11 +22,13 @@ import { MatTabsModule } from '@angular/material/tabs';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { Observable, catchError, filter, forkJoin, map, of, switchMap } from 'rxjs';
 
+import { FinanceApi } from '../../core/api/finance.api';
 import { MaintenanceApi } from '../../core/api/maintenance.api';
 import { StructureApi } from '../../core/api/structure.api';
 import { AuthStore } from '../../core/auth/auth.store';
 import { errorMessage } from '../../core/auth/error.interceptor';
 import {
+  Account,
   BillStatus,
   BillingFrequency,
   CycleStatus,
@@ -34,6 +36,8 @@ import {
   Payment,
   PaymentMethod,
   PaymentStatus,
+  Refund,
+  RefundStatus,
 } from '../../core/models';
 import { SocietyContextStore } from '../../core/society-context/society-context.store';
 import { sortBy } from '../../shared/sort';
@@ -191,7 +195,20 @@ export class MaintenanceAccess {
   readonly canViewConfig = computed(() => this.can('MAINTENANCE.CHARGE.VIEW'));
   readonly canConfigure = computed(() => this.canSocietyWide('MAINTENANCE.CHARGE.UPDATE'));
   readonly canSetArea = computed(() => this.can('FLAT.STRUCTURE.UPDATE'));
+  /** Refund a flat's unused credit, or void a refund. */
+  readonly canRefund = computed(() => this.canSocietyWide('MAINTENANCE.REFUND.CREATE'));
+  readonly canApproveRefund = computed(() => this.canSocietyWide('MAINTENANCE.REFUND.APPROVE'));
+  /** Keeps the books: may pick the cash/bank account a payment goes into. */
+  readonly keepsBooks = computed(() => this.canSocietyWide('FINANCE.ACCOUNT.VIEW'));
+  readonly userId = computed(() => this.auth.user()?.id ?? null);
 }
+
+export const REFUND_STATUS: Record<RefundStatus, { label: string; tone: Tone }> = {
+  PENDING_APPROVAL: { label: 'Waiting for approval', tone: 'warning' },
+  COMPLETED: { label: 'Refunded', tone: 'success' },
+  REJECTED: { label: 'Rejected', tone: 'neutral' },
+  VOID: { label: 'Void', tone: 'danger' },
+};
 
 // ---- Section tabs ----
 
@@ -233,6 +250,8 @@ export class MaintenanceTabs {
     ];
     if (a.canViewPayments())
       tabs.push({ label: 'Payments', link: '/maintenance/payments', exact: false });
+    if (a.canViewPayments())
+      tabs.push({ label: 'Refunds', link: '/maintenance/refunds', exact: false });
     if (a.committee())
       tabs.push({ label: 'Billing cycles', link: '/maintenance/cycles', exact: false });
     if (a.canViewConfig())
@@ -557,9 +576,22 @@ export interface RecordPaymentData {
           <mat-label>Note (optional)</mat-label>
           <input matInput formControlName="note" maxlength="2000" />
         </mat-form-field>
+        @if (depositAccounts().length) {
+          <mat-form-field appearance="outline">
+            <mat-label>Into account (books)</mat-label>
+            <mat-select formControlName="depositAccountId">
+              <mat-option [value]="null">The usual account for this method</mat-option>
+              @for (a of depositAccounts(); track a.id) {
+                <mat-option [value]="a.id">{{ a.name }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+        }
 
         <p class="hint">
-          Applied to the flat's oldest unpaid bills first. It can't be more than the flat owes.
+          Applied to the flat's oldest unpaid bills first. Anything above what the flat owes is kept
+          as its credit and pays its next bills (unless the society doesn't accept advance
+          payments).
         </p>
         @if (error(); as message) {
           <p class="dialog-error" role="alert">{{ message }}</p>
@@ -634,7 +666,10 @@ export class RecordPaymentDialog {
     method: ['CASH' as PaymentMethod, Validators.required],
     reference: [''],
     note: [''],
+    depositAccountId: [null as number | null],
   });
+  /** Cash and bank ledgers of the books, once they are started (empty otherwise). */
+  protected readonly depositAccounts = signal<{ id: number; name: string }[]>([]);
   private readonly method = signal<PaymentMethod>('CASH');
   protected readonly referenceLabel = computed(() =>
     this.method() === 'CHEQUE'
@@ -650,6 +685,11 @@ export class RecordPaymentDialog {
 
   constructor() {
     this.form.controls.method.valueChanges.subscribe((m) => this.method.set(m));
+    if (inject(MaintenanceAccess).keepsBooks()) {
+      cashAndBankAccounts(inject(FinanceApi), this.data.societyId).subscribe((accounts) =>
+        this.depositAccounts.set(accounts),
+      );
+    }
     if (!this.data.flat) {
       societyFlats(inject(StructureApi), this.data.societyId)
         .pipe(catchError(() => (this.flatsError.set(true), of([]))))
@@ -674,6 +714,7 @@ export class RecordPaymentDialog {
         reference: v.reference.trim() || undefined,
         note: v.note.trim() || undefined,
         billId: this.data.bill?.id,
+        depositAccountId: v.depositAccountId ?? undefined,
       })
       .subscribe({
         next: (payment) => this.ref.close(payment),
@@ -813,4 +854,247 @@ export function areaDialog(dialog: MatDialog, data: AreaDialogData): Observable<
     .open<AreaDialog, AreaDialogData, boolean>(AreaDialog, { data, width: '400px' })
     .afterClosed()
     .pipe(map((saved) => saved === true));
+}
+
+// ---- Books (finance) ----
+
+/**
+ * The cash and bank ledgers of the society's books, or none while the books aren't started (or can't be
+ * read). Quiet: callers only offer the choice when there is one.
+ */
+export function cashAndBankAccounts(
+  finance: FinanceApi,
+  societyId: number,
+): Observable<{ id: number; name: string }[]> {
+  return finance.books(societyId, { silent: true }).pipe(
+    switchMap((books) =>
+      books.started ? finance.accounts(societyId, { silent: true }) : of([] as Account[]),
+    ),
+    map((accounts) => {
+      const root = accounts.find((a) => a.systemKey === 'CASH_AND_BANK');
+      if (!root) return [];
+      const inside = new Set<number>([root.id]);
+      for (let grew = true; grew;) {
+        grew = false;
+        for (const a of accounts) {
+          if (a.parentId != null && inside.has(a.parentId) && !inside.has(a.id)) {
+            inside.add(a.id);
+            grew = true;
+          }
+        }
+      }
+      return accounts
+        .filter((a) => inside.has(a.id) && !a.group && a.active)
+        .map((a) => ({ id: a.id, name: a.name }));
+    }),
+    catchError(() => of([])),
+  );
+}
+
+// ---- Refund credit ----
+
+export interface RefundDialogData {
+  societyId: number;
+  flat: { id: number; label: string };
+  /** The flat's unused credit: the most that can be refunded. */
+  credit: number;
+}
+
+/** Pays a flat's unused credit back; closes with the refund. */
+@Component({
+  selector: 'app-refund-dialog',
+  imports: [
+    ReactiveFormsModule,
+    MatButtonModule,
+    MatButtonToggleModule,
+    MatDialogModule,
+    MatFormFieldModule,
+    MatIconModule,
+    MatInputModule,
+    MatSelectModule,
+  ],
+  template: `
+    <h2 mat-dialog-title>Refund credit</h2>
+    <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+      <mat-dialog-content>
+        <p class="for">
+          <mat-icon>home</mat-icon>
+          Flat <strong>{{ data.flat.label }}</strong> · unused credit {{ inr(data.credit) }}
+        </p>
+        <div class="row">
+          <mat-form-field appearance="outline">
+            <mat-label>Amount</mat-label>
+            <span matTextPrefix>₹&nbsp;</span>
+            <input
+              matInput
+              type="number"
+              inputmode="decimal"
+              min="0.01"
+              step="0.01"
+              [max]="data.credit"
+              formControlName="amount"
+              cdkFocusInitial
+            />
+            @if (form.controls.amount.invalid) {
+              <mat-error>Up to {{ inr(data.credit) }}, up to 2 decimals</mat-error>
+            }
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Paid on</mat-label>
+            <input matInput type="date" formControlName="paidOn" [max]="today" />
+          </mat-form-field>
+        </div>
+        <mat-button-toggle-group
+          formControlName="method"
+          class="methods"
+          aria-label="Method"
+          [hideSingleSelectionIndicator]="true"
+        >
+          @for (m of methods; track m.value) {
+            <mat-button-toggle [value]="m.value">{{ m.label }}</mat-button-toggle>
+          }
+        </mat-button-toggle-group>
+        @if (accounts().length) {
+          <mat-form-field appearance="outline">
+            <mat-label>Paid from (books)</mat-label>
+            <mat-select formControlName="paidFromAccountId">
+              <mat-option [value]="null">The usual paying account</mat-option>
+              @for (a of accounts(); track a.id) {
+                <mat-option [value]="a.id">{{ a.name }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+        }
+        <mat-form-field appearance="outline">
+          <mat-label>Reference (optional)</mat-label>
+          <input matInput formControlName="reference" maxlength="100" />
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Reason</mat-label>
+          <input matInput formControlName="reason" maxlength="500" />
+          @if (form.controls.reason.invalid) {
+            <mat-error>A reason is required</mat-error>
+          }
+        </mat-form-field>
+        <p class="hint">Large refunds may need a committee member's approval before they count.</p>
+        @if (error(); as message) {
+          <p class="dialog-error" role="alert">{{ message }}</p>
+        }
+      </mat-dialog-content>
+      <mat-dialog-actions align="end">
+        <button mat-button type="button" mat-dialog-close>Cancel</button>
+        <button mat-flat-button type="submit" [disabled]="saving()">
+          {{ saving() ? 'Saving…' : 'Refund' }}
+        </button>
+      </mat-dialog-actions>
+    </form>
+  `,
+  styles: `
+    mat-form-field {
+      width: 100%;
+    }
+    .row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0 12px;
+    }
+    .row mat-form-field {
+      flex: 1 1 160px;
+      width: auto;
+    }
+    .for {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 0 0 16px;
+      color: var(--mat-sys-on-surface-variant);
+    }
+    .methods {
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+    .hint {
+      margin: 0 0 8px;
+      color: var(--mat-sys-on-surface-variant);
+      font: var(--mat-sys-body-small);
+    }
+    .dialog-error {
+      margin: 0;
+      color: var(--mat-sys-error);
+    }
+  `,
+})
+export class RefundDialog {
+  protected readonly data = inject<RefundDialogData>(MAT_DIALOG_DATA);
+  private readonly ref = inject<MatDialogRef<RefundDialog, Refund>>(MatDialogRef);
+  private readonly api = inject(MaintenanceApi);
+  protected readonly inr = inr;
+  protected readonly methods = PAYMENT_METHODS;
+  protected readonly today = todayIso();
+  protected readonly form = inject(NonNullableFormBuilder).group({
+    amount: [
+      this.data.credit as number | null,
+      [
+        Validators.required,
+        Validators.min(0.01),
+        Validators.max(this.data.credit),
+        Validators.pattern(/^\d+(\.\d{1,2})?$/),
+      ],
+    ],
+    paidOn: [this.today, [Validators.required, notAfter(this.today)]],
+    method: ['BANK_TRANSFER' as PaymentMethod],
+    paidFromAccountId: [null as number | null],
+    reference: [''],
+    reason: ['', [Validators.required, Validators.pattern(/\S/)]],
+  });
+  protected readonly accounts = signal<{ id: number; name: string }[]>([]);
+  protected readonly saving = signal(false);
+  protected readonly error = signal<string | null>(null);
+
+  constructor() {
+    if (inject(MaintenanceAccess).keepsBooks()) {
+      cashAndBankAccounts(inject(FinanceApi), this.data.societyId).subscribe((a) =>
+        this.accounts.set(a),
+      );
+    }
+  }
+
+  protected submit(): void {
+    if (this.form.invalid || this.saving()) {
+      this.form.markAllAsTouched();
+      return;
+    }
+    const v = this.form.getRawValue();
+    this.saving.set(true);
+    this.error.set(null);
+    this.api
+      .recordRefund(this.data.societyId, {
+        flatId: this.data.flat.id,
+        amount: Number(v.amount),
+        paidOn: v.paidOn,
+        method: v.method,
+        reason: v.reason.trim(),
+        reference: v.reference.trim() || undefined,
+        paidFromAccountId: v.paidFromAccountId ?? undefined,
+      })
+      .subscribe({
+        next: (refund) => this.ref.close(refund),
+        error: (err: HttpErrorResponse) => {
+          this.saving.set(false);
+          this.error.set(errorMessage(err));
+        },
+      });
+  }
+}
+
+/** Emits the refund; nothing if the dialog was dismissed. */
+export function refundDialog(dialog: MatDialog, data: RefundDialogData): Observable<Refund> {
+  return dialog
+    .open<RefundDialog, RefundDialogData, Refund>(RefundDialog, {
+      data,
+      width: '520px',
+      maxWidth: 'calc(100vw - 32px)',
+    })
+    .afterClosed()
+    .pipe(filter((r): r is Refund => r !== undefined));
 }

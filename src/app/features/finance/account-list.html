@@ -1,0 +1,98 @@
+<app-page-header title="Finance" [subtitle]="subtitle()">
+  @if (access.canManage()) {
+    <button mat-stroked-button (click)="addBank()">
+      <mat-icon>account_balance</mat-icon>Add bank account
+    </button>
+    <button mat-flat-button (click)="add()"><mat-icon>add</mat-icon>Add account</button>
+  }
+</app-page-header>
+
+<app-finance-tabs />
+
+<div class="toolbar">
+  <mat-slide-toggle [checked]="showInactive()" (change)="showInactive.set($event.checked)"
+    >Show inactive</mat-slide-toggle
+  >
+</div>
+
+@if (loading() && accounts().length === 0) {
+  <app-skeleton variant="list" />
+} @else if (loadError()) {
+  <app-empty-state icon="cloud_off" message="Couldn't load the accounts.">
+    <button mat-stroked-button (click)="reload()">Try again</button>
+  </app-empty-state>
+} @else if (accounts().length === 0) {
+  <app-empty-state
+    icon="account_tree"
+    message="No chart of accounts yet. Set up the books on the Overview tab."
+  />
+} @else {
+  <div class="list">
+    @for (r of rows(); track r.account.id) {
+      <div class="tree-row" [class.root]="r.depth === 0" [class.inactive]="!r.account.active">
+        <span class="name" [style.padding-left.px]="r.depth * 20">
+          <span class="code">{{ r.account.code }}</span>
+          @if (r.account.group) {
+            <mat-icon inline class="muted">folder</mat-icon>
+            <span class="group-name">{{ r.account.name }}</span>
+          } @else if (access.canViewVouchers()) {
+            <a [routerLink]="['/finance/accounts', r.account.id]">{{ r.account.name }}</a>
+          } @else {
+            {{ r.account.name }}
+          }
+          @if (r.account.bank; as b) {
+            <span class="meta muted"
+              >{{ b.bankName }}
+              @if (b.last4) {
+                · ••{{ b.last4 }}
+              }
+            </span>
+          }
+          @if (r.account.systemKey && r.depth > 0) {
+            <app-status-pill outline>System</app-status-pill>
+          }
+          @if (!r.account.active) {
+            <app-status-pill>Inactive</app-status-pill>
+          }
+        </span>
+        <span class="amount" [class.negative]="r.account.balance < 0">{{
+          signedInr(r.account.balance)
+        }}</span>
+        <span class="actions">
+          @if (access.canManage()) {
+            <button
+              mat-icon-button
+              [matMenuTriggerFor]="menu"
+              [attr.aria-label]="'Actions for ' + r.account.name"
+            >
+              <mat-icon>more_vert</mat-icon>
+            </button>
+            <mat-menu #menu="matMenu">
+              <button mat-menu-item (click)="edit(r.account)"><mat-icon>edit</mat-icon>Edit</button>
+              @if (r.account.group) {
+                @if (isBankGroup(r.account)) {
+                  <button mat-menu-item (click)="addBank()">
+                    <mat-icon>account_balance</mat-icon>Add bank account
+                  </button>
+                } @else {
+                  <button mat-menu-item (click)="add(r.account)">
+                    <mat-icon>add</mat-icon>Add account here
+                  </button>
+                }
+              }
+              @if (!isProtected(r.account)) {
+                <button mat-menu-item (click)="toggleActive(r.account)">
+                  <mat-icon>{{ r.account.active ? 'visibility_off' : 'visibility' }}</mat-icon>
+                  {{ r.account.active ? 'Deactivate' : 'Activate' }}
+                </button>
+                <button mat-menu-item (click)="remove(r.account)">
+                  <mat-icon>delete</mat-icon>Delete
+                </button>
+              }
+            </mat-menu>
+          }
+        </span>
+      </div>
+    }
+  </div>
+}

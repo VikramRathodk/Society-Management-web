@@ -1,0 +1,66 @@
+<app-page-header title="Maintenance" [subtitle]="subtitle()" />
+
+<app-maintenance-tabs />
+
+@if (loading() && refunds().length === 0) {
+  <app-skeleton variant="list" />
+} @else if (loadError()) {
+  <app-empty-state icon="cloud_off" message="Couldn't load refunds.">
+    <button mat-stroked-button (click)="reload()">Try again</button>
+  </app-empty-state>
+} @else if (refunds().length === 0) {
+  <app-empty-state
+    icon="currency_exchange"
+    message="No refunds yet. A flat's unused credit can be refunded from the Dues tab."
+  />
+} @else {
+  <div class="list">
+    @for (r of refunds(); track r.id) {
+      <div class="row">
+        <span class="main">
+          <span class="title">
+            {{ r.refundNumber }}
+            <app-status-pill [tone]="refundStatus[r.status].tone">{{
+              refundStatus[r.status].label
+            }}</app-status-pill>
+          </span>
+          <span class="meta">
+            Flat {{ flatLabel(r.wingName, r.flatNumber) }} · {{ methodLabel(r.method) }} ·
+            {{ dayLabel(r.paidOn) }} · {{ r.reason }}
+          </span>
+          <span class="meta">
+            By {{ r.createdByName }}
+            @if (r.decidedByName && r.status !== 'PENDING_APPROVAL') {
+              · {{ r.status === 'REJECTED' ? 'rejected' : 'approved' }} by {{ r.decidedByName }}
+              @if (r.decisionReason) {
+                ({{ r.decisionReason }})
+              }
+            }
+            @if (r.voidReason) {
+              · voided: {{ r.voidReason }}
+            }
+          </span>
+        </span>
+        <span class="side">
+          <span class="amount" [class.muted]="r.status === 'VOID' || r.status === 'REJECTED'">{{
+            inr(r.amount)
+          }}</span>
+          <span class="actions">
+            @if (r.status === 'PENDING_APPROVAL') {
+              @if (access.canApproveRefund() && !isMaker(r)) {
+                <button mat-button (click)="reject(r)">Reject</button>
+                <button mat-flat-button (click)="approve(r)">Approve</button>
+              }
+              @if (isMaker(r) && access.canRefund()) {
+                <button mat-button (click)="withdraw(r)">Withdraw</button>
+              }
+            }
+            @if (r.status === 'COMPLETED' && access.canRefund()) {
+              <button mat-button (click)="voidRefund(r)">Void</button>
+            }
+          </span>
+        </span>
+      </div>
+    }
+  </div>
+}

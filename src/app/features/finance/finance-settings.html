@@ -1,0 +1,216 @@
+<app-page-header title="Finance" [subtitle]="subtitle()" />
+
+<app-finance-tabs />
+
+@if (loading() && !data()) {
+  <app-skeleton variant="form" />
+} @else if (loadError()) {
+  <app-empty-state icon="cloud_off" message="Couldn't load the finance settings.">
+    <button mat-stroked-button (click)="reload()">Try again</button>
+  </app-empty-state>
+} @else if (data(); as d) {
+  @if (!d.books.started) {
+    <app-empty-state icon="account_balance" message="Start the books on the Overview tab first." />
+  } @else {
+    <div class="layout">
+      <div class="stack">
+        @if (d.check; as c) {
+          <app-section title="Books and maintenance" padded>
+            @if (c.ok) {
+              <div class="callout" data-tone="success">
+                <mat-icon>check_circle</mat-icon>
+                <p>
+                  Every flat's dues ({{ inr(c.booksDues) }}) and advances ({{
+                    inr(c.booksAdvance)
+                  }}) in the books agree with maintenance.
+                </p>
+              </div>
+            } @else {
+              <div class="callout" data-tone="danger">
+                <mat-icon>error</mat-icon>
+                <p>
+                  These flats differ between the books and maintenance. Please report it: it means
+                  an entry is missing.
+                </p>
+              </div>
+              <div class="table-wrap">
+                <table class="money">
+                  <thead>
+                    <tr>
+                      <th>Flat</th>
+                      <th class="num">Dues (books)</th>
+                      <th class="num">Dues (maintenance)</th>
+                      <th class="num">Advance (books)</th>
+                      <th class="num">Advance (maintenance)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (m of c.mismatches; track m.flatId) {
+                      <tr>
+                        <td>{{ m.flatLabel }}</td>
+                        <td class="num">{{ inr(m.booksDues) }}</td>
+                        <td class="num">{{ inr(m.maintenanceDues) }}</td>
+                        <td class="num">{{ inr(m.booksAdvance) }}</td>
+                        <td class="num">{{ inr(m.maintenanceAdvance) }}</td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            }
+          </app-section>
+        }
+
+        <app-section title="Maintenance charges in the books" padded>
+          <p class="muted">
+            Which account each maintenance charge is booked to when bills are issued. A sinking fund
+            charge usually goes to the Sinking fund, not to income. Late charges always go to
+            Interest / late charges.
+          </p>
+          @for (m of d.mappings; track m.chargeHeadId) {
+            <div class="opening-row">
+              <span class="name">
+                {{ m.chargeHeadName }}
+                @if (!m.chargeHeadActive) {
+                  <app-status-pill>Inactive</app-status-pill>
+                }
+                @if (!m.mapped && !(m.chargeHeadId in mappingEdits())) {
+                  <span class="meta muted">· default</span>
+                }
+              </span>
+              <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                <mat-select
+                  [value]="mappingValue(m)"
+                  (selectionChange)="setMapping(m, $event.value)"
+                  [disabled]="!access.canManage()"
+                  [attr.aria-label]="'Account for ' + m.chargeHeadName"
+                >
+                  <mat-option [value]="null">Maintenance charges (default)</mat-option>
+                  @for (r of creditLedgers(); track r.account.id) {
+                    <mat-option [value]="r.account.id"
+                      >{{ r.account.code }} · {{ r.account.name }}</mat-option
+                    >
+                  }
+                </mat-select>
+              </mat-form-field>
+            </div>
+          } @empty {
+            <p class="muted">No maintenance charges yet.</p>
+          }
+          @if (error()?.section === 'mappings') {
+            <p class="danger-text" role="alert">{{ error()!.message }}</p>
+          }
+          @if (access.canManage() && d.mappings.length) {
+            <button
+              mat-flat-button
+              (click)="saveMappings()"
+              [disabled]="!mappingsDirty() || saving() === 'mappings'"
+            >
+              Save
+            </button>
+          }
+        </app-section>
+
+        <app-section title="Where maintenance money goes" padded>
+          <p class="muted">When a payment or refund doesn't name an account, it uses these.</p>
+          @if (defaults(); as def) {
+            @for (f of defaultFields; track f.key) {
+              <div class="opening-row">
+                <span class="name">{{ f.label }}</span>
+                <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                  <mat-select
+                    [value]="def[f.key]"
+                    (selectionChange)="setDefault(f.key, $event.value)"
+                    [disabled]="!access.canManage()"
+                    [attr.aria-label]="f.label"
+                  >
+                    <mat-option [value]="null">Not set (cash)</mat-option>
+                    @for (a of money(); track a.id) {
+                      <mat-option [value]="a.id">{{ a.name }}</mat-option>
+                    }
+                  </mat-select>
+                </mat-form-field>
+              </div>
+            }
+          }
+          @if (error()?.section === 'defaults') {
+            <p class="danger-text" role="alert">{{ error()!.message }}</p>
+          }
+          @if (access.canManage()) {
+            <button mat-flat-button (click)="saveDefaults()" [disabled]="saving() === 'defaults'">
+              Save
+            </button>
+          }
+        </app-section>
+      </div>
+
+      <div class="stack">
+        <app-section title="Lock date" padded>
+          <p class="muted">
+            Nothing can be entered, approved or voided on or before this day. Lock a period once it
+            has been audited. Started on {{ dayLabel(d.books.startDate) }}.
+          </p>
+          <mat-form-field appearance="outline">
+            <mat-label>Locked up to</mat-label>
+            <input
+              matInput
+              type="date"
+              [value]="lockDate()"
+              [min]="d.books.startDate"
+              [max]="today"
+              (change)="lockDate.set($any($event.target).value)"
+              [disabled]="!access.canManage()"
+            />
+          </mat-form-field>
+          @if (error()?.section === 'lock') {
+            <p class="danger-text" role="alert">{{ error()!.message }}</p>
+          }
+          @if (access.canManage()) {
+            <button
+              mat-flat-button
+              (click)="saveLock()"
+              [disabled]="saving() === 'lock' || (lockDate() || null) === d.books.lockedUntil"
+            >
+              {{ lockDate() ? 'Lock' : 'Unlock' }}
+            </button>
+          }
+        </app-section>
+
+        @if (d.openings; as o) {
+          <app-section title="Opening balances" padded>
+            <dl class="facts">
+              @for (e of o.entries; track e.accountId) {
+                <dt>{{ e.name }}</dt>
+                <dd>{{ signedInr(e.amount) }}</dd>
+              }
+              <dt>Members' dues</dt>
+              <dd>{{ inr(o.memberDues) }}</dd>
+              <dt>Members' advances</dt>
+              <dd>{{ inr(o.memberAdvances) }}</dd>
+              <dt>General fund</dt>
+              <dd>{{ signedInr(o.generalFund) }}</dd>
+            </dl>
+            <p class="muted">
+              Entry <a [routerLink]="['/finance/entries', o.voucherId]">{{ o.voucherNumber }}</a> on
+              {{ dayLabel(o.startDate) }}.
+              @if (!o.editable) {
+                They can no longer be changed: record a journal entry instead.
+              }
+            </p>
+          </app-section>
+        }
+
+        <app-section title="Rules" padded>
+          <p class="muted">
+            The financial year, the amount above which expenses need a second person's approval, and
+            whether residents see a monthly summary are society settings.
+          </p>
+          <a mat-stroked-button [routerLink]="['/societies', d.books.societyId, 'settings']">
+            <mat-icon>tune</mat-icon>
+            Society settings
+          </a>
+        </app-section>
+      </div>
+    </div>
+  }
+}

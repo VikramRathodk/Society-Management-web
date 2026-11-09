@@ -1,0 +1,255 @@
+<app-page-header title="Finance" [subtitle]="subtitle()" />
+
+<app-finance-tabs />
+
+@if (loading() && !data()) {
+  <app-skeleton variant="list" />
+} @else if (loadError()) {
+  <app-empty-state icon="cloud_off" message="Couldn't load the books.">
+    <button mat-stroked-button (click)="retry()">Try again</button>
+  </app-empty-state>
+} @else if (data(); as d) {
+  @if (!d.books.started) {
+    @if (!access.canManage()) {
+      <app-empty-state
+        icon="account_balance"
+        message="This society's books haven't been started yet."
+      />
+    } @else {
+      <div class="callout">
+        <mat-icon>info</mat-icon>
+        <p>
+          Set up the books once: the accounts, the society's bank accounts and what every account
+          held on the day you start. From then on, maintenance bills and payments go into the books
+          on their own.
+        </p>
+      </div>
+
+      <div class="setup-steps">
+        <app-section title="1. Chart of accounts" padded>
+          @if (d.books.hasChart) {
+            <p class="muted">
+              Ready: {{ d.accounts.length }} accounts. You can rename, add and move them under
+              Accounts.
+            </p>
+          } @else {
+            <p class="muted">
+              Start with the standard chart for a housing society: cash, bank, member dues, funds,
+              income and expenses.
+            </p>
+            <button mat-flat-button (click)="seedChart()" [disabled]="seeding()">
+              <mat-icon>account_tree</mat-icon>
+              {{ seeding() ? 'Creating…' : 'Create the standard chart' }}
+            </button>
+          }
+        </app-section>
+
+        @if (d.books.hasChart) {
+          <app-section title="2. Cash and bank accounts" padded>
+            <div class="list">
+              @for (a of banks(); track a.id) {
+                <div class="row">
+                  <span class="main">
+                    <span class="title">{{ a.name }}</span>
+                    <span class="meta">
+                      @if (a.bank; as b) {
+                        {{ b.bankName }} · {{ b.accountType === 'SAVINGS' ? 'Savings' : 'Current' }}
+                        @if (b.last4) {
+                          · ••{{ b.last4 }}
+                        }
+                      } @else {
+                        Cash
+                      }
+                    </span>
+                  </span>
+                </div>
+              }
+            </div>
+            <p></p>
+            <button mat-stroked-button (click)="addBank()">
+              <mat-icon>account_balance</mat-icon>
+              Add bank account
+            </button>
+          </app-section>
+
+          <app-section title="3. Opening balances" padded>
+            <p class="muted">
+              What each account held at the start of the day you start the books. Leave the rest
+              empty. Maintenance dues and advances are taken from maintenance; the General fund is
+              worked out.
+            </p>
+            <mat-form-field appearance="outline">
+              <mat-label>Start date</mat-label>
+              <input
+                matInput
+                type="date"
+                [max]="today"
+                [ngModel]="startDate()"
+                (ngModelChange)="startDate.set($event)"
+              />
+            </mat-form-field>
+            @for (r of openingRows(); track r.account.id) {
+              <div class="opening-row">
+                <span class="name">
+                  {{ r.account.name }}
+                  <span class="meta muted">· {{ r.path }}</span>
+                </span>
+                <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                  <span matTextPrefix>₹&nbsp;</span>
+                  <input
+                    matInput
+                    type="number"
+                    step="0.01"
+                    [attr.aria-label]="'Opening balance of ' + r.account.name"
+                    (input)="setOpening(r.account.id, $any($event.target).value)"
+                  />
+                </mat-form-field>
+              </div>
+            }
+            <p>
+              General fund (balances the rest):
+              <strong [class.negative]="generalFund() < 0">{{ signedInr(generalFund()) }}</strong>
+            </p>
+            @if (startError(); as message) {
+              <p class="danger-text" role="alert">{{ message }}</p>
+            }
+            <button mat-flat-button (click)="start()" [disabled]="starting() || !startDate()">
+              <mat-icon>flag</mat-icon>
+              {{ starting() ? 'Starting…' : 'Start the books' }}
+            </button>
+          </app-section>
+        }
+      </div>
+    }
+  } @else {
+    @if (access.canRecord() || access.canJournal()) {
+      <div class="actions-bar">
+        @if (access.canRecord()) {
+          <button mat-flat-button (click)="record('RECEIPT')">
+            <mat-icon>call_received</mat-icon>Record income
+          </button>
+          <button mat-flat-button (click)="record('PAYMENT')">
+            <mat-icon>call_made</mat-icon>Record expense
+          </button>
+          <button mat-stroked-button (click)="record('CONTRA')">
+            <mat-icon>swap_horiz</mat-icon>Transfer
+          </button>
+        }
+        @if (access.canJournal()) {
+          <button mat-stroked-button (click)="record('JOURNAL')">
+            <mat-icon>edit_note</mat-icon>Journal entry
+          </button>
+        }
+      </div>
+    }
+
+    <div class="stats">
+      <app-stat-card
+        icon="account_balance_wallet"
+        label="Cash and bank"
+        [value]="d.cash ? inr(d.cash.totalClosing) : '—'"
+        link="/finance/reports"
+      />
+      <app-stat-card
+        icon="pending_actions"
+        label="Waiting for approval"
+        [value]="'' + d.waiting.length"
+        link="/finance/entries"
+        [queryParams]="{ status: 'PENDING_APPROVAL' }"
+        [tone]="d.waiting.length ? 'warning' : 'neutral'"
+      />
+      @if (d.check; as c) {
+        <app-stat-card
+          icon="fact_check"
+          label="Books vs maintenance"
+          [value]="c.ok ? 'In agreement' : c.mismatches.length + ' flats differ'"
+          link="/finance/settings"
+          [tone]="c.ok ? 'success' : 'danger'"
+        />
+      }
+      <app-stat-card
+        icon="lock_clock"
+        label="Locked up to"
+        [value]="d.books.lockedUntil ? dayLabel(d.books.lockedUntil) : 'Not locked'"
+        link="/finance/settings"
+      />
+    </div>
+
+    <div class="layout">
+      <div class="stack">
+        <app-section title="Latest entries">
+          <a sectionActions mat-button routerLink="/finance/entries">View all</a>
+          @if (d.recent.length === 0) {
+            <app-empty-state icon="receipt" message="No entries yet." />
+          } @else {
+            <div class="list">
+              @for (v of d.recent; track v.id) {
+                <a class="row" [routerLink]="['/finance/entries', v.id]">
+                  <span class="main">
+                    <span class="title">
+                      {{ v.number }}
+                      @if (v.status !== 'POSTED') {
+                        <app-status-pill [tone]="voucherStatus[v.status].tone">{{
+                          voucherStatus[v.status].label
+                        }}</app-status-pill>
+                      }
+                    </span>
+                    <span class="meta"
+                      >{{ voucherType[v.type].label }} · {{ dayLabel(v.date) }} ·
+                      {{ v.payee || v.narration || '' }}</span
+                    >
+                  </span>
+                  <span class="side"
+                    ><span class="amount">{{ inr(v.amount) }}</span></span
+                  >
+                </a>
+              }
+            </div>
+          }
+        </app-section>
+      </div>
+      <div class="stack">
+        <app-section title="Cash and bank">
+          @if (d.cash; as c) {
+            <div class="list">
+              @for (a of c.accounts; track a.accountId) {
+                <a class="row" [routerLink]="['/finance/accounts', a.accountId]">
+                  <span class="main">
+                    <span class="title">{{ a.name }}</span>
+                    <span class="meta"
+                      >In {{ inr(a.received) }} · out {{ inr(a.paid) }} this year</span
+                    >
+                  </span>
+                  <span class="side"
+                    ><span class="amount" [class.negative]="a.closing < 0">{{
+                      signedInr(a.closing)
+                    }}</span></span
+                  >
+                </a>
+              }
+            </div>
+          }
+        </app-section>
+        @if (d.waiting.length) {
+          <app-section title="Waiting for approval">
+            <div class="list">
+              @for (v of d.waiting; track v.id) {
+                <a class="row" [routerLink]="['/finance/entries', v.id]">
+                  <span class="main">
+                    <span class="title">{{ v.number }}</span>
+                    <span class="meta"
+                      >{{ v.payee || v.narration }} · by {{ v.createdByName }}</span
+                    >
+                  </span>
+                  <span class="side"
+                    ><span class="amount">{{ inr(v.amount) }}</span></span
+                  >
+                </a>
+              }
+            </div>
+          </app-section>
+        }
+      </div>
+    </div>
+  }
+}

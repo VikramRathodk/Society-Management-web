@@ -1,0 +1,349 @@
+<app-page-header class="no-print" title="Finance" [subtitle]="societyName()">
+  @if (report()) {
+    @if (access.canExport()) {
+      <button mat-stroked-button (click)="export()"><mat-icon>download</mat-icon>CSV</button>
+    }
+    <button mat-flat-button (click)="print()"><mat-icon>print</mat-icon>Print</button>
+  }
+</app-page-header>
+
+<app-finance-tabs />
+
+<div class="toolbar no-print">
+  <mat-button-toggle-group
+    [value]="kind()"
+    (change)="choose($event.value)"
+    [hideSingleSelectionIndicator]="true"
+    aria-label="Statement"
+  >
+    @for (r of reports; track r.value) {
+      <mat-button-toggle [value]="r.value">{{ r.label }}</mat-button-toggle>
+    }
+  </mat-button-toggle-group>
+  <span class="grow"></span>
+  @if (usesAsOf()) {
+    <mat-form-field appearance="outline" subscriptSizing="dynamic">
+      <mat-label>As of</mat-label>
+      <input matInput type="date" [value]="asOf()" (change)="asOf.set($any($event.target).value)" />
+    </mat-form-field>
+  } @else {
+    <mat-form-field appearance="outline" subscriptSizing="dynamic">
+      <mat-label>From</mat-label>
+      <input
+        matInput
+        type="date"
+        [value]="from()"
+        [max]="to() || today"
+        (change)="from.set($any($event.target).value)"
+      />
+    </mat-form-field>
+    <mat-form-field appearance="outline" subscriptSizing="dynamic">
+      <mat-label>To</mat-label>
+      <input
+        matInput
+        type="date"
+        [value]="to()"
+        [min]="from()"
+        (change)="to.set($any($event.target).value)"
+      />
+    </mat-form-field>
+  }
+</div>
+
+<ng-template #groups let-groups let-label="label" let-total="total">
+  @for (g of groups; track g.groupId) {
+    <tr class="group">
+      <td>{{ g.name }}</td>
+      <td class="num">{{ inr(g.total) }}</td>
+    </tr>
+    @for (line of g.lines; track line.accountId) {
+      <tr class="sub">
+        <td>
+          <a [routerLink]="['/finance/accounts', line.accountId]">{{ line.name }}</a>
+        </td>
+        <td class="num" [class.negative]="line.amount < 0">{{ signedInr(line.amount) }}</td>
+      </tr>
+    }
+  } @empty {
+    <tr>
+      <td colspan="2" class="muted">Nothing in this period.</td>
+    </tr>
+  }
+  <tr class="total">
+    <td>{{ label }}</td>
+    <td class="num">{{ signedInr(total) }}</td>
+  </tr>
+</ng-template>
+
+@if (loading() && !report()) {
+  <app-skeleton variant="list" />
+} @else if (loadError()) {
+  <app-empty-state
+    icon="cloud_off"
+    message="Couldn't load the statement. Have the books been started?"
+  >
+    <button mat-stroked-button (click)="retry()">Try again</button>
+  </app-empty-state>
+} @else if (report(); as r) {
+  <h2 class="print-title">
+    {{ societyName() }} · {{ title() }}
+    <span class="muted">
+      @if (usesAsOf()) {
+        as of {{ dayLabel(asOf()) }}
+      } @else {
+        {{ dayLabel(from()) }} – {{ dayLabel(to()) }}
+      }
+    </span>
+  </h2>
+
+  @switch (r.kind) {
+    @case ('trial-balance') {
+      <p>
+        @if (r.data.balanced) {
+          <app-status-pill tone="success">Balanced</app-status-pill>
+        } @else {
+          <app-status-pill tone="danger">Out of balance</app-status-pill>
+        }
+      </p>
+      <div class="table-wrap">
+        <table class="money">
+          <thead>
+            <tr>
+              <th>Code</th>
+              <th>Account</th>
+              <th class="num">Debit</th>
+              <th class="num">Credit</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of r.data.rows; track row.accountId) {
+              <tr>
+                <td class="muted">{{ row.code }}</td>
+                <td>
+                  <a [routerLink]="['/finance/accounts', row.accountId]">{{ row.name }}</a>
+                </td>
+                <td class="num">{{ row.debit ? inr(row.debit) : '' }}</td>
+                <td class="num">{{ row.credit ? inr(row.credit) : '' }}</td>
+              </tr>
+            }
+            <tr class="total">
+              <td></td>
+              <td>Total</td>
+              <td class="num">{{ inr(r.data.totalDebit) }}</td>
+              <td class="num">{{ inr(r.data.totalCredit) }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    }
+    @case ('income-expenditure') {
+      <div class="layout">
+        <div class="stack">
+          <div class="table-wrap">
+            <table class="money">
+              <thead>
+                <tr>
+                  <th>Income</th>
+                  <th class="num">Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                <ng-container
+                  *ngTemplateOutlet="
+                    groups;
+                    context: {
+                      $implicit: r.data.income,
+                      label: 'Total income',
+                      total: r.data.totalIncome,
+                    }
+                  "
+                />
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="stack">
+          <div class="table-wrap">
+            <table class="money">
+              <thead>
+                <tr>
+                  <th>Expenditure</th>
+                  <th class="num">Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                <ng-container
+                  *ngTemplateOutlet="
+                    groups;
+                    context: {
+                      $implicit: r.data.expenditure,
+                      label: 'Total expenditure',
+                      total: r.data.totalExpenditure,
+                    }
+                  "
+                />
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <p class="result">
+        {{ r.data.surplus >= 0 ? 'Surplus' : 'Deficit' }}:
+        <strong [class.negative]="r.data.surplus < 0">{{
+          inr(r.data.surplus < 0 ? -r.data.surplus : r.data.surplus)
+        }}</strong>
+      </p>
+    }
+    @case ('receipts-payments') {
+      <div class="layout">
+        <div class="stack">
+          <div class="table-wrap">
+            <table class="money">
+              <thead>
+                <tr>
+                  <th>Receipts</th>
+                  <th class="num">Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr class="group">
+                  <td>Opening cash and bank</td>
+                  <td class="num">{{ inr(r.data.openingTotal) }}</td>
+                </tr>
+                @for (o of r.data.opening; track o.accountId) {
+                  <tr class="sub">
+                    <td>{{ o.name }}</td>
+                    <td class="num">{{ signedInr(o.amount) }}</td>
+                  </tr>
+                }
+                <ng-container
+                  *ngTemplateOutlet="
+                    groups;
+                    context: {
+                      $implicit: r.data.receipts,
+                      label: 'Total receipts',
+                      total: r.data.receiptsTotal,
+                    }
+                  "
+                />
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="stack">
+          <div class="table-wrap">
+            <table class="money">
+              <thead>
+                <tr>
+                  <th>Payments</th>
+                  <th class="num">Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                <ng-container
+                  *ngTemplateOutlet="
+                    groups;
+                    context: {
+                      $implicit: r.data.payments,
+                      label: 'Total payments',
+                      total: r.data.paymentsTotal,
+                    }
+                  "
+                />
+                <tr class="group">
+                  <td>Closing cash and bank</td>
+                  <td class="num">{{ inr(r.data.closingTotal) }}</td>
+                </tr>
+                @for (c of r.data.closing; track c.accountId) {
+                  <tr class="sub">
+                    <td>{{ c.name }}</td>
+                    <td class="num">{{ signedInr(c.amount) }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    }
+    @case ('balance-sheet') {
+      <p>
+        @if (r.data.balanced) {
+          <app-status-pill tone="success">Balanced</app-status-pill>
+        } @else {
+          <app-status-pill tone="danger">Out of balance</app-status-pill>
+        }
+      </p>
+      <div class="layout">
+        <div class="stack">
+          <div class="table-wrap">
+            <table class="money">
+              <thead>
+                <tr>
+                  <th>Funds and liabilities</th>
+                  <th class="num">Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                <ng-container
+                  *ngTemplateOutlet="
+                    groups;
+                    context: {
+                      $implicit: r.data.funds,
+                      label: 'Funds',
+                      total: r.data.totalFunds - r.data.surplus,
+                    }
+                  "
+                />
+                <tr class="sub">
+                  <td>Surplus / (deficit) to date</td>
+                  <td class="num" [class.negative]="r.data.surplus < 0">
+                    {{ signedInr(r.data.surplus) }}
+                  </td>
+                </tr>
+                <ng-container
+                  *ngTemplateOutlet="
+                    groups;
+                    context: {
+                      $implicit: r.data.liabilities,
+                      label: 'Liabilities',
+                      total: r.data.totalLiabilities,
+                    }
+                  "
+                />
+                <tr class="total">
+                  <td>Total</td>
+                  <td class="num">{{ inr(r.data.totalFunds + r.data.totalLiabilities) }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="stack">
+          <div class="table-wrap">
+            <table class="money">
+              <thead>
+                <tr>
+                  <th>Assets</th>
+                  <th class="num">Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                <ng-container
+                  *ngTemplateOutlet="
+                    groups;
+                    context: {
+                      $implicit: r.data.assets,
+                      label: 'Total assets',
+                      total: r.data.totalAssets,
+                    }
+                  "
+                />
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    }
+  }
+}

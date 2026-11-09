@@ -1,0 +1,153 @@
+<app-page-header title="Finance" [subtitle]="subtitle()">
+  @if (access.canExport()) {
+    <button mat-stroked-button (click)="exportDayBook()">
+      <mat-icon>download</mat-icon>
+      Day book CSV
+    </button>
+  }
+  @if (access.canRecord() || access.canJournal()) {
+    <button mat-flat-button [matMenuTriggerFor]="newMenu">
+      <mat-icon>add</mat-icon>
+      New entry
+    </button>
+    <mat-menu #newMenu="matMenu">
+      @if (access.canRecord()) {
+        <button mat-menu-item (click)="record('RECEIPT')">
+          <mat-icon>call_received</mat-icon>Income received
+        </button>
+        <button mat-menu-item (click)="record('PAYMENT')">
+          <mat-icon>call_made</mat-icon>Expense paid
+        </button>
+        <button mat-menu-item (click)="record('CONTRA')">
+          <mat-icon>swap_horiz</mat-icon>Transfer cash / bank
+        </button>
+      }
+      @if (access.canJournal()) {
+        <button mat-menu-item (click)="record('JOURNAL')">
+          <mat-icon>edit_note</mat-icon>Journal entry
+        </button>
+      }
+    </mat-menu>
+  }
+</app-page-header>
+
+<app-finance-tabs />
+
+<div class="toolbar">
+  <mat-form-field appearance="outline" subscriptSizing="dynamic">
+    <mat-label>Search</mat-label>
+    <mat-icon matPrefix>search</mat-icon>
+    <input
+      matInput
+      [value]="q()"
+      (input)="q.set($any($event.target).value)"
+      placeholder="Number, payee, narration"
+    />
+  </mat-form-field>
+  <mat-form-field appearance="outline" subscriptSizing="dynamic">
+    <mat-label>Kind</mat-label>
+    <mat-select [value]="type()" (selectionChange)="type.set($event.value)">
+      <mat-option value="">All</mat-option>
+      @for (t of types; track t.value) {
+        <mat-option [value]="t.value">{{ t.label }}</mat-option>
+      }
+    </mat-select>
+  </mat-form-field>
+  <mat-form-field appearance="outline" subscriptSizing="dynamic">
+    <mat-label>Status</mat-label>
+    <mat-select [value]="status()" (selectionChange)="status.set($event.value)">
+      <mat-option value="">All</mat-option>
+      @for (s of statuses; track s.value) {
+        <mat-option [value]="s.value">{{ s.label }}</mat-option>
+      }
+    </mat-select>
+  </mat-form-field>
+  <mat-form-field appearance="outline" subscriptSizing="dynamic">
+    <mat-label>From</mat-label>
+    <input
+      matInput
+      type="date"
+      [value]="from()"
+      [max]="to() || today"
+      (change)="from.set($any($event.target).value)"
+    />
+  </mat-form-field>
+  <mat-form-field appearance="outline" subscriptSizing="dynamic">
+    <mat-label>To</mat-label>
+    <input
+      matInput
+      type="date"
+      [value]="to()"
+      [min]="from()"
+      [max]="today"
+      (change)="to.set($any($event.target).value)"
+    />
+  </mat-form-field>
+  <span class="grow"></span>
+  @if (filtered()) {
+    <button mat-button (click)="clearFilters()">Clear filters</button>
+  }
+</div>
+
+@if (loading() && vouchers().length === 0) {
+  <app-skeleton variant="list" />
+} @else if (loadError()) {
+  <app-empty-state icon="cloud_off" message="Couldn't load the entries.">
+    <button mat-stroked-button (click)="retry()">Try again</button>
+  </app-empty-state>
+} @else if (vouchers().length === 0) {
+  <app-empty-state
+    icon="receipt"
+    [message]="filtered() ? 'No entries match these filters.' : 'No entries yet.'"
+  />
+} @else {
+  <div class="list">
+    @for (v of vouchers(); track v.id) {
+      <a class="row" [routerLink]="['/finance/entries', v.id]">
+        <span class="main">
+          <span class="title">
+            <mat-icon class="muted" inline>{{ voucherType[v.type].icon }}</mat-icon>
+            {{ v.number }}
+            @if (v.status !== 'POSTED') {
+              <app-status-pill [tone]="voucherStatus[v.status].tone">{{
+                voucherStatus[v.status].label
+              }}</app-status-pill>
+            }
+            @if (v.reversesVoucherId) {
+              <app-status-pill outline>Reversal</app-status-pill>
+            }
+          </span>
+          <span class="meta">
+            {{ voucherType[v.type].label }} · {{ dayLabel(v.date) }}
+            @if (v.payee) {
+              · {{ v.payee }}
+            }
+            @if (v.flatLabel) {
+              · flat {{ v.flatLabel }}
+            }
+            @if (v.narration && !v.payee) {
+              · {{ v.narration }}
+            }
+          </span>
+        </span>
+        <span class="side">
+          <span class="amount" [class.muted]="v.status === 'VOID' || v.status === 'REJECTED'">
+            @if (v.status === 'VOID' || v.status === 'REJECTED') {
+              <s>{{ inr(v.amount) }}</s>
+            } @else {
+              {{ inr(v.amount) }}
+            }
+          </span>
+        </span>
+      </a>
+    }
+  </div>
+
+  @if (hasMore()) {
+    <div class="load-more">
+      <button mat-button (click)="loadMore()" [disabled]="loadingMore()">
+        {{ loadingMore() ? 'Loading…' : 'Load older entries' }}
+      </button>
+    </div>
+  }
+}

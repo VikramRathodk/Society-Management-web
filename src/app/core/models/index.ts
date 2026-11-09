@@ -7,3 +7,4 @@ export * from './notice.model';
 export * from './complaint.model';
 export * from './maintenance.model';
 export * from './invitation.model';
+export * from './finance.model';
