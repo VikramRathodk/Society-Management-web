@@ -4,7 +4,7 @@ import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { RouterLink } from '@angular/router';
-import { Observable, catchError, forkJoin, map, of, switchMap, tap } from 'rxjs';
+import { Observable, catchError, combineLatest, forkJoin, map, of, switchMap, tap } from 'rxjs';
 
 import { ComplaintApi } from '../../core/api/complaint.api';
 import { MaintenanceApi } from '../../core/api/maintenance.api';
@@ -19,8 +19,13 @@ import { Complaint, FlatDues, Notice, Visitor, VisitorStatus } from '../../core/
 import { SocietyContextStore } from '../../core/society-context/society-context.store';
 import { Section, Skeleton, StatCard, Tone } from '../../shared/ui';
 import { ComplaintRow } from '../complaints/complaint-ui';
-import { MaintenanceAccess, inr } from '../maintenance/maintenance-ui';
-import { VisitorPhotos, VisitorRow, timeAgo } from '../visitors/visitor-ui';
+import { MaintenanceAccess } from '../maintenance/maintenance-ui';
+import { GateBoard } from '../visitors/gate-board';
+import { VisitorActions, VisitorPhotos, VisitorRow, timeAgo } from '../visitors/visitor-ui';
+import { DuesSpotlight, MoneyGlance, rupees } from './dashboard-ui';
+
+/** Which home screen fits what the user can do (roles are configurable, so this goes by permissions). */
+export type Persona = 'committee' | 'gate' | 'resident';
 
 /** The API caps a page at 100 and returns no totals, so larger counts show as "100+". */
 const MAX = 100;
@@ -63,6 +68,9 @@ interface Card {
     VisitorRow,
     ComplaintRow,
     FinanceSummaryCard,
+    GateBoard,
+    MoneyGlance,
+    DuesSpotlight,
   ],
   providers: [VisitorPhotos],
   templateUrl: './dashboard.html',
@@ -103,6 +111,52 @@ export class Dashboard {
       !this.can('FINANCE.ACCOUNT.VIEW'),
   );
   protected readonly timeAgo = timeAgo;
+  protected readonly actions = inject(VisitorActions);
+
+  /**
+   * Runs the society: issues bills, records payments, reads the books or manages users. Merely
+   * seeing every flat's bills isn't enough (gate staff may have that to answer "has 1001 paid?").
+   */
+  private readonly committee = computed(
+    () =>
+      this.maintenance.canIssue() ||
+      this.maintenance.canRecord() ||
+      this.can('FINANCE.REPORT.VIEW') ||
+      this.can('USER.ACCOUNT.VIEW'),
+  );
+  /** Holds a society role without a flat, i.e. works here (guard, manager) rather than only lives here. */
+  private readonly hasStaffRole = computed(() =>
+    (this.auth.user()?.roles ?? []).some(
+      (r) => r.societyId === this.ctx.selectedSocietyId() && r.flatId == null,
+    ),
+  );
+  /**
+   * committee – the full overview with money at a glance.
+   * gate      – staff who log and let in visitors and run nothing else: the gate board (a guard
+   *             who also lives here still gets it; their own dues are under Maintenance).
+   * resident  – everyone else: their dues, their visitors, notices and complaints.
+   */
+  protected readonly persona = computed<Persona>(() => {
+    if (this.committee()) return 'committee';
+    if (
+      this.hasStaffRole() &&
+      this.can('VISITOR.ENTRY.CREATE') &&
+      this.can('VISITOR.ENTRY.UPDATE')
+    ) {
+      return 'gate';
+    }
+    return 'resident';
+  });
+  protected readonly canOpenGate = computed(() => this.can('VISITOR.ENTRY.UPDATE'));
+  protected readonly showMoney = computed(
+    () => this.can('FINANCE.REPORT.VIEW') || this.maintenance.canIssue(),
+  );
+  /** The visitor lists failed: say so rather than "nobody is waiting". */
+  protected readonly visitorsFailed = computed(() => this.data().pending === null);
+  /** Dues for the resident's own flat(s); null when they failed to load. */
+  protected readonly myDues = computed(() => this.data().dues);
+  protected readonly busy = signal<ReadonlySet<number>>(new Set());
+  private readonly attempt = signal(0);
 
   protected readonly data = signal<DashboardData>({});
   protected readonly loading = signal(true);
@@ -153,14 +207,15 @@ export class Dashboard {
         tone: open > 0 ? 'warning' : 'neutral',
       });
     }
-    if (this.canViewDues()) {
+    // Residents get the dues spotlight instead of a card.
+    if (this.canViewDues() && this.persona() !== 'resident') {
       // The backend scopes dues to the viewer: every flat for the committee, a resident's own flat.
       const dues = d.dues;
       const overdue = sum(dues, (f) => f.overdue);
       cards.push({
         label: this.maintenance.committee() ? 'Outstanding dues' : 'Your dues',
         icon: 'account_balance_wallet',
-        value: loading ? null : dues == null ? '—' : inr(sum(dues, (f) => f.outstanding)),
+        value: loading ? null : dues == null ? '—' : rupees(sum(dues, (f) => f.outstanding)),
         link: '/maintenance',
         tone: overdue > 0 ? 'warning' : 'neutral',
       });
@@ -198,19 +253,48 @@ export class Dashboard {
   protected readonly notices = computed(() => this.data().notices ?? []);
 
   constructor() {
-    toObservable(this.ctx.selectedSocietyId)
+    combineLatest([toObservable(this.ctx.selectedSocietyId), toObservable(this.attempt)])
       .pipe(
         tap(() => {
           this.loading.set(true);
           this.data.set({});
         }),
-        switchMap((societyId) => this.load(societyId)),
+        // The gate board loads its own data.
+        switchMap(([societyId]) => (this.persona() === 'gate' ? of({}) : this.load(societyId))),
         takeUntilDestroyed(),
       )
       .subscribe((data) => {
         this.data.set(data);
         this.loading.set(false);
       });
+  }
+
+  protected retry(): void {
+    this.attempt.update((n) => n + 1);
+  }
+
+  /** Approve or reject from the panel; the row leaves "Needs approval" once decided. */
+  protected decide(visitor: Visitor, approve: boolean): void {
+    this.busy.update((ids) => new Set(ids).add(visitor.id));
+    const done = () =>
+      this.busy.update((ids) => {
+        const next = new Set(ids);
+        next.delete(visitor.id);
+        return next;
+      });
+    const action = approve ? this.actions.approve(visitor) : this.actions.reject(visitor);
+    action.subscribe({
+      next: (updated) => {
+        if (!updated) return;
+        this.data.update((d) => ({
+          ...d,
+          pending: d.pending?.filter((v) => v.id !== updated.id),
+          recent: d.recent?.map((v) => (v.id === updated.id ? updated : v)),
+        }));
+      },
+      complete: done,
+      error: done,
+    });
   }
 
   /** Everything the visible cards and panels need; each failure only blanks its own part. */

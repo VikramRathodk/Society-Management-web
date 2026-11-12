@@ -117,8 +117,10 @@ export class MaintenanceApi {
   }
 
   /** Newest first, cancelled ones included. */
-  cycles(societyId: number) {
-    return this.http.get<BillingCycle[]>(`${this.society(societyId)}/cycles`);
+  cycles(societyId: number, options: { silent?: boolean } = {}) {
+    return this.http.get<BillingCycle[]>(`${this.society(societyId)}/cycles`, {
+      context: options.silent ? inlineErrors() : undefined,
+    });
   }
 
   cycle(id: number) {

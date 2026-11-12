@@ -36,8 +36,9 @@
 
 .stats {
   display: grid;
-  // Two per row on phones, up to five on wide screens.
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  // One or two per row on phones, up to five on wide screens; wide enough for "₹54,400" and a
+  // two-word label on one line.
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 190px), 1fr));
   gap: 12px;
   margin-bottom: 24px;
 }
@@ -60,8 +61,26 @@ app-visitor-row {
   color: var(--mat-sys-on-surface-variant);
 }
 
+// Failed to load: say so (with a retry) instead of looking empty.
+.quiet.failed {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-block: 12px;
+
+  button {
+    margin-left: auto;
+  }
+}
+
 .panels.more {
   margin-top: 16px;
+}
+
+// Money strip (committee) and dues spotlight (residents) sit between the hero and the cards.
+.block {
+  display: block;
+  margin-bottom: 24px;
 }
 
 .notice,

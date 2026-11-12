@@ -124,25 +124,147 @@ describe('Dashboard', () => {
     outstanding,
     overdue,
     oldestDueDate: '2026-10-10',
+    credit: 0,
   });
 
+  const text = () => (fixture.nativeElement as HTMLElement).textContent ?? '';
+
   it('totals every flat’s dues for the committee and flags overdue ones', async () => {
-    await setup(['MAINTENANCE.BILL.VIEW'], [{ societyId: 1, flatId: null }]);
+    await setup(
+      ['MAINTENANCE.BILL.VIEW', 'MAINTENANCE.BILL.CREATE'],
+      [{ societyId: 1, flatId: null }],
+    );
     expect(labels()).toEqual(['Outstanding dues']);
     http
       .expectOne('/api/societies/1/maintenance/dues?overdueOnly=false')
       .flush([dues(1, 2500.1, 0), dues(2, 1000.2, 1000.2)]);
+    // The money strip asks for the latest bill cycle.
+    http.expectOne('/api/societies/1/maintenance/cycles').flush([]);
     await fixture.whenStable();
-    expect(values()).toEqual(['₹3,500.30']);
+    expect(values()).toEqual(['₹3,500']);
     const card = (fixture.nativeElement as HTMLElement).querySelector('app-stat-card')!;
     expect(card.outerHTML).toContain('warning');
   });
 
-  it('shows a resident their own dues', async () => {
+  it('gives the committee money at a glance and the latest cycle’s collection', async () => {
+    await setup(
+      ['MAINTENANCE.BILL.VIEW', 'MAINTENANCE.BILL.CREATE', 'FINANCE.REPORT.VIEW'],
+      [{ societyId: 1, flatId: null }],
+    );
+    http.expectOne('/api/societies/1/maintenance/dues?overdueOnly=false').flush([]);
+    http
+      .expectOne((r) => r.url === '/api/societies/1/finance/summary')
+      .flush({
+        from: '2026-04-01',
+        to: '2027-03-31',
+        months: [
+          {
+            month: '2026-09',
+            income: [],
+            expenditure: [],
+            totalIncome: 100000,
+            totalExpenditure: 80000,
+            closingCashAndBank: 500000,
+          },
+          {
+            month: '2026-10',
+            income: [],
+            expenditure: [],
+            totalIncome: 120000,
+            totalExpenditure: 140000,
+            closingCashAndBank: 480000,
+          },
+        ],
+      });
+    http.expectOne('/api/societies/1/maintenance/cycles').flush([
+      {
+        id: 7,
+        kind: 'REGULAR',
+        status: 'ISSUED',
+        periodStart: '2026-10-01',
+        periodEnd: '2026-10-31',
+        billCount: 36,
+        billsByStatus: { PAID: 31, UNPAID: 5 },
+        totalBilled: 216000,
+        totalPaid: 186000,
+        totalOutstanding: 30000,
+      },
+    ]);
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const glance = (fixture.nativeElement as HTMLElement).querySelector('app-money-glance')!;
+    expect(glance.textContent).toContain('₹1,20,000');
+    expect(glance.textContent).toContain('+20% vs');
+    // Spending more than came in reads as a deficit.
+    expect(glance.textContent).toContain('Deficit');
+    expect(glance.textContent).toContain('₹20,000');
+    expect(glance.textContent).toContain('31 of 36');
+    expect(glance.textContent).toContain('₹30,000 outstanding');
+  });
+
+  it('shows a resident their own dues in the spotlight, not as a card', async () => {
     await setup(['MAINTENANCE.BILL.VIEW'], [{ societyId: 1, flatId: 9 }]);
-    expect(labels()).toEqual(['Your dues']);
+    expect(labels()).toEqual([]);
+    http
+      .expectOne('/api/societies/1/maintenance/dues?overdueOnly=false')
+      .flush([dues(9, 6000, 6000)]);
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(text()).toContain('₹6,000');
+    expect(text()).toContain('overdue');
+    expect(text()).toContain('View & pay');
+  });
+
+  it('tells a resident with nothing due that they are paid up', async () => {
+    await setup(['MAINTENANCE.BILL.VIEW'], [{ societyId: 1, flatId: 9 }]);
     http.expectOne('/api/societies/1/maintenance/dues?overdueOnly=false').flush([]);
     await fixture.whenStable();
-    expect(values()).toEqual(['₹0.00']);
+    fixture.detectChanges();
+    expect(text()).toContain('All paid up');
+  });
+
+  it('says the visitors failed to load instead of "nobody is waiting"', async () => {
+    await setup(['VISITOR.ENTRY.VIEW']);
+    http
+      .match((r) => r.url === '/api/visitors')
+      .forEach((r) => r.flush(null, { status: 500, statusText: 'Error' }));
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(text()).toContain("Couldn't load visitors.");
+    expect(text()).not.toContain('Nobody is waiting');
+  });
+
+  it('shows gate staff the gate board instead of the overview', async () => {
+    // A guard who also lives here: seeing every flat's bills doesn't make them committee, and
+    // their flat doesn't make them a resident first.
+    await setup(
+      [
+        'VISITOR.ENTRY.VIEW',
+        'VISITOR.ENTRY.CREATE',
+        'VISITOR.ENTRY.UPDATE',
+        'MAINTENANCE.BILL.VIEW',
+      ],
+      [
+        { societyId: 1, flatId: null },
+        { societyId: 1, flatId: 9 },
+      ],
+    );
+    expect(labels()).toEqual([]);
+    // Only the board's three lanes are fetched; the overview loads nothing.
+    for (const status of ['APPROVED', 'PENDING', 'ENTERED']) {
+      http
+        .expectOne(`/api/visitors?societyId=1&status=${status}&page=0&size=100`)
+        .flush(
+          status === 'APPROVED'
+            ? [visitor(5, 'Pepper Potts', new Date().toISOString(), 'APPROVED')]
+            : [],
+        );
+    }
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(text()).toContain('Let in');
+    expect(text()).toContain('Pepper Potts');
+    expect(text()).toContain('Waiting on residents');
   });
 });
