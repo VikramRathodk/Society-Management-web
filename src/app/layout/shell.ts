@@ -47,6 +47,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Structure', icon: 'domain', link: '/structure', permission: 'FLAT.DIRECTORY.VIEW' },
   { label: 'Users', icon: 'group', link: '/users', permission: 'USER.ACCOUNT.VIEW' },
   { label: 'Invitations', icon: 'mail', link: '/invitations', visible: canOpenInvitations },
+  { label: 'Gate', icon: 'door_front', link: '/gate', permission: 'VISITOR.ENTRY.UPDATE' },
   { label: 'Visitors', icon: 'badge', link: '/visitors', permission: 'VISITOR.ENTRY.VIEW' },
   { label: 'Notices', icon: 'campaign', link: '/notices', permission: 'NOTICE.POST.VIEW' },
   {

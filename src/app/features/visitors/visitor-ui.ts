@@ -18,6 +18,8 @@ import { Observable, catchError, map, of, shareReplay, switchMap } from 'rxjs';
 
 import { VisitorApi } from '../../core/api/visitor.api';
 import { Visitor, VisitorStatus } from '../../core/models';
+import { AuthStore } from '../../core/auth/auth.store';
+import { confirmDialog } from '../../shared/confirm-dialog';
 import { Avatar, StatusPill, Tone } from '../../shared/ui';
 
 /** How each status reads and is coloured everywhere. */
@@ -294,4 +296,73 @@ export class VisitorRow {
 
   protected readonly status = computed(() => VISITOR_STATUS[this.visitor().status]);
   protected readonly when = computed(() => timeAgo(this.visitor().loggedAt));
+}
+
+/**
+ * Visitor actions for screens other than the gate log (gate board, resident home): who may do what,
+ * the override confirmation, and re-fetching the row afterwards. Each call emits the updated visitor,
+ * or null if the action failed or was cancelled (the error interceptor has already said why).
+ */
+@Injectable({ providedIn: 'root' })
+export class VisitorActions {
+  private readonly api = inject(VisitorApi);
+  private readonly auth = inject(AuthStore);
+  private readonly dialog = inject(MatDialog);
+
+  can(permission: string, visitor: Visitor): boolean {
+    return this.auth.can(permission, visitor.societyId);
+  }
+
+  /** Approve/reject: residents decide for their own flat; anyone else also needs OVERRIDE. */
+  canDecide(permission: string, visitor: Visitor): boolean {
+    return (
+      this.can(permission, visitor) &&
+      (this.isResidentOf(visitor) || this.can('VISITOR.APPROVAL.OVERRIDE', visitor))
+    );
+  }
+
+  isResidentOf(visitor: Visitor): boolean {
+    return this.auth.user()?.roles.some((a) => a.flatId === visitor.flatId) ?? false;
+  }
+
+  approve(visitor: Visitor): Observable<Visitor | null> {
+    return this.decide(visitor, 'Approve', () => this.api.approve(visitor.id));
+  }
+
+  reject(visitor: Visitor): Observable<Visitor | null> {
+    return this.decide(visitor, 'Reject', () => this.api.reject(visitor.id));
+  }
+
+  enter(visitor: Visitor): Observable<Visitor | null> {
+    return this.act(this.api.enter(visitor.id), visitor);
+  }
+
+  exit(visitor: Visitor): Observable<Visitor | null> {
+    return this.act(this.api.exit(visitor.id), visitor);
+  }
+
+  /** Someone who isn't a resident of the flat decides on its behalf (SECRETARY+): confirm first. */
+  private decide(
+    visitor: Visitor,
+    verb: 'Approve' | 'Reject',
+    request: () => Observable<unknown>,
+  ): Observable<Visitor | null> {
+    const confirmed = this.isResidentOf(visitor)
+      ? of(true)
+      : confirmDialog(this.dialog, {
+          title: `${verb} on behalf of flat ${visitor.flatNumber}?`,
+          message: `You are not a resident of flat ${visitor.flatNumber}. This will be recorded as an override.`,
+          confirmText: verb,
+        });
+    return confirmed.pipe(switchMap((ok) => (ok ? this.act(request(), visitor) : of(null))));
+  }
+
+  /** On 409 (someone else answered first) the re-fetch brings the row up to date. */
+  private act(request: Observable<unknown>, visitor: Visitor): Observable<Visitor | null> {
+    return request.pipe(
+      catchError(() => of(null)),
+      switchMap(() => this.api.get(visitor.id)),
+      catchError(() => of(null)),
+    );
+  }
 }

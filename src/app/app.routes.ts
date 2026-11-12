@@ -97,6 +97,13 @@ export const routes: Routes = [
           import('./features/visitors/visitor-create').then((m) => m.VisitorCreate),
       },
       {
+        path: 'gate',
+        title: 'Gate',
+        canMatch: [permissionGuard],
+        data: { permission: 'VISITOR.ENTRY.UPDATE' },
+        loadComponent: () => import('./features/visitors/gate-board').then((m) => m.GateBoard),
+      },
+      {
         path: 'visitors',
         title: 'Visitors',
         canMatch: [permissionGuard],
