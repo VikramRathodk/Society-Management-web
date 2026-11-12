@@ -1,6 +1,8 @@
+import { inject } from '@angular/core';
 import { Routes } from '@angular/router';
 
 import { authGuard, guestGuard } from './core/auth/auth.guard';
+import { AuthStore } from './core/auth/auth.store';
 import { permissionGuard, societyPermissionGuard } from './core/auth/permission.guard';
 import { unsavedChangesGuard } from './core/unsaved-changes.guard';
 import { invitationsGuard } from './features/invitations/invitation-ui';
@@ -12,6 +14,15 @@ export const routes: Routes = [
     title: 'Sign in',
     canMatch: [guestGuard],
     loadComponent: () => import('./features/auth/login/login').then((m) => m.Login),
+  },
+  // Public home for signed-out visitors. Signed-in users don't match it and fall through to the
+  // shell below, which sends them to the dashboard.
+  {
+    path: '',
+    pathMatch: 'full',
+    title: 'Gate, dues and books for housing societies',
+    canMatch: [() => !inject(AuthStore).isAuthenticated()],
+    loadComponent: () => import('./features/landing/landing').then((m) => m.Landing),
   },
   // Public: where invitation links and QR codes land, signed in or not.
   {

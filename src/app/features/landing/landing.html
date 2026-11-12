@@ -1,0 +1,251 @@
+<header class="nav">
+  <div class="wrap nav-inner">
+    <a class="brand" routerLink="/" aria-label="Society Management home">
+      <span class="brand-mark"><mat-icon>apartment</mat-icon></span>
+      <span class="brand-name">Society Management</span>
+    </a>
+    <nav class="nav-links" aria-label="Sections">
+      <a href="#features" (click)="scrollTo('features', $event)">Features</a>
+      <a href="#roles" (click)="scrollTo('roles', $event)">Who it's for</a>
+      <a href="#how" (click)="scrollTo('how', $event)">How it works</a>
+      @if (config.plans.length) {
+        <a href="#pricing" (click)="scrollTo('pricing', $event)">Pricing</a>
+      }
+      <a href="#faq" (click)="scrollTo('faq', $event)">FAQ</a>
+    </nav>
+    <a mat-flat-button routerLink="/login" class="nav-cta">Log in</a>
+  </div>
+</header>
+
+<main>
+  <!-- Hero -->
+  <section class="hero">
+    <div class="wrap hero-grid">
+      <div class="hero-text">
+        <p class="eyebrow">For housing societies and apartment committees</p>
+        <h1>Your society's gate, dues and books — in one calm place.</h1>
+        <p class="lead">
+          Guards log visitors and residents approve them from their phone. Bills go out every cycle
+          with a UPI QR on each one. And every rupee lands in proper books, with a second person
+          approving what the first one records.
+        </p>
+        <div class="hero-ctas">
+          @if (demoLink) {
+            <a mat-flat-button class="big" [href]="demoLink">Request a demo</a>
+            <a mat-stroked-button class="big" routerLink="/login">Log in</a>
+          } @else {
+            <a mat-flat-button class="big" routerLink="/login">Log in</a>
+            <a
+              mat-stroked-button
+              class="big"
+              href="#features"
+              (click)="scrollTo('features', $event)"
+            >
+              See what's inside
+            </a>
+          }
+        </div>
+        <ul class="assurances">
+          <li><mat-icon aria-hidden="true">verified_user</mat-icon>Role-based access</li>
+          <li><mat-icon aria-hidden="true">fact_check</mat-icon>Second-person approvals</li>
+          <li><mat-icon aria-hidden="true">history</mat-icon>Full audit trail</li>
+        </ul>
+      </div>
+
+      <!-- A picture of the product, drawn with the app's own pieces. -->
+      <app-landing-preview />
+    </div>
+  </section>
+
+  <!-- Three pillars -->
+  <section id="features" class="section">
+    <div class="wrap">
+      <p class="eyebrow">What it does</p>
+      <h2>Three jobs every committee does, done properly.</h2>
+      <div class="pillars">
+        @for (p of pillars; track p.title) {
+          <article class="pillar">
+            <span class="pillar-icon"
+              ><mat-icon aria-hidden="true">{{ p.icon }}</mat-icon></span
+            >
+            <p class="pillar-eyebrow">{{ p.eyebrow }}</p>
+            <h3>{{ p.title }}</h3>
+            <p>{{ p.text }}</p>
+            <ul>
+              @for (point of p.points; track point) {
+                <li><mat-icon aria-hidden="true">check</mat-icon>{{ point }}</li>
+              }
+            </ul>
+          </article>
+        }
+      </div>
+    </div>
+  </section>
+
+  <!-- Roles -->
+  <section id="roles" class="section tinted">
+    <div class="wrap">
+      <p class="eyebrow">Who it's for</p>
+      <h2>Everyone opens it to a screen made for them.</h2>
+      <div class="roles">
+        @for (r of roles; track r.title) {
+          <article class="role">
+            <span class="role-icon"
+              ><mat-icon aria-hidden="true">{{ r.icon }}</mat-icon></span
+            >
+            <h3>{{ r.title }}</h3>
+            <p>{{ r.text }}</p>
+          </article>
+        }
+      </div>
+    </div>
+  </section>
+
+  <!-- Everything else -->
+  <section class="section">
+    <div class="wrap">
+      <p class="eyebrow">And the rest</p>
+      <h2>The everyday things, already there.</h2>
+      <ul class="features">
+        @for (f of features; track f.title) {
+          <li>
+            <mat-icon aria-hidden="true">{{ f.icon }}</mat-icon>
+            <span
+              ><strong>{{ f.title }}</strong
+              >{{ f.text }}</span
+            >
+          </li>
+        }
+      </ul>
+    </div>
+  </section>
+
+  <!-- Transparency -->
+  <section class="section">
+    <div class="wrap trust">
+      <div>
+        <p class="eyebrow">Transparency</p>
+        <h2>Nothing about money changes quietly.</h2>
+        <p class="lead">
+          Whoever records an entry, someone else approves it. Every change to accounts, entries and
+          settings is written to the audit log with who did it and when. Close a period with a lock
+          date and it stays closed.
+        </p>
+      </div>
+      <ol class="log" aria-label="Example audit trail">
+        <li>
+          <mat-icon aria-hidden="true">add_circle</mat-icon>
+          <span><strong>Ramesh K.</strong> recorded an expense: Lift maintenance ₹12,000</span>
+          <small>18 Nov · 09:12</small>
+        </li>
+        <li>
+          <mat-icon aria-hidden="true">task_alt</mat-icon>
+          <span><strong>Sunita M.</strong> approved it</span>
+          <small>18 Nov · 11:40</small>
+        </li>
+        <li>
+          <mat-icon aria-hidden="true">lock</mat-icon>
+          <span><strong>Sunita M.</strong> locked the books up to 31 Oct</span>
+          <small>19 Nov · 18:05</small>
+        </li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- How it works -->
+  <section id="how" class="section tinted">
+    <div class="wrap">
+      <p class="eyebrow">How it works</p>
+      <h2>Up and running in an afternoon.</h2>
+      <ol class="steps">
+        @for (s of steps; track s.title; let i = $index) {
+          <li>
+            <span class="step-no">{{ i + 1 }}</span>
+            <h3>{{ s.title }}</h3>
+            <p>{{ s.text }}</p>
+          </li>
+        }
+      </ol>
+    </div>
+  </section>
+
+  <!-- Pricing: only once real plans are configured in LANDING.plans -->
+  @if (config.plans.length) {
+    <section id="pricing" class="section">
+      <div class="wrap">
+        <p class="eyebrow">Pricing</p>
+        <h2>Simple, by the size of your society.</h2>
+        <div class="plans">
+          @for (plan of config.plans; track plan.name) {
+            <article class="plan">
+              <h3>{{ plan.name }}</h3>
+              <p class="price">
+                {{ plan.price }} <small>{{ plan.per }}</small>
+              </p>
+              <p>{{ plan.blurb }}</p>
+              <ul>
+                @for (point of plan.points; track point) {
+                  <li><mat-icon aria-hidden="true">check</mat-icon>{{ point }}</li>
+                }
+              </ul>
+            </article>
+          }
+        </div>
+      </div>
+    </section>
+  }
+
+  <!-- FAQ -->
+  <section id="faq" class="section">
+    <div class="wrap narrow">
+      <p class="eyebrow">Questions</p>
+      <h2>Things committees usually ask.</h2>
+      <div class="faqs">
+        @for (f of faqs; track f.q) {
+          <details>
+            <summary>{{ f.q }}<mat-icon aria-hidden="true">expand_more</mat-icon></summary>
+            <p>{{ f.a }}</p>
+          </details>
+        }
+      </div>
+    </div>
+  </section>
+
+  <!-- Closing call to action -->
+  <section class="section">
+    <div class="wrap">
+      <div class="closing">
+        <h2>Bring the gate, the dues and the books together.</h2>
+        @if (demoLink) {
+          <p>Tell us about your society and we'll show you around.</p>
+          <div class="hero-ctas">
+            <a mat-flat-button class="big on-dark" [href]="demoLink">Request a demo</a>
+            @if (config.contactPhone) {
+              <span class="phone"
+                ><mat-icon aria-hidden="true">call</mat-icon>{{ config.contactPhone }}</span
+              >
+            }
+          </div>
+        } @else {
+          <p>Already invited by your society? Sign in with your phone number.</p>
+          <div class="hero-ctas">
+            <a mat-flat-button class="big on-dark" routerLink="/login">Log in</a>
+          </div>
+        }
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="footer">
+  <div class="wrap footer-inner">
+    <span class="brand small">
+      <span class="brand-mark"><mat-icon>apartment</mat-icon></span>
+      Society Management
+    </span>
+    <span>© {{ year }} Society Management</span>
+    @if (config.contactEmail) {
+      <a [href]="'mailto:' + config.contactEmail">{{ config.contactEmail }}</a>
+    }
+  </div>
+</footer>
