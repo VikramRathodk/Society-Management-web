@@ -22,6 +22,7 @@ import {
   flatLabel,
   inr,
   recordPaymentDialog,
+  refundDialog,
 } from './maintenance-ui';
 
 /**
@@ -104,6 +105,25 @@ export class MaintenanceDues {
       this.snack.open(`Payment recorded · receipt ${payment.receiptNumber}`, undefined, {
         duration: 4000,
       });
+      this.retry();
+    });
+  }
+
+  protected refund(d: FlatDues): void {
+    const societyId = this.ctx.selectedSocietyId();
+    if (societyId == null) return;
+    refundDialog(this.dialog, {
+      societyId,
+      flat: { id: d.flatId, label: flatLabel(d.wingName, d.flatNumber) },
+      credit: d.credit,
+    }).subscribe((refund) => {
+      this.snack.open(
+        refund.status === 'PENDING_APPROVAL'
+          ? `Refund ${refund.refundNumber} is waiting for approval`
+          : `Refund ${refund.refundNumber} recorded`,
+        undefined,
+        { duration: 4000 },
+      );
       this.retry();
     });
   }

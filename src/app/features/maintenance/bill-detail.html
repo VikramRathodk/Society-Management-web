@@ -190,8 +190,18 @@
                         p.receiptNumber
                       }}</a>
                     </td>
-                    <td>{{ dayLabel(p.paidOn) }}</td>
-                    <td>{{ methodLabel(p.method) }}</td>
+                    <td>{{ dayLabel(p.fromCredit ? p.appliedOn : p.paidOn) }}</td>
+                    <td>
+                      {{
+                        p.fromCredit
+                          ? 'From advance (' +
+                            methodLabel(p.method) +
+                            ' ' +
+                            dayLabel(p.paidOn) +
+                            ')'
+                          : methodLabel(p.method)
+                      }}
+                    </td>
                     <td class="num">{{ inr(p.amount) }}</td>
                   </tr>
                 }

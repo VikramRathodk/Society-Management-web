@@ -90,12 +90,15 @@
             </tr>
           </thead>
           <tbody>
-            @for (a of p.allocations; track a.billId) {
+            @for (a of p.allocations; track $index) {
               <tr>
                 <td>
                   <a class="no-print-link" [routerLink]="['/maintenance/bills', a.billId]">{{
                     a.billNumber
                   }}</a>
+                  @if (a.fromCredit) {
+                    <span class="muted"> · from the advance, {{ dayLabel(a.appliedOn) }}</span>
+                  }
                 </td>
                 <td class="num">{{ inr(a.amount) }}</td>
               </tr>
@@ -103,6 +106,11 @@
           </tbody>
         </table>
       </div>
+    }
+    @if (p.status === 'RECORDED' && p.creditLeft) {
+      <p class="muted">
+        Kept as advance (pays the next bills): <strong>{{ inr(p.creditLeft) }}</strong>
+      </p>
     }
   </app-section>
 }

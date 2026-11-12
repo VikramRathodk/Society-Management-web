@@ -1,0 +1,61 @@
+<app-page-header title="Finance" [subtitle]="subtitle()" />
+
+<app-finance-tabs />
+
+<div class="toolbar">
+  <mat-form-field appearance="outline" subscriptSizing="dynamic">
+    <mat-label>What changed</mat-label>
+    <mat-select [value]="entityType()" (selectionChange)="entityType.set($event.value)">
+      <mat-option value="">Everything</mat-option>
+      @for (e of entities; track e.value) {
+        <mat-option [value]="e.value">{{ e.label }}</mat-option>
+      }
+    </mat-select>
+  </mat-form-field>
+</div>
+
+@if (loading() && entries().length === 0) {
+  <app-skeleton variant="list" />
+} @else if (loadError()) {
+  <app-empty-state icon="cloud_off" message="Couldn't load the audit log." />
+} @else if (entries().length === 0) {
+  <app-empty-state icon="history" message="Nothing recorded yet." />
+} @else {
+  <div class="list">
+    @for (e of entries(); track e.id) {
+      <div class="row">
+        <span class="main">
+          <span class="title">
+            {{ entityLabel(e.entityType) }}
+            <app-status-pill outline>{{ e.action }}</app-status-pill>
+          </span>
+          <span class="meta"
+            >{{ e.performedByName ?? 'Someone' }} ·
+            {{ e.performedAt | date: 'd MMM y, h:mm a' }}</span
+          >
+          @if (e.reason) {
+            <span class="meta">Reason: {{ e.reason }}</span>
+          }
+          <dl class="changes">
+            @for (c of changes(e); track c.key) {
+              <dt>{{ c.key }}</dt>
+              <dd>
+                @if (c.old !== null) {
+                  <span class="old">{{ c.old }}</span>
+                }
+                {{ c.new }}
+              </dd>
+            }
+          </dl>
+        </span>
+      </div>
+    }
+  </div>
+  @if (hasMore()) {
+    <div class="load-more">
+      <button mat-button (click)="loadMore()" [disabled]="loadingMore()">
+        {{ loadingMore() ? 'Loading…' : 'Load older' }}
+      </button>
+    </div>
+  }
+}

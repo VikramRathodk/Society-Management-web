@@ -109,5 +109,9 @@
         }
       </app-section>
     }
+
+    @if (showFinanceSummary()) {
+      <app-finance-summary-card />
+    }
   </div>
 }

@@ -210,6 +210,77 @@ export const routes: Routes = [
                 (m) => m.MaintenanceSettings,
               ),
           },
+          {
+            path: 'refunds',
+            title: 'Maintenance refunds',
+            canMatch: [permissionGuard],
+            data: { permission: 'MAINTENANCE.PAYMENT.VIEW' },
+            loadComponent: () =>
+              import('./features/maintenance/refund-list').then((m) => m.RefundList),
+          },
+        ],
+      },
+      {
+        path: 'finance',
+        canMatch: [permissionGuard],
+        data: { permission: 'FINANCE.ACCOUNT.VIEW' },
+        children: [
+          {
+            path: '',
+            pathMatch: 'full',
+            title: 'Finance',
+            loadComponent: () =>
+              import('./features/finance/finance-overview').then((m) => m.FinanceOverview),
+          },
+          {
+            path: 'entries/:id',
+            title: 'Entry',
+            canMatch: [permissionGuard],
+            data: { permission: 'FINANCE.VOUCHER.VIEW' },
+            loadComponent: () =>
+              import('./features/finance/entry-detail').then((m) => m.EntryDetail),
+          },
+          {
+            path: 'entries',
+            title: 'Entries',
+            canMatch: [permissionGuard],
+            data: { permission: 'FINANCE.VOUCHER.VIEW' },
+            loadComponent: () => import('./features/finance/entry-list').then((m) => m.EntryList),
+          },
+          {
+            path: 'accounts/:id',
+            title: 'Ledger',
+            canMatch: [permissionGuard],
+            data: { permission: 'FINANCE.VOUCHER.VIEW' },
+            loadComponent: () => import('./features/finance/ledger').then((m) => m.LedgerPage),
+          },
+          {
+            path: 'accounts',
+            title: 'Chart of accounts',
+            loadComponent: () =>
+              import('./features/finance/account-list').then((m) => m.AccountList),
+          },
+          {
+            path: 'reports',
+            title: 'Financial statements',
+            canMatch: [permissionGuard],
+            data: { permission: 'FINANCE.REPORT.VIEW' },
+            loadComponent: () =>
+              import('./features/finance/finance-reports').then((m) => m.FinanceReports),
+          },
+          {
+            path: 'settings',
+            title: 'Finance settings',
+            loadComponent: () =>
+              import('./features/finance/finance-settings').then((m) => m.FinanceSettings),
+          },
+          {
+            path: 'audit',
+            title: 'Finance audit log',
+            canMatch: [permissionGuard],
+            data: { permission: 'FINANCE.AUDIT.VIEW' },
+            loadComponent: () => import('./features/finance/audit-log').then((m) => m.AuditLog),
+          },
         ],
       },
       {

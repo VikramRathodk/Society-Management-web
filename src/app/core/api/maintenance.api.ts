@@ -15,6 +15,9 @@ import {
   MaintenanceSettings,
   OpeningBalancesRequest,
   Payment,
+  Refund,
+  RefundRequest,
+  RefundStatus,
   RecordPaymentRequest,
   ReminderResult,
   UpdateSettingsRequest,
@@ -218,6 +221,60 @@ export class MaintenanceApi {
     return this.http.post<ReminderResult>(
       `${this.society(societyId)}/dues/remind`,
       flatIds ? { flatIds } : {},
+    );
+  }
+
+  // ---- Credit and refunds ----
+
+  /** A flat's unused credit (what could be refunded). */
+  flatCredit(societyId: number, flatId: number) {
+    return this.http.get<{ flatId: number; credit: number }>(
+      `${this.society(societyId)}/flats/${flatId}/credit`,
+    );
+  }
+
+  refunds(societyId: number, query: { flatId?: number | null; status?: RefundStatus[] } = {}) {
+    const p: Record<string, string | number | string[]> = { societyId };
+    if (query.flatId != null) p['flatId'] = query.flatId;
+    if (query.status?.length) p['status'] = query.status;
+    return this.http.get<Refund[]>(`${this.api}/maintenance/refunds`, { params: p });
+  }
+
+  refund(id: number) {
+    return this.http.get<Refund>(`${this.api}/maintenance/refunds/${id}`);
+  }
+
+  recordRefund(societyId: number, body: RefundRequest) {
+    return this.http.post<Refund>(`${this.society(societyId)}/refunds`, body, {
+      context: inlineErrors(),
+    });
+  }
+
+  approveRefund(id: number) {
+    return this.http.post<Refund>(`${this.api}/maintenance/refunds/${id}/approve`, null);
+  }
+
+  rejectRefund(id: number, reason: string) {
+    return this.http.post<Refund>(
+      `${this.api}/maintenance/refunds/${id}/reject`,
+      { reason },
+      {
+        context: inlineErrors(),
+      },
+    );
+  }
+
+  withdrawRefund(id: number) {
+    return this.http.post<Refund>(`${this.api}/maintenance/refunds/${id}/withdraw`, null);
+  }
+
+  voidRefund(id: number, reason: string) {
+    return this.http.post<Refund>(
+      `${this.api}/maintenance/refunds/${id}/void`,
+      { reason },
+      {
+        context: inlineErrors(),
+      },
     );
   }
 }

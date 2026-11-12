@@ -62,6 +62,12 @@ const NAV_ITEMS: NavItem[] = [
     permission: 'MAINTENANCE.BILL.VIEW',
   },
   {
+    label: 'Finance',
+    icon: 'account_balance',
+    link: '/finance',
+    permission: 'FINANCE.ACCOUNT.VIEW',
+  },
+  {
     label: 'Roles',
     icon: 'admin_panel_settings',
     link: '/roles',
@@ -167,6 +173,34 @@ export class Shell {
         icon: 'add_card',
         keywords: 'receipt pay dues maintenance cash cheque upi',
         run: go('/maintenance/payments?record=1'),
+      });
+    if (can('FINANCE.VOUCHER.CREATE')) {
+      list.push({
+        id: 'act:income',
+        group: 'Actions',
+        label: 'Record income',
+        icon: 'call_received',
+        keywords: 'finance receipt income money in hall rent donation interest books',
+        run: go('/finance/entries?new=RECEIPT'),
+      });
+      list.push({
+        id: 'act:expense',
+        group: 'Actions',
+        label: 'Record expense',
+        icon: 'call_made',
+        keywords: 'finance payment expense bill money out vendor books',
+        run: go('/finance/entries?new=PAYMENT'),
+      });
+    }
+    if (can('FINANCE.REPORT.VIEW'))
+      list.push({
+        id: 'act:statements',
+        group: 'Actions',
+        label: 'Financial statements',
+        icon: 'summarize',
+        keywords:
+          'balance sheet income expenditure receipts payments trial balance report accounts',
+        run: go('/finance/reports'),
       });
     if (can('MAINTENANCE.BILL.CREATE'))
       list.push({

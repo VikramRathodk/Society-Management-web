@@ -78,10 +78,17 @@
             @if (d.overdue > 0) {
               <app-status-pill tone="warning">Overdue</app-status-pill>
             }
+            @if (d.credit > 0) {
+              <app-status-pill tone="success">Credit {{ inr(d.credit) }}</app-status-pill>
+            }
           </span>
           <span class="meta">
-            {{ d.openBills }} open bill{{ d.openBills === 1 ? '' : 's' }} · oldest due
-            {{ dayLabel(d.oldestDueDate) }}
+            @if (d.openBills > 0) {
+              {{ d.openBills }} open bill{{ d.openBills === 1 ? '' : 's' }} · oldest due
+              {{ dayLabel(d.oldestDueDate) }}
+            } @else {
+              Nothing owed · the credit pays the next bills
+            }
           </span>
         </a>
         <div class="side">
@@ -90,6 +97,16 @@
             <span class="meta danger-text">{{ inr(d.overdue) }} overdue</span>
           }
           <span class="actions">
+            @if (access.canRefund() && d.credit > 0) {
+              <button
+                mat-icon-button
+                (click)="refund(d)"
+                matTooltip="Refund credit"
+                [attr.aria-label]="'Refund credit of flat ' + flatLabel(d.wingName, d.flatNumber)"
+              >
+                <mat-icon>currency_exchange</mat-icon>
+              </button>
+            }
             @if (access.canUpdateBills() && d.overdue > 0) {
               <button
                 mat-icon-button

@@ -8,6 +8,7 @@ import { Observable, catchError, forkJoin, map, of, switchMap, tap } from 'rxjs'
 
 import { ComplaintApi } from '../../core/api/complaint.api';
 import { MaintenanceApi } from '../../core/api/maintenance.api';
+import { FinanceSummaryCard } from '../finance/finance-summary-card';
 import { NoticeApi } from '../../core/api/notice.api';
 import { StructureApi } from '../../core/api/structure.api';
 import { UserApi } from '../../core/api/user.api';
@@ -61,6 +62,7 @@ interface Card {
     StatCard,
     VisitorRow,
     ComplaintRow,
+    FinanceSummaryCard,
   ],
   providers: [VisitorPhotos],
   templateUrl: './dashboard.html',
@@ -92,6 +94,13 @@ export class Dashboard {
   );
   protected readonly canViewDues = computed(
     () => this.can('MAINTENANCE.BILL.VIEW') && this.ctx.selectedSocietyId() != null,
+  );
+  /** Residents (no Finance section) see the society's monthly summary when it is shared. */
+  protected readonly showFinanceSummary = computed(
+    () =>
+      this.ctx.selectedSocietyId() != null &&
+      this.can('FINANCE.SUMMARY.VIEW') &&
+      !this.can('FINANCE.ACCOUNT.VIEW'),
   );
   protected readonly timeAgo = timeAgo;
 

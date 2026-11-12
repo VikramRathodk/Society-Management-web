@@ -1,0 +1,111 @@
+<app-page-header
+  [title]="ledger() ? ledger()!.code + ' · ' + ledger()!.name : 'Ledger'"
+  [subtitle]="
+    ledger()
+      ? accountTypeLabel(ledger()!.type) +
+        (ledger()!.flatLabel ? ' · flat ' + ledger()!.flatLabel : '')
+      : null
+  "
+  back="/finance/accounts"
+  backLabel="Back to accounts"
+>
+  @if (ledger()) {
+    @if (access.canExport()) {
+      <button mat-stroked-button class="no-print" (click)="export()">
+        <mat-icon>download</mat-icon>CSV
+      </button>
+    }
+    <button mat-flat-button class="no-print" (click)="print()">
+      <mat-icon>print</mat-icon>Print
+    </button>
+  }
+</app-page-header>
+
+<div class="toolbar no-print">
+  <mat-form-field appearance="outline" subscriptSizing="dynamic">
+    <mat-label>From</mat-label>
+    <input
+      matInput
+      type="date"
+      [value]="from()"
+      [max]="to() || today"
+      (change)="from.set($any($event.target).value)"
+    />
+  </mat-form-field>
+  <mat-form-field appearance="outline" subscriptSizing="dynamic">
+    <mat-label>To</mat-label>
+    <input
+      matInput
+      type="date"
+      [value]="to()"
+      [min]="from()"
+      (change)="to.set($any($event.target).value)"
+    />
+  </mat-form-field>
+</div>
+
+@if (loading() && !ledger()) {
+  <app-skeleton variant="list" />
+} @else if (loadError() === 'missing') {
+  <app-empty-state icon="search_off" message="This account doesn't exist or isn't yours to see." />
+} @else if (loadError() === 'failed' && !ledger()) {
+  <app-empty-state icon="cloud_off" message="Couldn't load the ledger.">
+    <button mat-stroked-button (click)="retry()">Try again</button>
+  </app-empty-state>
+} @else if (ledger(); as l) {
+  <div class="table-wrap">
+    <table class="money">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Entry</th>
+          <th>Details</th>
+          <th class="num">Debit</th>
+          <th class="num">Credit</th>
+          <th class="num">Balance</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="group">
+          <td>{{ dayLabel(l.from) }}</td>
+          <td colspan="4">Opening balance</td>
+          <td class="num" [class.negative]="l.opening < 0">{{ signedInr(l.opening) }}</td>
+        </tr>
+        @for (line of l.lines; track $index) {
+          <tr>
+            <td>{{ dayLabel(line.date) }}</td>
+            <td>
+              <a [routerLink]="['/finance/entries', line.voucherId]">{{ line.voucherNumber }}</a>
+            </td>
+            <td>
+              {{ voucherType[line.voucherType].label }}
+              @if (line.payee) {
+                · {{ line.payee }}
+              }
+              @if (line.flatLabel) {
+                · {{ line.flatLabel }}
+              }
+              @if (line.narration) {
+                <div class="muted">{{ line.narration }}</div>
+              }
+            </td>
+            <td class="num">{{ line.debit ? inr(line.debit) : '' }}</td>
+            <td class="num">{{ line.credit ? inr(line.credit) : '' }}</td>
+            <td class="num" [class.negative]="line.balance < 0">{{ signedInr(line.balance) }}</td>
+          </tr>
+        } @empty {
+          <tr>
+            <td colspan="6" class="muted">No entries in this period.</td>
+          </tr>
+        }
+        <tr class="total">
+          <td>{{ dayLabel(l.to) }}</td>
+          <td colspan="2">Closing balance</td>
+          <td class="num">{{ inr(l.totalDebit) }}</td>
+          <td class="num">{{ inr(l.totalCredit) }}</td>
+          <td class="num" [class.negative]="l.closing < 0">{{ signedInr(l.closing) }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+}

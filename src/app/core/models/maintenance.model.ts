@@ -122,6 +122,9 @@ export interface BillPayment {
   method: PaymentMethod;
   /** The part of the payment that went to this bill. */
   amount: number;
+  /** Paid later from the payment's unused credit (an advance), on `appliedOn`. */
+  fromCredit: boolean;
+  appliedOn: string | null;
 }
 
 export interface Bill extends BillingPeriod {
@@ -156,12 +159,16 @@ export interface RecordPaymentRequest {
   note?: string;
   /** Pay this bill first; the rest goes to the oldest bills. */
   billId?: number;
+  /** The finance cash/bank ledger it went into; the books' default for the method when left out. */
+  depositAccountId?: number;
 }
 
 export interface PaymentAllocation {
   billId: number;
   billNumber: string;
   amount: number;
+  fromCredit: boolean;
+  appliedOn: string | null;
 }
 
 export interface Payment {
@@ -182,8 +189,11 @@ export interface Payment {
   voidedAt: string | null;
   voidedByName: string | null;
   voidReason: string | null;
+  depositAccountId: number | null;
   /** Only on the single-payment endpoint (the receipt). */
   allocations: PaymentAllocation[] | null;
+  /** What is left of it as the flat's credit; only on the single-payment endpoint. */
+  creditLeft: number | null;
 }
 
 export interface OpeningBalanceEntry {
@@ -206,10 +216,53 @@ export interface FlatDues {
   outstanding: number;
   /** Past the due date plus the society's grace days. */
   overdue: number;
-  oldestDueDate: string;
+  /** Null for a flat that only has credit. */
+  oldestDueDate: string | null;
+  /** Unused advance (credit). */
+  credit: number;
 }
 
 export interface ReminderResult {
   flatCount: number;
   totalOverdue: number;
+}
+
+// ---- Refunds of unused credit ----
+
+export type RefundStatus = 'PENDING_APPROVAL' | 'COMPLETED' | 'REJECTED' | 'VOID';
+
+export interface Refund {
+  id: number;
+  refundNumber: string;
+  societyId: number;
+  flatId: number;
+  wingName: string;
+  flatNumber: string;
+  amount: number;
+  paidOn: string;
+  method: PaymentMethod;
+  paidFromAccountId: number | null;
+  reference: string | null;
+  reason: string;
+  status: RefundStatus;
+  createdAt: string | null;
+  createdBy: number;
+  createdByName: string | null;
+  decidedAt: string | null;
+  decidedByName: string | null;
+  decisionReason: string | null;
+  voidedAt: string | null;
+  voidedByName: string | null;
+  voidReason: string | null;
+  allocations: { paymentId: number; amount: number }[];
+}
+
+export interface RefundRequest {
+  flatId: number;
+  amount: number;
+  paidOn: string;
+  method: PaymentMethod;
+  reason: string;
+  reference?: string;
+  paidFromAccountId?: number;
 }
