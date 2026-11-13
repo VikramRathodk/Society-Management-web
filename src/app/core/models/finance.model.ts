@@ -6,7 +6,15 @@ export type VoucherType = 'RECEIPT' | 'PAYMENT' | 'CONTRA' | 'JOURNAL' | 'OPENIN
 export type VoucherStatus = 'PENDING_APPROVAL' | 'POSTED' | 'REJECTED' | 'VOID';
 export type DocumentType = 'INVOICE' | 'RECEIPT' | 'APPROVAL' | 'BANK_PROOF' | 'OTHER';
 export type AuditEntityType =
-  'VOUCHER' | 'ACCOUNT' | 'BANK_ACCOUNT' | 'BOOKS' | 'MAPPING' | 'SETTING' | 'REFUND' | 'DOCUMENT';
+  | 'VOUCHER'
+  | 'ACCOUNT'
+  | 'BANK_ACCOUNT'
+  | 'BOOKS'
+  | 'MAPPING'
+  | 'SETTING'
+  | 'REFUND'
+  | 'DOCUMENT'
+  | 'RECONCILIATION';
 
 export interface BookDefaults {
   cashDepositAccountId: number | null;
@@ -196,6 +204,8 @@ export interface LedgerLine {
   debit: number;
   credit: number;
   balance: number;
+  /** Bank ledgers: the day it cleared at the bank (null while it hasn't, and before the first statement). */
+  clearedOn?: string | null;
 }
 
 export interface Ledger {

@@ -1,0 +1,620 @@
+<app-page-header
+  [title]="statement()?.accountName ?? 'Bank statement'"
+  [subtitle]="statement() ? periodText(statement()!) : null"
+  [back]="statement() ? '/finance/reconcile/' + statement()!.accountId : '/finance/reconcile'"
+  backLabel="Back to statements"
+>
+  @if (statement(); as s) {
+    <app-status-pill headerMeta [tone]="statementStatus[s.status].tone">{{
+      statementStatus[s.status].label
+    }}</app-status-pill>
+  }
+  @if (statement(); as s) {
+    @if (editable()) {
+      <button mat-stroked-button (click)="autoMatch()" [disabled]="busy() || !s.unmatched">
+        <mat-icon>auto_fix_high</mat-icon>Auto-match
+      </button>
+      <button mat-flat-button (click)="importCsv()">
+        <mat-icon>upload_file</mat-icon>Import CSV
+      </button>
+      <button mat-icon-button [matMenuTriggerFor]="more" aria-label="More statement actions">
+        <mat-icon>more_vert</mat-icon>
+      </button>
+      <mat-menu #more="matMenu">
+        <button mat-menu-item (click)="edit()">
+          <mat-icon>edit</mat-icon>Edit period or balances
+        </button>
+        <button mat-menu-item (click)="remove()">
+          <mat-icon>delete</mat-icon>Delete statement
+        </button>
+      </mat-menu>
+    }
+  }
+</app-page-header>
+
+@if (loading() && !data()) {
+  <app-skeleton variant="list" />
+} @else if (loadError() === 'missing') {
+  <app-empty-state
+    icon="search_off"
+    message="This statement doesn't exist or isn't yours to see."
+  />
+} @else if (loadError() === 'failed' && !data()) {
+  <app-empty-state icon="cloud_off" message="Couldn't load the statement.">
+    <button mat-stroked-button (click)="refresh(true)">Try again</button>
+  </app-empty-state>
+} @else if (data(); as d) {
+  <div class="stats">
+    <app-stat-card
+      icon="login"
+      label="Opening balance"
+      [value]="signedInr(d.statement.openingBalance)"
+    />
+    <app-stat-card icon="south_west" label="Money in" [value]="inr(d.statement.credits)" />
+    <app-stat-card icon="north_east" label="Money out" [value]="inr(d.statement.debits)" />
+    <app-stat-card
+      icon="logout"
+      label="Closing balance"
+      [value]="signedInr(d.statement.closingBalance)"
+    />
+  </div>
+
+  @if (d.statement.status === 'OPEN' && d.statement.reopenedAt) {
+    <div class="callout">
+      <mat-icon>history</mat-icon>
+      <p>
+        Reopened {{ dayLabel(d.statement.reopenedAt.slice(0, 10)) }}: {{ d.statement.reopenReason }}
+      </p>
+    </div>
+  }
+  @if (d.statement.lines && d.statement.linesDifference !== 0) {
+    <div class="callout" data-tone="warning" role="status">
+      <mat-icon>warning</mat-icon>
+      <p>
+        The imported lines take the balance from {{ signedInr(d.statement.openingBalance) }} to
+        {{ signedInr(d.statement.linesClosing) }}, but the statement closes at
+        {{ signedInr(d.statement.closingBalance) }} ({{ signedInr(d.statement.linesDifference) }}
+        apart). Import the rest of the statement, or check the balances.
+      </p>
+    </div>
+  }
+
+  <mat-tab-group mat-stretch-tabs="false" animationDuration="0ms">
+    <!-- ---- Match ---- -->
+    <mat-tab label="Match">
+      @if (d.statement.lines === 0) {
+        <app-empty-state
+          icon="upload_file"
+          message="No lines yet. Import the statement's CSV from the bank's website."
+        >
+          @if (editable()) {
+            <button mat-flat-button (click)="importCsv()">
+              <mat-icon>upload_file</mat-icon>Import CSV
+            </button>
+          }
+        </app-empty-state>
+      } @else {
+        <div class="match-grid">
+          <!-- Bank lines -->
+          <section class="pane" aria-label="Bank statement lines">
+            <header class="pane-head">
+              <h2>Bank statement</h2>
+              <mat-button-toggle-group
+                [value]="lineFilter()"
+                (change)="lineFilter.set($event.value)"
+                [hideSingleSelectionIndicator]="true"
+                aria-label="Show lines"
+              >
+                <mat-button-toggle value="UNMATCHED"
+                  >Unmatched {{ d.statement.unmatched }}</mat-button-toggle
+                >
+                <mat-button-toggle value="MATCHED"
+                  >Matched {{ d.statement.matched }}</mat-button-toggle
+                >
+                <mat-button-toggle value="EXCLUDED"
+                  >Set aside {{ d.statement.excluded }}</mat-button-toggle
+                >
+                <mat-button-toggle value="ALL">All</mat-button-toggle>
+              </mat-button-toggle-group>
+            </header>
+            <div class="list">
+              @for (line of visibleLines(); track line.id) {
+                <div
+                  class="bank-line"
+                  data-testid="bank-line"
+                  [class.selectable]="editable() && line.state === 'UNMATCHED'"
+                  [class.selected]="selectedLineId() === line.id"
+                  [attr.role]="editable() && line.state === 'UNMATCHED' ? 'button' : null"
+                  [attr.tabindex]="editable() && line.state === 'UNMATCHED' ? 0 : null"
+                  [attr.aria-label]="
+                    editable() && line.state === 'UNMATCHED'
+                      ? 'Match ' +
+                        flowLabel(lineNet(line)) +
+                        ' on ' +
+                        dayLabel(line.date) +
+                        ': ' +
+                        line.description
+                      : null
+                  "
+                  [attr.aria-pressed]="
+                    editable() && line.state === 'UNMATCHED' ? selectedLineId() === line.id : null
+                  "
+                  (click)="select(line)"
+                  (keydown.enter)="select(line)"
+                  (keydown.space)="$event.preventDefault(); select(line)"
+                >
+                  <span class="main">
+                    <span class="title">
+                      <span class="date">{{ dayLabel(line.date) }}</span>
+                      <app-status-pill [tone]="lineState[line.state].tone">{{
+                        lineState[line.state].label
+                      }}</app-status-pill>
+                      @if (line.auto) {
+                        <app-status-pill outline>Auto</app-status-pill>
+                      }
+                    </span>
+                    <span class="desc">{{ line.description }}</span>
+                    @if (line.reference) {
+                      <span class="meta">Ref {{ line.reference }}</span>
+                    }
+                    @if (line.entries.length) {
+                      <span class="meta">
+                        Cleared
+                        @for (e of line.entries; track e.lineId; let last = $last) {
+                          <a
+                            [routerLink]="['/finance/entries', e.voucherId]"
+                            (click)="$event.stopPropagation()"
+                            >{{ e.number }}</a
+                          >{{ last ? '' : ', ' }}
+                        }
+                      </span>
+                    }
+                    @if (line.voucherNumber && line.voucherStatus === 'PENDING_APPROVAL') {
+                      <span class="meta">
+                        <a
+                          [routerLink]="['/finance/entries', line.voucherId]"
+                          (click)="$event.stopPropagation()"
+                          >{{ line.voucherNumber }}</a
+                        >
+                        waiting for approval
+                      </span>
+                    }
+                    @if (line.state === 'EXCLUDED' && line.excludeReason) {
+                      <span class="meta">Set aside: {{ line.excludeReason }}</span>
+                    }
+                  </span>
+                  <span class="side">
+                    <span
+                      class="amount"
+                      [class.in]="lineNet(line) > 0"
+                      [class.negative]="lineNet(line) < 0"
+                      >{{ flowLabel(lineNet(line)) }}</span
+                    >
+                    @if (editable()) {
+                      <button
+                        mat-icon-button
+                        [matMenuTriggerFor]="lineMenu"
+                        [attr.aria-label]="'Actions for the line ' + line.description"
+                        (click)="$event.stopPropagation()"
+                        (keydown.enter)="$event.stopPropagation()"
+                      >
+                        <mat-icon>more_vert</mat-icon>
+                      </button>
+                      <mat-menu #lineMenu="matMenu">
+                        @switch (line.state) {
+                          @case ('UNMATCHED') {
+                            @if (!line.voucherId) {
+                              @if (access.canRecord()) {
+                                <button mat-menu-item (click)="recordEntry(line)">
+                                  <mat-icon>post_add</mat-icon>Record entry from this line
+                                </button>
+                              }
+                              <button mat-menu-item (click)="exclude(line)">
+                                <mat-icon>block</mat-icon>Set aside
+                              </button>
+                            }
+                          }
+                          @case ('MATCHED') {
+                            <button mat-menu-item (click)="unmatch(line)">
+                              <mat-icon>link_off</mat-icon>Unmatch
+                            </button>
+                          }
+                          @case ('EXCLUDED') {
+                            <button mat-menu-item (click)="include(line)">
+                              <mat-icon>undo</mat-icon>Bring back
+                            </button>
+                          }
+                        }
+                      </mat-menu>
+                    }
+                  </span>
+                </div>
+              } @empty {
+                <p class="empty muted">
+                  {{
+                    lineFilter() === 'UNMATCHED'
+                      ? 'Every line is matched or set aside.'
+                      : 'No lines here.'
+                  }}
+                </p>
+              }
+            </div>
+          </section>
+
+          <!-- Books -->
+          <section class="pane" aria-label="Entries in the books">
+            @if (selectedLine(); as line) {
+              <header class="pane-head">
+                <h2>Match this line</h2>
+                <button mat-button (click)="clearSelection()">
+                  <mat-icon>close</mat-icon>Done
+                </button>
+              </header>
+              <div class="target">
+                <span>{{ dayLabel(line.date) }} · {{ line.description }}</span>
+                <strong [class.negative]="lineNet(line) < 0">{{ flowLabel(lineNet(line)) }}</strong>
+              </div>
+
+              @if (suggestions(); as s) {
+                @if (s.single.length || s.groups.length) {
+                  <h3>Suggestions</h3>
+                  <div class="list suggestions">
+                    @for (sg of s.single; track sg.entry.lineId) {
+                      <div class="row">
+                        <span class="main">
+                          <span class="title">
+                            {{ sg.entry.number }} · {{ dayLabel(sg.entry.date) }}
+                            @if (!sg.withinWindow) {
+                              <app-status-pill outline
+                                >{{ sg.daysApart }} days apart</app-status-pill
+                              >
+                            }
+                          </span>
+                          <span class="meta">{{
+                            sg.entry.payee || sg.entry.narration || voucherType[sg.entry.type].label
+                          }}</span>
+                        </span>
+                        <span class="actions">
+                          <span class="amount">{{ flowLabel(entryNet(sg.entry)) }}</span>
+                          <button
+                            mat-stroked-button
+                            (click)="matchEntries([sg.entry])"
+                            [disabled]="busy()"
+                          >
+                            Match
+                          </button>
+                        </span>
+                      </div>
+                    }
+                    @for (g of s.groups; track $index) {
+                      <div class="row">
+                        <span class="main">
+                          <span class="title">{{ g.length }} entries together</span>
+                          <span class="meta">
+                            @for (e of g; track e.lineId; let last = $last) {
+                              {{ e.number }} ({{ inr(abs(entryNet(e))) }}){{ last ? '' : ' + ' }}
+                            }
+                          </span>
+                        </span>
+                        <span class="actions">
+                          <button mat-stroked-button (click)="matchEntries(g)" [disabled]="busy()">
+                            Match all
+                          </button>
+                        </span>
+                      </div>
+                    }
+                  </div>
+                } @else {
+                  <p class="muted">
+                    No entry in the books has this amount. Tick the entries that make it up, or
+                    record the missing entry from the line's menu.
+                  </p>
+                }
+              }
+              <h3>Or tick the entries that make it up</h3>
+            } @else {
+              <header class="pane-head">
+                <h2>In the books</h2>
+                <mat-button-toggle-group
+                  [value]="bookView()"
+                  (change)="bookView.set($event.value)"
+                  [hideSingleSelectionIndicator]="true"
+                  aria-label="Show entries"
+                >
+                  <mat-button-toggle value="waiting"
+                    >Not yet in the bank {{ d.waiting.length }}</mat-button-toggle
+                  >
+                  <mat-button-toggle value="cleared"
+                    >Cleared here {{ d.cleared.length }}</mat-button-toggle
+                  >
+                </mat-button-toggle-group>
+              </header>
+              @if (editable() && bookView() === 'waiting') {
+                <p class="muted hint">
+                  Pick a bank line on the left to match it. Two entries that cancel out (a bounced
+                  cheque and its reversal) can be ticked and paired.
+                </p>
+              }
+            }
+
+            @if (selectedLine() || bookView() === 'waiting') {
+              <div class="list">
+                @for (e of d.waiting; track e.lineId) {
+                  <div class="row entry" data-testid="book-entry">
+                    <span class="main">
+                      <span class="title">
+                        @if (editable()) {
+                          <mat-checkbox
+                            [checked]="ticked().has(e.lineId)"
+                            (change)="tick(e, $event.checked)"
+                            [aria-label]="'Tick ' + e.number"
+                          />
+                        }
+                        <a [routerLink]="['/finance/entries', e.voucherId]">{{ e.number }}</a>
+                        <span class="muted">{{ dayLabel(e.date) }}</span>
+                        @if (e.status !== 'POSTED') {
+                          <app-status-pill [tone]="voucherStatus[e.status].tone">{{
+                            voucherStatus[e.status].label
+                          }}</app-status-pill>
+                        }
+                        @if (e.reversal) {
+                          <app-status-pill outline>Reversal</app-status-pill>
+                        }
+                      </span>
+                      <span class="meta">
+                        {{ voucherType[e.type].label }}
+                        @if (e.payee) {
+                          · {{ e.payee }}
+                        }
+                        @if (e.reference) {
+                          · Ref {{ e.reference }}
+                        }
+                        @if (e.narration) {
+                          · {{ e.narration }}
+                        }
+                      </span>
+                    </span>
+                    <span
+                      class="amount"
+                      [class.in]="entryNet(e) > 0"
+                      [class.negative]="entryNet(e) < 0"
+                      >{{ flowLabel(entryNet(e)) }}</span
+                    >
+                  </div>
+                } @empty {
+                  <p class="empty muted">Every entry up to the statement's end has cleared.</p>
+                }
+              </div>
+              @if (editable() && ticked().size) {
+                <div class="tick-bar" role="status">
+                  <span>
+                    {{ ticked().size }} ticked · {{ flowLabel(tickedNet()) }}
+                    @if (selectedLine(); as line) {
+                      @if (tickedNet() !== lineNet(line)) {
+                        ·
+                        <span class="danger-text">the line is {{ flowLabel(lineNet(line)) }}</span>
+                      }
+                    }
+                  </span>
+                  @if (selectedLine()) {
+                    <button
+                      mat-flat-button
+                      (click)="matchTicked()"
+                      [disabled]="busy() || !canMatchTicked()"
+                    >
+                      Match
+                    </button>
+                  } @else {
+                    <button
+                      mat-flat-button
+                      (click)="pairTicked()"
+                      [disabled]="busy() || !canPair()"
+                    >
+                      Pair (they cancel out)
+                    </button>
+                  }
+                </div>
+              }
+            } @else {
+              <div class="list">
+                @for (e of d.cleared; track e.lineId) {
+                  <div class="row entry">
+                    <span class="main">
+                      <span class="title">
+                        <a [routerLink]="['/finance/entries', e.voucherId]">{{ e.number }}</a>
+                        <span class="muted">{{ dayLabel(e.date) }}</span>
+                        @if (e.auto) {
+                          <app-status-pill outline>Auto</app-status-pill>
+                        }
+                      </span>
+                      <span class="meta">
+                        @if (e.pairLineId) {
+                          Paired with an entry that cancels it
+                        } @else {
+                          Cleared by a bank line
+                        }
+                        @if (e.payee) {
+                          · {{ e.payee }}
+                        }
+                      </span>
+                    </span>
+                    <span class="actions">
+                      <span class="amount">{{ flowLabel(entryNet(e)) }}</span>
+                      @if (editable() && e.pairLineId) {
+                        <button mat-button (click)="unpair(e)" [disabled]="busy()">Unpair</button>
+                      }
+                    </span>
+                  </div>
+                } @empty {
+                  <p class="empty muted">Nothing cleared on this statement yet.</p>
+                }
+              </div>
+            }
+          </section>
+        </div>
+      }
+    </mat-tab>
+
+    <!-- ---- BRS ---- -->
+    <mat-tab label="Reconciliation statement">
+      @let b = d.brs;
+      <div class="actions-bar brs-actions">
+        @if (b.canComplete && access.canReconcileComplete()) {
+          <button mat-flat-button (click)="complete()" [disabled]="busy()">
+            <mat-icon>task_alt</mat-icon>Complete reconciliation
+          </button>
+        }
+        @if (d.statement.status === 'COMPLETED' && access.canReconcileComplete()) {
+          <button mat-stroked-button (click)="reopen()">
+            <mat-icon>lock_open</mat-icon>Reopen
+          </button>
+        }
+        @if (access.canExport() || access.canReconcile()) {
+          <button mat-stroked-button (click)="exportBrs()"><mat-icon>download</mat-icon>CSV</button>
+        }
+      </div>
+
+      @if (d.statement.status === 'OPEN' && b.problems.length) {
+        <div class="callout" data-tone="warning">
+          <mat-icon>rule</mat-icon>
+          <div>
+            <p><strong>Not ready to complete yet</strong></p>
+            <ul>
+              @for (p of b.problems; track p) {
+                <li>{{ p }}</li>
+              }
+            </ul>
+          </div>
+        </div>
+      } @else if (d.statement.status === 'OPEN' && b.canComplete) {
+        <div class="callout" data-tone="success">
+          <mat-icon>check_circle</mat-icon>
+          <p>Everything is accounted for. Complete the reconciliation to lock it.</p>
+        </div>
+      }
+      @if (d.statement.status === 'COMPLETED') {
+        <div class="callout" [attr.data-tone]="b.booksChanged ? 'warning' : 'success'">
+          <mat-icon>{{ b.booksChanged ? 'warning' : 'verified' }}</mat-icon>
+          <p>
+            Reconciled {{ dayLabel(d.statement.completedAt?.slice(0, 10)) }}.
+            @if (b.booksChanged) {
+              Entries in this period were added or changed since, so the books no longer give these
+              figures. Reopen it to reconcile again.
+            }
+          </p>
+        </div>
+      }
+
+      <div class="table-wrap">
+        <table class="money brs">
+          <tbody>
+            <tr class="group">
+              <td colspan="3">Balance in the books on {{ dayLabel(d.statement.periodTo) }}</td>
+              <td class="num">{{ signedInr(b.bookBalance) }}</td>
+            </tr>
+            <tr class="sub">
+              <td colspan="4" class="muted">Less: receipts not yet in the bank</td>
+            </tr>
+            @for (e of b.receipts; track e.lineId) {
+              <tr class="sub">
+                <td>{{ dayLabel(e.date) }}</td>
+                <td>
+                  <a [routerLink]="['/finance/entries', e.voucherId]">{{ e.number }}</a>
+                </td>
+                <td>{{ e.payee || e.narration }}</td>
+                <td class="num">{{ inr(abs(entryNet(e))) }}</td>
+              </tr>
+            }
+            <tr class="sub">
+              <td colspan="3">Total receipts not yet in the bank</td>
+              <td class="num">− {{ inr(b.unclearedReceipts) }}</td>
+            </tr>
+            <tr class="sub">
+              <td colspan="4" class="muted">Add: payments not yet out of the bank</td>
+            </tr>
+            @for (e of b.payments; track e.lineId) {
+              <tr class="sub">
+                <td>{{ dayLabel(e.date) }}</td>
+                <td>
+                  <a [routerLink]="['/finance/entries', e.voucherId]">{{ e.number }}</a>
+                </td>
+                <td>{{ e.payee || e.narration }}</td>
+                <td class="num">{{ inr(abs(entryNet(e))) }}</td>
+              </tr>
+            }
+            <tr class="sub">
+              <td colspan="3">Total payments not yet out of the bank</td>
+              <td class="num">+ {{ inr(b.unclearedPayments) }}</td>
+            </tr>
+            @if (b.excluded.length) {
+              <tr class="sub">
+                <td colspan="4" class="muted">Bank lines set aside</td>
+              </tr>
+              @for (x of b.excluded; track x.id) {
+                <tr class="sub">
+                  <td>{{ dayLabel(x.date) }}</td>
+                  <td></td>
+                  <td>
+                    {{ x.description }}
+                    @if (x.reason) {
+                      <span class="muted">({{ x.reason }})</span>
+                    }
+                  </td>
+                  <td class="num">{{ flowLabel(x.moneyIn - x.moneyOut) }}</td>
+                </tr>
+              }
+            }
+            <tr class="total">
+              <td colspan="3">Balance the books explain</td>
+              <td class="num">{{ signedInr(b.explainedBalance) }}</td>
+            </tr>
+            <tr>
+              <td colspan="3">Balance as per bank statement</td>
+              <td class="num">{{ signedInr(b.bankClosing) }}</td>
+            </tr>
+            <tr class="total" [class.off]="b.difference !== 0">
+              <td colspan="3">Difference</td>
+              <td class="num" data-testid="brs-difference">{{ signedInr(b.difference) }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </mat-tab>
+
+    <!-- ---- Imports ---- -->
+    <mat-tab [label]="'Imports ' + d.imports.length">
+      @if (d.imports.length === 0) {
+        <app-empty-state icon="upload_file" message="No files imported yet." />
+      } @else {
+        <div class="list">
+          @for (i of d.imports; track i.id) {
+            <div class="row">
+              <span class="main">
+                <span class="title">{{ i.filename ?? 'Statement file' }}</span>
+                <span class="meta">
+                  {{ dayLabel(i.importedAt.slice(0, 10)) }} · {{ i.rowsImported }} imported
+                  @if (i.rowsDuplicate) {
+                    · {{ i.rowsDuplicate }} already there
+                  }
+                  @if (i.rowsIgnored) {
+                    · {{ i.rowsIgnored }} skipped
+                  }
+                </span>
+              </span>
+              <span class="actions">
+                <button mat-icon-button (click)="downloadImport(i)" aria-label="Download the file">
+                  <mat-icon>download</mat-icon>
+                </button>
+                @if (editable()) {
+                  <button mat-icon-button (click)="removeImport(i)" aria-label="Remove this import">
+                    <mat-icon>delete</mat-icon>
+                  </button>
+                }
+              </span>
+            </div>
+          }
+        </div>
+      }
+    </mat-tab>
+  </mat-tab-group>
+}

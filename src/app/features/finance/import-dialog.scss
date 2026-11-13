@@ -1,0 +1,136 @@
+.hint {
+  margin: 0 0 16px;
+  color: var(--mat-sys-on-surface-variant);
+  font: var(--mat-sys-body-small);
+}
+
+.file-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin-bottom: 16px;
+}
+
+.muted {
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.small {
+  margin: 4px 0 16px;
+  font: var(--mat-sys-body-small);
+}
+
+.source {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 8px 0 12px;
+  font: var(--mat-sys-body-medium);
+
+  &[data-source='SUGGESTED'],
+  &[data-source='NONE'] {
+    color: var(--app-warning);
+  }
+}
+
+.raw {
+  overflow-x: auto;
+  max-height: 260px;
+  border: 1px solid var(--app-card-border);
+  border-radius: var(--app-radius);
+
+  table {
+    border-collapse: collapse;
+    font: var(--mat-sys-body-small);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  th,
+  td {
+    padding: 4px 10px;
+    text-align: left;
+    border-bottom: 1px solid var(--mat-sys-surface-container-high);
+  }
+
+  th {
+    position: sticky;
+    top: 0;
+    background: var(--mat-sys-surface-container);
+    color: var(--mat-sys-on-surface-variant);
+  }
+
+  td {
+    max-width: 260px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .num {
+    text-align: right;
+  }
+
+  tr.header td {
+    background: var(--mat-sys-primary-container);
+    color: var(--mat-sys-on-primary-container);
+    font-weight: 600;
+  }
+}
+
+.mapping {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 0 12px;
+
+  mat-form-field {
+    width: 100%;
+  }
+}
+
+mat-button-toggle-group {
+  flex-wrap: wrap;
+  align-self: flex-start;
+}
+
+h3 {
+  margin: 16px 0 4px;
+  font: var(--mat-sys-title-small);
+}
+
+.summary {
+  margin: 0 0 12px;
+}
+
+.notes {
+  margin: 0 0 12px;
+  padding: 8px 12px;
+  border-radius: var(--app-radius);
+  font: var(--mat-sys-body-small);
+
+  ul {
+    margin: 4px 0 0;
+    padding-left: 20px;
+  }
+
+  &.danger {
+    background: var(--mat-sys-error-container);
+    color: var(--mat-sys-on-error-container);
+  }
+
+  &.warning {
+    background: var(--app-warning-container);
+  }
+}
+
+.dialog-error {
+  margin: 12px 0 0;
+  color: var(--mat-sys-error);
+}

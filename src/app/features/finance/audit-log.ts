@@ -22,6 +22,7 @@ const ENTITIES: { value: AuditEntityType; label: string }[] = [
   { value: 'MAPPING', label: 'Default accounts and charge ledgers' },
   { value: 'SETTING', label: 'Finance settings' },
   { value: 'DOCUMENT', label: 'Documents' },
+  { value: 'RECONCILIATION', label: 'Bank reconciliation' },
 ];
 
 /** Who changed what in the books and why, newest first. Entries can't be edited or deleted. */

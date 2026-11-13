@@ -279,6 +279,30 @@ export const routes: Routes = [
               import('./features/finance/account-list').then((m) => m.AccountList),
           },
           {
+            path: 'reconcile/statements/:id',
+            title: 'Bank statement',
+            canMatch: [permissionGuard],
+            data: { permission: 'FINANCE.RECONCILIATION.VIEW' },
+            loadComponent: () =>
+              import('./features/finance/reconcile-statement').then((m) => m.ReconcileStatement),
+          },
+          {
+            path: 'reconcile/:accountId',
+            title: 'Bank reconciliation',
+            canMatch: [permissionGuard],
+            data: { permission: 'FINANCE.RECONCILIATION.VIEW' },
+            loadComponent: () =>
+              import('./features/finance/reconcile-list').then((m) => m.ReconcileList),
+          },
+          {
+            path: 'reconcile',
+            title: 'Bank reconciliation',
+            canMatch: [permissionGuard],
+            data: { permission: 'FINANCE.RECONCILIATION.VIEW' },
+            loadComponent: () =>
+              import('./features/finance/reconcile-list').then((m) => m.ReconcileList),
+          },
+          {
             path: 'reports',
             title: 'Financial statements',
             canMatch: [permissionGuard],
