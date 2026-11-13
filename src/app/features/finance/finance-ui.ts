@@ -199,6 +199,11 @@ export class FinanceAccess {
   readonly canReports = computed(() => this.wide('FINANCE.REPORT.VIEW'));
   readonly canExport = computed(() => this.wide('FINANCE.REPORT.EXPORT'));
   readonly canAudit = computed(() => this.wide('FINANCE.AUDIT.VIEW'));
+  readonly canReconcile = computed(() => this.wide('FINANCE.RECONCILIATION.VIEW'));
+  /** Column mapping, statements, imports and matching. */
+  readonly canReconcileEdit = computed(() => this.wide('FINANCE.RECONCILIATION.UPDATE'));
+  /** Complete and reopen a reconciliation. */
+  readonly canReconcileComplete = computed(() => this.wide('FINANCE.RECONCILIATION.COMPLETE'));
   /** Residents: may ask for the summary (the society decides whether they get it). */
   readonly canSummary = computed(() =>
     this.auth.can('FINANCE.SUMMARY.VIEW', this.ctx.selectedSocietyId()),
@@ -243,6 +248,8 @@ export class FinanceTabs {
     if (a.canViewVouchers())
       tabs.push({ label: 'Entries', link: '/finance/entries', exact: false });
     tabs.push({ label: 'Accounts', link: '/finance/accounts', exact: false });
+    if (a.canReconcile())
+      tabs.push({ label: 'Reconcile', link: '/finance/reconcile', exact: false });
     if (a.canReports()) tabs.push({ label: 'Reports', link: '/finance/reports', exact: false });
     tabs.push({ label: 'Settings', link: '/finance/settings', exact: false });
     if (a.canAudit()) tabs.push({ label: 'Audit log', link: '/finance/audit', exact: false });

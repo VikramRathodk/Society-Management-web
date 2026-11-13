@@ -8,110 +8,168 @@
     </p>
     <h1>{{ greeting }}{{ firstName() ? ', ' + firstName() : '' }}</h1>
   </div>
-  <div class="actions">
-    <a mat-flat-button *hasPermission="'VISITOR.ENTRY.CREATE'" routerLink="/visitors/new">
-      <mat-icon>person_add</mat-icon>
-      Log visitor
-    </a>
-    <a mat-stroked-button *hasPermission="'COMPLAINT.TICKET.CREATE'" routerLink="/complaints/new">
-      <mat-icon>add_comment</mat-icon>
-      Raise complaint
-    </a>
-    <a mat-stroked-button *hasPermission="'USER.ACCOUNT.CREATE'" routerLink="/users/new">
-      <mat-icon>group_add</mat-icon>
-      New user
-    </a>
-  </div>
+  @if (persona() !== 'gate') {
+    <div class="actions">
+      @if (canOpenGate()) {
+        <a mat-stroked-button routerLink="/gate">
+          <mat-icon>door_front</mat-icon>
+          Gate mode
+        </a>
+      }
+      <a mat-flat-button *hasPermission="'VISITOR.ENTRY.CREATE'" routerLink="/visitors/new">
+        <mat-icon>person_add</mat-icon>
+        Log visitor
+      </a>
+      <a mat-stroked-button *hasPermission="'COMPLAINT.TICKET.CREATE'" routerLink="/complaints/new">
+        <mat-icon>add_comment</mat-icon>
+        Raise complaint
+      </a>
+      <a mat-stroked-button *hasPermission="'USER.ACCOUNT.CREATE'" routerLink="/users/new">
+        <mat-icon>group_add</mat-icon>
+        New user
+      </a>
+    </div>
+  }
 </header>
 
-@if (cards().length) {
-  <div class="stats">
-    @for (card of cards(); track card.label) {
-      <app-stat-card
-        [icon]="card.icon"
-        [label]="card.label"
-        [value]="card.value"
-        [link]="card.link"
-        [queryParams]="card.queryParams"
-        [tone]="card.tone"
-      />
-    }
-  </div>
-}
+@if (persona() === 'gate') {
+  <app-gate-board embedded />
+} @else {
+  @if (persona() === 'resident' && canViewDues()) {
+    <app-dues-spotlight class="block" [dues]="loading() ? undefined : myDues()" (retry)="retry()" />
+  }
 
-@if (canViewVisitors()) {
-  <div class="panels">
-    <app-section title="Needs approval" subtitle="Longest waiting first">
-      <a sectionActions mat-button routerLink="/visitors" [queryParams]="{ status: 'PENDING' }">
-        Review
-      </a>
-      @for (v of waiting(); track v.id) {
-        <app-visitor-row [visitor]="v" compact />
-      } @empty {
-        @if (loading()) {
-          <app-skeleton variant="rows" [count]="3" />
-        } @else {
-          <p class="quiet">Nobody is waiting at the gate.</p>
-        }
+  @if (persona() === 'committee' && showMoney()) {
+    <app-money-glance class="block" />
+  }
+
+  @if (cards().length) {
+    <div class="stats">
+      @for (card of cards(); track card.label) {
+        <app-stat-card
+          [icon]="card.icon"
+          [label]="card.label"
+          [value]="card.value"
+          [link]="card.link"
+          [queryParams]="card.queryParams"
+          [tone]="card.tone"
+        />
       }
-    </app-section>
+    </div>
+  }
 
-    <app-section title="Recent activity">
-      <a sectionActions mat-button routerLink="/visitors">Gate log</a>
-      @for (v of recent(); track v.id) {
-        <app-visitor-row [visitor]="v" compact />
-      } @empty {
-        @if (loading()) {
-          <app-skeleton variant="rows" [count]="3" />
-        } @else {
-          <p class="quiet">No visitors yet.</p>
-        }
-      }
-    </app-section>
-  </div>
-}
-
-@if (canViewNotices() || canViewComplaints()) {
-  <div class="panels more">
-    @if (canViewNotices()) {
-      <app-section title="Notice board">
-        <a sectionActions mat-button routerLink="/notices">All notices</a>
-        @for (n of notices(); track n.id) {
-          <a class="notice" routerLink="/notices">
-            <span class="notice-title">{{ n.title }}</span>
-            <span class="notice-meta">{{ n.postedByName }} · {{ timeAgo(n.createdAt) }}</span>
-          </a>
-        } @empty {
-          @if (loading()) {
-            <app-skeleton variant="rows" [count]="3" />
-          } @else {
-            <p class="quiet">No notices yet.</p>
-          }
-        }
-      </app-section>
-    }
-
-    @if (canViewComplaints()) {
-      <app-section title="Open complaints" subtitle="Longest waiting first">
-        <a sectionActions mat-button routerLink="/complaints" [queryParams]="{ status: 'OPEN' }">
-          View all
+  @if (canViewVisitors()) {
+    <div class="panels">
+      <app-section
+        [title]="persona() === 'resident' ? 'At your gate' : 'Needs approval'"
+        subtitle="Longest waiting first"
+      >
+        <a sectionActions mat-button routerLink="/visitors" [queryParams]="{ status: 'PENDING' }">
+          Review
         </a>
-        @for (c of openComplaints(); track c.id) {
-          <a class="complaint" [routerLink]="['/complaints', c.id]">
-            <app-complaint-row [complaint]="c" compact />
-          </a>
+        @for (v of waiting(); track v.id) {
+          <app-visitor-row [visitor]="v" compact>
+            @if (actions.canDecide('VISITOR.APPROVAL.REJECT', v)) {
+              <button mat-stroked-button (click)="decide(v, false)" [disabled]="busy().has(v.id)">
+                Reject
+              </button>
+            }
+            @if (actions.canDecide('VISITOR.APPROVAL.APPROVE', v)) {
+              <button mat-flat-button (click)="decide(v, true)" [disabled]="busy().has(v.id)">
+                Approve
+              </button>
+            }
+          </app-visitor-row>
         } @empty {
           @if (loading()) {
             <app-skeleton variant="rows" [count]="3" />
+          } @else if (visitorsFailed()) {
+            <p class="quiet failed">
+              <mat-icon aria-hidden="true">cloud_off</mat-icon>
+              Couldn't load visitors.
+              <button mat-button (click)="retry()">Try again</button>
+            </p>
           } @else {
-            <p class="quiet">No open complaints.</p>
+            <p class="quiet">Nobody is waiting at the gate.</p>
           }
         }
       </app-section>
-    }
 
-    @if (showFinanceSummary()) {
-      <app-finance-summary-card />
-    }
-  </div>
+      <app-section title="Recent activity">
+        <a sectionActions mat-button routerLink="/visitors">Gate log</a>
+        @for (v of recent(); track v.id) {
+          <app-visitor-row [visitor]="v" compact />
+        } @empty {
+          @if (loading()) {
+            <app-skeleton variant="rows" [count]="3" />
+          } @else if (data().recent === null) {
+            <p class="quiet failed">
+              <mat-icon aria-hidden="true">cloud_off</mat-icon>
+              Couldn't load visitors.
+              <button mat-button (click)="retry()">Try again</button>
+            </p>
+          } @else {
+            <p class="quiet">No visitors yet.</p>
+          }
+        }
+      </app-section>
+    </div>
+  }
+
+  @if (canViewNotices() || canViewComplaints()) {
+    <div class="panels more">
+      @if (canViewNotices()) {
+        <app-section title="Notice board">
+          <a sectionActions mat-button routerLink="/notices">All notices</a>
+          @for (n of notices(); track n.id) {
+            <a class="notice" routerLink="/notices">
+              <span class="notice-title">{{ n.title }}</span>
+              <span class="notice-meta">{{ n.postedByName }} · {{ timeAgo(n.createdAt) }}</span>
+            </a>
+          } @empty {
+            @if (loading()) {
+              <app-skeleton variant="rows" [count]="3" />
+            } @else if (data().notices === null) {
+              <p class="quiet failed">
+                <mat-icon aria-hidden="true">cloud_off</mat-icon>
+                Couldn't load notices.
+                <button mat-button (click)="retry()">Try again</button>
+              </p>
+            } @else {
+              <p class="quiet">No notices yet.</p>
+            }
+          }
+        </app-section>
+      }
+
+      @if (canViewComplaints()) {
+        <app-section title="Open complaints" subtitle="Longest waiting first">
+          <a sectionActions mat-button routerLink="/complaints" [queryParams]="{ status: 'OPEN' }">
+            View all
+          </a>
+          @for (c of openComplaints(); track c.id) {
+            <a class="complaint" [routerLink]="['/complaints', c.id]">
+              <app-complaint-row [complaint]="c" compact />
+            </a>
+          } @empty {
+            @if (loading()) {
+              <app-skeleton variant="rows" [count]="3" />
+            } @else if (data().openComplaints === null) {
+              <p class="quiet failed">
+                <mat-icon aria-hidden="true">cloud_off</mat-icon>
+                Couldn't load complaints.
+                <button mat-button (click)="retry()">Try again</button>
+              </p>
+            } @else {
+              <p class="quiet">No open complaints.</p>
+            }
+          }
+        </app-section>
+      }
+
+      @if (showFinanceSummary()) {
+        <app-finance-summary-card />
+      }
+    </div>
+  }
 }

@@ -1,0 +1,119 @@
+<app-page-header title="Finance" [subtitle]="ctx.selectedSociety()?.name ?? null">
+  @if (access.canReconcileEdit() && account()) {
+    <button mat-stroked-button (click)="columns()">
+      <mat-icon>view_column</mat-icon>Statement columns
+    </button>
+    <button mat-flat-button (click)="newStatement()" [disabled]="!!openStatement()">
+      <mat-icon>add</mat-icon>New statement
+    </button>
+  }
+</app-page-header>
+
+<app-finance-tabs />
+
+@if (loading() && banks().length === 0) {
+  <app-skeleton variant="list" />
+} @else if (loadError()) {
+  <app-empty-state icon="cloud_off" message="Couldn't load the bank accounts.">
+    <button mat-stroked-button (click)="reload()">Try again</button>
+  </app-empty-state>
+} @else if (!books()?.started) {
+  <app-empty-state
+    icon="menu_book"
+    message="Start the books on the Overview tab before reconciling the bank."
+  />
+} @else if (banks().length === 0) {
+  <app-empty-state
+    icon="account_balance"
+    message="No bank accounts in the books yet. Add one on the Accounts tab."
+  />
+} @else {
+  <div class="toolbar">
+    <mat-form-field appearance="outline" subscriptSizing="dynamic">
+      <mat-label>Bank account</mat-label>
+      <mat-select [value]="account().id" (selectionChange)="choose($event.value)">
+        @for (b of banks(); track b.id) {
+          <mat-option [value]="b.id">
+            {{ b.name }}
+            @if (b.bank?.last4) {
+              · ••{{ b.bank?.last4 }}
+            }
+          </mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+    @if (account(); as a) {
+      <span class="muted">
+        Balance in the books
+        <strong [class.negative]="a.balance < 0">{{ signedInr(a.balance) }}</strong>
+        ·
+        <a [routerLink]="['/finance/accounts', a.id]">Bank book</a>
+      </span>
+    }
+  </div>
+
+  @if (openStatement(); as open) {
+    <div class="callout" data-tone="warning">
+      <mat-icon>pending_actions</mat-icon>
+      <p>
+        The statement for {{ periodText(open) }} is still open. Finish it before starting the next
+        one.
+        <a [routerLink]="['/finance/reconcile/statements', open.id]">Continue reconciling</a>
+      </p>
+    </div>
+  }
+
+  @if (statementsLoading() && statements().length === 0) {
+    <app-skeleton variant="list" />
+  } @else if (statements().length === 0) {
+    <app-empty-state
+      icon="fact_check"
+      message="No statements yet. Add the bank's statement for a period, import its CSV, and match it to the books."
+    >
+      @if (access.canReconcileEdit()) {
+        <button mat-flat-button (click)="newStatement()">
+          <mat-icon>add</mat-icon>New statement
+        </button>
+      }
+    </app-empty-state>
+  } @else {
+    <div class="list">
+      @for (s of sorted(); track s.id) {
+        <a class="row" [routerLink]="['/finance/reconcile/statements', s.id]">
+          <span class="main">
+            <span class="title">
+              {{ periodText(s) }}
+              <app-status-pill [tone]="status[s.status].tone">{{
+                status[s.status].label
+              }}</app-status-pill>
+              @if (s.status === 'OPEN' && s.reopenedAt) {
+                <app-status-pill outline>Reopened</app-status-pill>
+              }
+            </span>
+            <span class="meta">
+              {{ s.lines }} lines
+              @if (s.lines) {
+                · {{ s.matched }} matched
+                @if (s.unmatched) {
+                  · <span class="danger-text">{{ s.unmatched }} unmatched</span>
+                }
+                @if (s.excluded) {
+                  · {{ s.excluded }} set aside
+                }
+              }
+              @if (s.completedAt) {
+                · reconciled {{ dayLabel(s.completedAt.slice(0, 10)) }}
+              }
+            </span>
+          </span>
+          <span class="side">
+            <span class="amount" [class.negative]="s.closingBalance < 0">{{
+              signedInr(s.closingBalance)
+            }}</span>
+            <span class="meta">closing</span>
+          </span>
+        </a>
+      }
+    </div>
+  }
+}

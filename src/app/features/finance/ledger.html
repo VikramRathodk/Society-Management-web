@@ -60,6 +60,9 @@
           <th>Date</th>
           <th>Entry</th>
           <th>Details</th>
+          @if (showCleared()) {
+            <th>In the bank</th>
+          }
           <th class="num">Debit</th>
           <th class="num">Credit</th>
           <th class="num">Balance</th>
@@ -68,7 +71,7 @@
       <tbody>
         <tr class="group">
           <td>{{ dayLabel(l.from) }}</td>
-          <td colspan="4">Opening balance</td>
+          <td [attr.colspan]="showCleared() ? 5 : 4">Opening balance</td>
           <td class="num" [class.negative]="l.opening < 0">{{ signedInr(l.opening) }}</td>
         </tr>
         @for (line of l.lines; track $index) {
@@ -89,18 +92,21 @@
                 <div class="muted">{{ line.narration }}</div>
               }
             </td>
+            @if (showCleared()) {
+              <td class="muted">{{ dayLabel(line.clearedOn) }}</td>
+            }
             <td class="num">{{ line.debit ? inr(line.debit) : '' }}</td>
             <td class="num">{{ line.credit ? inr(line.credit) : '' }}</td>
             <td class="num" [class.negative]="line.balance < 0">{{ signedInr(line.balance) }}</td>
           </tr>
         } @empty {
           <tr>
-            <td colspan="6" class="muted">No entries in this period.</td>
+            <td [attr.colspan]="showCleared() ? 7 : 6" class="muted">No entries in this period.</td>
           </tr>
         }
         <tr class="total">
           <td>{{ dayLabel(l.to) }}</td>
-          <td colspan="2">Closing balance</td>
+          <td [attr.colspan]="showCleared() ? 3 : 2">Closing balance</td>
           <td class="num">{{ inr(l.totalDebit) }}</td>
           <td class="num">{{ inr(l.totalCredit) }}</td>
           <td class="num" [class.negative]="l.closing < 0">{{ signedInr(l.closing) }}</td>

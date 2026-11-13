@@ -52,6 +52,10 @@ export class LedgerPage {
   protected readonly from = signal('');
   protected readonly to = signal('');
   protected readonly ledger = signal<Ledger | null>(null);
+  /** A bank ledger with reconciled statements: the day each entry cleared at the bank. */
+  protected readonly showCleared = computed(
+    () => this.ledger()?.lines.some((l) => l.clearedOn) ?? false,
+  );
   protected readonly loading = signal(true);
   protected readonly loadError = signal<'missing' | 'failed' | null>(null);
   private readonly attempt = signal(0);

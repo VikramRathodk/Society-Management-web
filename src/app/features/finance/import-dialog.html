@@ -1,0 +1,265 @@
+<h2 mat-dialog-title>
+  {{ data.statementId != null ? 'Import bank statement' : 'Statement columns' }}
+</h2>
+<mat-dialog-content>
+  <p class="hint">
+    {{ data.accountName }}: download the statement from the bank's website as CSV (for Excel or PDF,
+    open it and save as CSV first). The columns are saved for this account, so next month's file
+    imports straight away.
+  </p>
+
+  <div class="file-row">
+    <button mat-stroked-button type="button" (click)="fileInput.click()">
+      <mat-icon>upload_file</mat-icon>{{ file() ? 'Choose another file' : 'Choose CSV file' }}
+    </button>
+    <input
+      #fileInput
+      type="file"
+      accept=".csv,.txt,text/csv,text/plain"
+      hidden
+      data-testid="statement-file"
+      (change)="pick($event)"
+    />
+    @if (file(); as f) {
+      <span class="muted">{{ f.name }}</span>
+    }
+  </div>
+
+  @if (reading()) {
+    <mat-progress-bar mode="indeterminate" />
+  }
+
+  @if (preview(); as p) {
+    <p class="source" [attr.data-source]="p.mappingSource">
+      <mat-icon inline>{{ p.mappingSource === 'SAVED' ? 'bookmark' : 'auto_fix_high' }}</mat-icon>
+      {{ sourceText[p.mappingSource] }}
+    </p>
+
+    <div class="raw" aria-label="First rows of the file">
+      <table>
+        <thead>
+          <tr>
+            <th>Row</th>
+            @for (c of columns(); track c.value) {
+              <th>{{ c.value }}</th>
+            }
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of sampleRows(); track $index; let i = $index) {
+            <tr [class.header]="i + 1 === form.controls.headerRow.value">
+              <td class="muted">{{ i + 1 }}</td>
+              @for (c of columns(); track c.value) {
+                <td>{{ row[c.value - 1] }}</td>
+              }
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    <p class="muted small">
+      {{ p.totalRows }} rows in the file. The highlighted one holds the column names; lines start
+      after it.
+    </p>
+
+    <form [formGroup]="form" class="mapping" novalidate>
+      <div class="grid">
+        <mat-form-field appearance="outline">
+          <mat-label>Separator</mat-label>
+          <mat-select formControlName="delimiter">
+            @for (d of delimiters; track d.value) {
+              <mat-option [value]="d.value">{{ d.label }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Column names on row</mat-label>
+          <input matInput type="number" min="1" max="100" formControlName="headerRow" />
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Date column</mat-label>
+          <mat-select formControlName="dateColumn">
+            @for (c of columns(); track c.value) {
+              <mat-option [value]="c.value">{{ c.label }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Date format</mat-label>
+          <mat-select formControlName="dateFormat">
+            @for (f of dateFormats(); track f) {
+              <mat-option [value]="f">{{ f }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Description column</mat-label>
+          <mat-select formControlName="descriptionColumn">
+            @for (c of columns(); track c.value) {
+              <mat-option [value]="c.value">{{ c.label }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Reference column (optional)</mat-label>
+          <mat-select formControlName="referenceColumn">
+            <mat-option [value]="null">None</mat-option>
+            @for (c of columns(); track c.value) {
+              <mat-option [value]="c.value">{{ c.label }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+      </div>
+
+      <mat-button-toggle-group
+        formControlName="amountStyle"
+        [hideSingleSelectionIndicator]="true"
+        aria-label="How amounts are shown"
+      >
+        @for (s of styles; track s.value) {
+          <mat-button-toggle [value]="s.value" [title]="s.hint">{{ s.label }}</mat-button-toggle>
+        }
+      </mat-button-toggle-group>
+
+      <div class="grid">
+        @switch (form.controls.amountStyle.value) {
+          @case ('DEBIT_CREDIT') {
+            <mat-form-field appearance="outline">
+              <mat-label>Withdrawal (money out) column</mat-label>
+              <mat-select formControlName="debitColumn">
+                @for (c of columns(); track c.value) {
+                  <mat-option [value]="c.value">{{ c.label }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>Deposit (money in) column</mat-label>
+              <mat-select formControlName="creditColumn">
+                @for (c of columns(); track c.value) {
+                  <mat-option [value]="c.value">{{ c.label }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+          }
+          @default {
+            <mat-form-field appearance="outline">
+              <mat-label>Amount column</mat-label>
+              <mat-select formControlName="amountColumn">
+                @for (c of columns(); track c.value) {
+                  <mat-option [value]="c.value">{{ c.label }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+            @if (form.controls.amountStyle.value === 'AMOUNT_TYPE') {
+              <mat-form-field appearance="outline">
+                <mat-label>Dr/Cr column</mat-label>
+                <mat-select formControlName="typeColumn">
+                  @for (c of columns(); track c.value) {
+                    <mat-option [value]="c.value">{{ c.label }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+            }
+          }
+        }
+        <mat-form-field appearance="outline">
+          <mat-label>Balance column (optional, for checking)</mat-label>
+          <mat-select formControlName="balanceColumn">
+            <mat-option [value]="null">None</mat-option>
+            @for (c of columns(); track c.value) {
+              <mat-option [value]="c.value">{{ c.label }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+      </div>
+    </form>
+
+    @if (p.parsed; as parsed) {
+      <h3>What it reads</h3>
+      <p class="summary">
+        <strong>{{ parsed.lineCount }}</strong> lines
+        @if (parsed.firstDate) {
+          · {{ dayLabel(parsed.firstDate) }} – {{ dayLabel(parsed.lastDate) }}
+        }
+        · in {{ inr(parsed.credits) }} · out {{ inr(parsed.debits) }}
+      </p>
+      @if (parsed.errorCount) {
+        <div class="notes danger" role="alert">
+          <strong>{{ parsed.errorCount }} row(s) can't be read</strong>; the file can't be imported
+          until the columns read every transaction:
+          <ul>
+            @for (n of parsed.errors; track n.row) {
+              <li>Row {{ n.row }}: {{ n.message }}</li>
+            }
+          </ul>
+        </div>
+      }
+      @if (parsed.warnings.length) {
+        <div class="notes warning">
+          <ul>
+            @for (n of parsed.warnings; track n.row) {
+              <li>Row {{ n.row }}: {{ n.message }}</li>
+            }
+          </ul>
+        </div>
+      }
+      @if (parsed.ignored.length) {
+        <p class="muted small">
+          Skipped {{ parsed.ignored.length }} row(s) that aren't transactions (e.g. totals or blank
+          lines).
+        </p>
+      }
+      @if (parsed.lines.length) {
+        <div class="raw">
+          <table>
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Description</th>
+                <th>Reference</th>
+                <th class="num">Out</th>
+                <th class="num">In</th>
+                <th class="num">Balance</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (l of parsed.lines.slice(0, 10); track l.row) {
+                <tr>
+                  <td>{{ dayLabel(l.date) }}</td>
+                  <td>{{ l.description }}</td>
+                  <td>{{ l.reference }}</td>
+                  <td class="num">{{ l.debit ? inr(l.debit) : '' }}</td>
+                  <td class="num">{{ l.credit ? inr(l.credit) : '' }}</td>
+                  <td class="num">{{ l.balance != null ? inr(l.balance) : '' }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    } @else if (!complete()) {
+      <p class="muted">Set the date, description and amount columns to see the lines.</p>
+    }
+  }
+
+  @if (error(); as message) {
+    <p class="dialog-error" role="alert">{{ message }}</p>
+  }
+</mat-dialog-content>
+<mat-dialog-actions align="end">
+  <button mat-button type="button" mat-dialog-close>Cancel</button>
+  <button
+    mat-flat-button
+    type="button"
+    (click)="submit()"
+    [disabled]="saving() || reading() || !readable()"
+  >
+    {{
+      saving()
+        ? 'Saving…'
+        : data.statementId != null
+          ? 'Import ' + (preview()?.parsed?.lineCount ?? '') + ' lines'
+          : 'Save columns'
+    }}
+  </button>
+</mat-dialog-actions>

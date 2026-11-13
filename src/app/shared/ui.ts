@@ -50,17 +50,35 @@ export class EmptyState {
   readonly message = input.required<string>();
 }
 
-/** Compact coloured label, e.g. a visitor's status. */
+/** Default icon per tone, so a status never relies on colour alone (paid ✓, pending ◷, overdue !). */
+const TONE_ICON: Record<Tone, string | null> = {
+  success: 'check_circle',
+  warning: 'schedule',
+  danger: 'error',
+  primary: 'timelapse',
+  neutral: null,
+};
+
+/**
+ * Compact coloured label, e.g. a visitor's status. Filled pills get an icon from their tone; pass
+ * `icon` to pick another, or `icon="none"` to drop it. Outline pills (tags) have no icon by default.
+ */
 @Component({
   selector: 'app-status-pill',
-  template: `<ng-content />`,
+  // The icon is drawn by CSS (::before), so the pill's text content stays just the label.
+  template: `@if (iconName(); as name) {
+      <span class="material-icons pill-icon" aria-hidden="true" [attr.data-icon]="name"></span>
+    }
+    <ng-content />`,
   host: { '[attr.data-tone]': 'tone()', '[class.outline]': 'outline()' },
   styles: `
     :host {
       display: inline-flex;
       align-items: center;
-      height: 22px;
-      padding: 0 10px;
+      gap: 4px;
+      min-height: 22px;
+      box-sizing: border-box;
+      padding: 1px 10px;
       border-radius: 11px;
       font: var(--mat-sys-label-medium);
       font-weight: 600;
@@ -88,11 +106,33 @@ export class EmptyState {
       background: transparent;
       box-shadow: inset 0 0 0 1px var(--mat-sys-outline-variant);
     }
+    .pill-icon {
+      width: 14px;
+      height: 14px;
+      margin-left: -3px;
+      overflow: hidden;
+      font-size: 14px;
+      font-variation-settings:
+        'FILL' 1,
+        'wght' 500,
+        'opsz' 20;
+    }
+    .pill-icon::before {
+      content: attr(data-icon);
+    }
   `,
 })
 export class StatusPill {
   readonly tone = input<Tone>('neutral');
   readonly outline = input(false, { transform: booleanAttribute });
+  /** Material Symbol name; `none` for no icon. Defaults to the tone's icon. */
+  readonly icon = input<string | null>(null);
+
+  protected readonly iconName = computed(() => {
+    const icon = this.icon();
+    if (icon === 'none') return null;
+    return icon ?? (this.outline() ? null : TONE_ICON[this.tone()]);
+  });
 }
 
 /** A number with a label and icon, linking to the page behind it. */
