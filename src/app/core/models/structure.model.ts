@@ -4,22 +4,48 @@ export interface Complex {
   address: string | null;
 }
 
+/** SETUP until the secretary goes live; residents can only join a LIVE society. */
+export type SocietyStatus = 'SETUP' | 'LIVE';
+export type SocietySource = 'PLATFORM' | 'SELF_SIGNUP';
+
 export interface Society {
   id: number;
   name: string;
   address: string | null;
   complexId: number | null;
+  status: SocietyStatus;
+  source: SocietySource;
+  createdAt: string | null;
+  wentLiveAt: string | null;
+  registrationNumber: string | null;
+  city: string | null;
+  state: string | null;
+  pincode: string | null;
+  contactPhone: string | null;
+  contactEmail: string | null;
+  hasLogo: boolean;
+  notes: string | null;
 }
 
 export interface CreateSocietyRequest {
   name: string;
   address?: string;
   complexId?: number;
+  /** Skip Setup: for a running society moving in. */
+  startLive?: boolean;
 }
 
+/** Fields left out stay as they are; an empty string clears one (except the name). */
 export interface UpdateSocietyRequest {
   name?: string;
   address?: string;
+  registrationNumber?: string;
+  city?: string;
+  state?: string;
+  pincode?: string;
+  contactPhone?: string;
+  contactEmail?: string;
+  notes?: string;
 }
 
 /** How a society setting's value is typed and edited (see the backend's SocietySettingCatalog). */

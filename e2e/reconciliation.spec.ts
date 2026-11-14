@@ -61,6 +61,7 @@ test.describe.serial('bank reconciliation', () => {
       await call(request, 'post', '/api/societies', admin, {
         name: `E2E Reconcile ${stamp}`,
         address: 'E2E',
+        startLive: true,
       })
     ).id;
     secretaryPhone = phone();

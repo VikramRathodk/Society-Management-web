@@ -2,9 +2,9 @@ import { Injectable, inject } from '@angular/core';
 import { Title } from '@angular/platform-browser';
 import { RouterStateSnapshot, TitleStrategy } from '@angular/router';
 
-const APP_NAME = 'Society Management';
+const APP_NAME = 'Sahvasa';
 
-/** Browser tab title: "<route title> · Society Management". */
+/** Browser tab title: "<route title> · Sahvasa". */
 @Injectable({ providedIn: 'root' })
 export class AppTitleStrategy extends TitleStrategy {
   private readonly title = inject(Title);

@@ -148,6 +148,40 @@ export class StatusPill {
   });
 }
 
+/**
+ * The Sahvasa mark: two arches (doorways sharing one space) with a resident between them, on the brand-teal
+ * tile. It fills its container and takes the container's corner radius, so drop it inside an existing
+ * `.brand-mark` box: <span class="brand-mark"><app-logo /></span>. Brand colours are fixed, not theme roles.
+ */
+@Component({
+  selector: 'app-logo',
+  template: `
+    <svg viewBox="0 0 100 100" aria-hidden="true" focusable="false">
+      <g fill="none" stroke-width="6.4" stroke-linecap="round">
+        <path stroke="#ffffff" d="M23.6 68.4V44.35a15.95 15.95 0 0 1 31.9 0V68.4" />
+        <path stroke="#f59e0b" d="M44.3 68.4V44.35a16 16 0 0 1 32 0V68.4" />
+      </g>
+      <circle cx="49.6" cy="60.2" r="3.4" fill="#ffffff" />
+    </svg>
+  `,
+  styles: `
+    :host {
+      display: block;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      border-radius: inherit;
+      background: #0f766e;
+    }
+    svg {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+  `,
+})
+export class Logo {}
+
 /** True when it's fine to animate: a real browser, a visible tab, and no reduced-motion setting. */
 export function motionAllowed(): boolean {
   return (

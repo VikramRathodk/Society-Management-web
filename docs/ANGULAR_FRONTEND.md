@@ -1,4 +1,4 @@
-# Society Management — Angular Web Frontend
+# Sahvasa — Angular Web Frontend
 
 Build guide for an Angular web client (admin / committee / gate portal) on top of the existing Spring Boot API.
 The Flutter app stays the primary mobile client; this web app talks to exactly the same endpoints and the same

@@ -12,6 +12,7 @@ import { switchMap } from 'rxjs';
 import { AuthStore } from '../../../core/auth/auth.store';
 import { errorMessage } from '../../../core/auth/error.interceptor';
 import { SocietyContextStore } from '../../../core/society-context/society-context.store';
+import { Logo } from '../../../shared/ui';
 
 @Component({
   selector: 'app-login',
@@ -22,6 +23,7 @@ import { SocietyContextStore } from '../../../core/society-context/society-conte
     MatIconModule,
     MatInputModule,
     MatProgressSpinnerModule,
+    Logo,
   ],
   templateUrl: './login.html',
   styleUrl: './login.scss',

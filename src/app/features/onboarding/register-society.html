@@ -1,0 +1,214 @@
+<div class="register-page">
+  <div class="card">
+    <a class="brand" routerLink="/" aria-label="Sahvasa home">
+      <span class="brand-mark"><app-logo /></span>
+      <span class="brand-name">Sahvasa</span>
+    </a>
+
+    @if (submitted(); as s) {
+      <h1>Thanks! We'll call you.</h1>
+      <p class="lead">
+        We've got your registration for <strong>{{ s.view.societyName }}</strong
+        >. Someone from our team will call you on <strong>{{ s.phone }}</strong> to confirm, then
+        set it up for you.
+      </p>
+      <p class="number">
+        Registration number <strong data-testid="application-number">#{{ s.view.number }}</strong>
+      </p>
+      <p class="muted">Keep it to check on your registration here.</p>
+      <div class="actions">
+        <button mat-stroked-button type="button" (click)="showStatus()">Check status</button>
+        <a mat-button routerLink="/">Back to home</a>
+      </div>
+    } @else {
+      <mat-button-toggle-group
+        class="modes"
+        [value]="mode()"
+        (change)="mode.set($event.value)"
+        aria-label="What do you want to do"
+        hideSingleSelectionIndicator
+      >
+        <mat-button-toggle value="register">Register your society</mat-button-toggle>
+        <mat-button-toggle value="status">Check a registration</mat-button-toggle>
+      </mat-button-toggle-group>
+
+      @if (mode() === 'register') {
+        @if (enabled() === false) {
+          <h1>Registration is closed</h1>
+          <p class="lead">
+            We're not taking new societies online right now. Get in touch with us instead.
+          </p>
+          <a mat-stroked-button routerLink="/">Back to home</a>
+        } @else {
+          <h1>Bring your society on board</h1>
+          <p class="lead">
+            Tell us about your society. We call to confirm, then you set it up: wings and flats,
+            residents from a sheet, and the committee.
+          </p>
+          <form [formGroup]="form" (ngSubmit)="submit()">
+            <p class="group">Society</p>
+            <mat-form-field appearance="outline">
+              <mat-label>Society name</mat-label>
+              <input matInput formControlName="societyName" autocomplete="organization" />
+              @if (form.controls.societyName.invalid) {
+                <mat-error>Society name is required</mat-error>
+              }
+            </mat-form-field>
+            <div class="row">
+              <mat-form-field appearance="outline">
+                <mat-label>City</mat-label>
+                <input matInput formControlName="city" autocomplete="address-level2" />
+                @if (form.controls.city.invalid) {
+                  <mat-error>City is required</mat-error>
+                }
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>About how many flats</mat-label>
+                <input matInput type="number" min="1" max="10000" formControlName="approxFlats" />
+              </mat-form-field>
+            </div>
+            <mat-form-field appearance="outline">
+              <mat-label>Address</mat-label>
+              <textarea
+                matInput
+                formControlName="address"
+                rows="2"
+                autocomplete="street-address"
+              ></textarea>
+            </mat-form-field>
+
+            <p class="group">You</p>
+            @if (auth.user(); as me) {
+              <p class="signed-in">
+                <mat-icon aria-hidden="true">account_circle</mat-icon>
+                Registering as {{ me.name }} ({{ me.phone }}). You'll be the secretary on this
+                account.
+              </p>
+            } @else {
+              <mat-form-field appearance="outline">
+                <mat-label>Your name</mat-label>
+                <input matInput formControlName="applicantName" autocomplete="name" />
+                @if (form.controls.applicantName.invalid) {
+                  <mat-error>Your name is required</mat-error>
+                }
+              </mat-form-field>
+              <div class="row">
+                <mat-form-field appearance="outline">
+                  <mat-label>Phone</mat-label>
+                  <input
+                    matInput
+                    formControlName="applicantPhone"
+                    inputmode="tel"
+                    autocomplete="tel"
+                  />
+                  @if (form.controls.applicantPhone.invalid) {
+                    <mat-error>A phone number of 10 to 14 digits</mat-error>
+                  }
+                </mat-form-field>
+                <mat-form-field appearance="outline">
+                  <mat-label>Email (optional)</mat-label>
+                  <input
+                    matInput
+                    type="email"
+                    formControlName="applicantEmail"
+                    autocomplete="email"
+                  />
+                  @if (form.controls.applicantEmail.invalid) {
+                    <mat-error>Not an email address</mat-error>
+                  }
+                </mat-form-field>
+              </div>
+              <mat-form-field appearance="outline">
+                <mat-label>Choose a password</mat-label>
+                <input
+                  matInput
+                  type="password"
+                  formControlName="password"
+                  autocomplete="new-password"
+                />
+                <mat-hint
+                  >At least 8 characters. You'll sign in with your phone and this
+                  password.</mat-hint
+                >
+                @if (form.controls.password.invalid) {
+                  <mat-error>At least 8 characters</mat-error>
+                }
+              </mat-form-field>
+              <p class="muted">
+                Already have an account?
+                <a routerLink="/login" [queryParams]="{ returnUrl: '/register-society' }"
+                  >Sign in</a
+                >
+                and register from there.
+              </p>
+            }
+            <mat-form-field appearance="outline">
+              <mat-label>Anything we should know (optional)</mat-label>
+              <textarea
+                matInput
+                formControlName="message"
+                rows="2"
+                placeholder="e.g. best time to call"
+              ></textarea>
+            </mat-form-field>
+
+            @if (error(); as message) {
+              <p class="form-error" role="alert">{{ message }}</p>
+            }
+            <button mat-flat-button type="submit" class="submit" [disabled]="saving()">
+              Register society
+            </button>
+          </form>
+        }
+      } @else {
+        <h1>Check a registration</h1>
+        <form [formGroup]="lookup" (ngSubmit)="check()">
+          <div class="row">
+            <mat-form-field appearance="outline">
+              <mat-label>Registration number</mat-label>
+              <input matInput type="number" formControlName="number" />
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>Phone you registered with</mat-label>
+              <input matInput formControlName="phone" inputmode="tel" />
+            </mat-form-field>
+          </div>
+          <button mat-stroked-button type="submit">Check</button>
+        </form>
+        @if (lookupError(); as message) {
+          <p class="form-error" role="alert">{{ message }}</p>
+        }
+        @if (found(); as f) {
+          <div class="status" aria-live="polite">
+            <p>
+              <strong>{{ f.societyName }}</strong>
+              <app-status-pill [tone]="statusOf(f).tone">{{ statusOf(f).label }}</app-status-pill>
+            </p>
+            <p class="muted">Registered {{ f.createdAt | date: 'd MMM y' }}</p>
+            @switch (f.status) {
+              @case ('PENDING') {
+                <p>We haven't called yet. We'll be in touch soon.</p>
+              }
+              @case ('APPROVED') {
+                <p>Approved! You're the secretary. Sign in to set your society up.</p>
+                @if (auth.isAuthenticated()) {
+                  <button mat-flat-button type="button" (click)="openSociety()">
+                    Open my society
+                  </button>
+                } @else {
+                  <a mat-flat-button routerLink="/login">Sign in</a>
+                }
+              }
+              @case ('REJECTED') {
+                <p>We couldn't take this registration on: “{{ f.reason }}”</p>
+                <button mat-button type="button" (click)="mode.set('register')">
+                  Register again
+                </button>
+              }
+            }
+          </div>
+        }
+      }
+    }
+  </div>
+</div>

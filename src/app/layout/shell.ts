@@ -21,8 +21,10 @@ import { ThemeMode, ThemeStore } from '../core/theme';
 import { inviteDialog } from '../features/invitations/invite-dialog';
 import { canOpenInvitations } from '../features/invitations/invitation-ui';
 import { PendingInvitations } from '../features/invitations/pending-invitations';
+import { SetupBanner } from '../features/onboarding/setup-banner';
 import { confirmDialog } from '../shared/confirm-dialog';
 import { Command, CommandPaletteService } from './command-palette';
+import { Logo } from '../shared/ui';
 
 interface NavItem {
   label: string;
@@ -69,6 +71,13 @@ const NAV_ITEMS: NavItem[] = [
     permission: 'FINANCE.ACCOUNT.VIEW',
   },
   {
+    label: 'Registrations',
+    icon: 'how_to_reg',
+    link: '/registrations',
+    permission: 'SOCIETY.APPLICATION.VIEW',
+    platform: true,
+  },
+  {
     label: 'Roles',
     icon: 'admin_panel_settings',
     link: '/roles',
@@ -94,6 +103,8 @@ const NAV_ITEMS: NavItem[] = [
     MatToolbarModule,
     MatTooltipModule,
     PendingInvitations,
+    SetupBanner,
+    Logo,
   ],
   host: { '(document:keydown)': 'onKeydown($event)' },
   templateUrl: './shell.html',

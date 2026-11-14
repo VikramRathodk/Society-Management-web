@@ -1,0 +1,197 @@
+<app-page-header
+  [title]="society()?.name ?? 'Society setup'"
+  [subtitle]="live() ? 'Setup tools' : 'Getting your society ready'"
+  back="/societies"
+  backLabel="Back to societies"
+>
+  @if (society(); as s) {
+    @if (live()) {
+      <app-status-pill tone="success">Live</app-status-pill>
+    } @else if (progress(); as p) {
+      <app-status-pill tone="warning" icon="construction">
+        {{ p.done }} of {{ p.total }} steps done
+      </app-status-pill>
+    }
+  }
+</app-page-header>
+
+@if (loading()) {
+  <app-skeleton variant="form" />
+} @else if (society(); as s) {
+  <div class="wizard">
+    <nav class="steps" aria-label="Setup steps">
+      @for (item of steps(); track item.key; let i = $index) {
+        <button
+          type="button"
+          class="step"
+          [class.active]="step() === item.key"
+          [class.done]="item.done"
+          [attr.aria-current]="step() === item.key ? 'step' : null"
+          (click)="go(item.key)"
+        >
+          <span class="badge">
+            @if (item.done) {
+              <mat-icon aria-hidden="true">check</mat-icon>
+            } @else {
+              {{ i + 1 }}
+            }
+          </span>
+          <span class="text">
+            <span class="label">
+              {{ item.label }}
+              @if (item.required && !item.done) {
+                <span class="req">Required</span>
+              }
+            </span>
+            <span class="detail">{{ item.detail }}</span>
+          </span>
+        </button>
+      }
+    </nav>
+
+    <div class="panel">
+      @switch (step()) {
+        @case ('profile') {
+          <app-section
+            title="Society profile"
+            subtitle="Address, city, state, PIN and a contact phone are needed to go live"
+            padded
+          >
+            <app-society-profile-form [society]="s" (saved)="profileSaved($event)" />
+          </app-section>
+        }
+        @case ('structure') {
+          <app-section
+            title="Wings & flats"
+            subtitle="Describe each wing once; flats that already exist are skipped"
+            padded
+          >
+            <app-structure-generator [societyId]="s.id" (generated)="refresh()" />
+            <p class="aside">
+              To add, rename or remove a few flats, use the
+              <a routerLink="/structure">Structure</a> page.
+            </p>
+          </app-section>
+        }
+        @case ('residents') {
+          <app-section
+            title="Residents from a sheet"
+            [subtitle]="
+              live() ? 'Each row becomes an invitation' : 'Staged now, invited when you go live'
+            "
+            padded
+          >
+            @if ((checklist()?.structure?.flats ?? 0) === 0) {
+              <p class="aside" role="note">
+                Add wings and flats first: each row is matched to a flat.
+                <button mat-button type="button" (click)="go('structure')">Wings & flats</button>
+              </p>
+            }
+            <app-resident-importer
+              [societyId]="s.id"
+              [societyName]="s.name"
+              [live]="live()"
+              (changed)="refresh()"
+            />
+          </app-section>
+        }
+        @case ('committee') {
+          <app-section
+            title="Committee, treasurer and guards"
+            subtitle="Invite the people who run the society with you"
+            padded
+          >
+            @if (checklist(); as c) {
+              <p class="counts">
+                {{ c.committee.members }} {{ c.committee.members === 1 ? 'person' : 'people' }} so
+                far · {{ c.committee.openInvitations }} invited
+              </p>
+            }
+            <div class="row-actions">
+              <button mat-flat-button type="button" (click)="invite()">
+                <mat-icon>person_add</mat-icon> Invite someone
+              </button>
+              <a mat-button routerLink="/invitations">See invitations</a>
+            </div>
+          </app-section>
+          <app-society-rules [societyId]="s.id" class="rules" />
+          <p class="aside">
+            Billing and accounts have their own setup:
+            <a routerLink="/maintenance/settings">Maintenance settings</a> ·
+            <a routerLink="/finance/settings">Finance settings</a>
+          </p>
+        }
+        @case ('live') {
+          <app-section title="Go live" padded>
+            @if (checklist(); as c) {
+              @if (c.status === 'LIVE') {
+                <p class="live-note">
+                  <mat-icon aria-hidden="true">celebration</mat-icon>
+                  {{ c.name }} is live. Residents can sign in with their invitations.
+                </p>
+                @if (wentLive(); as sent) {
+                  <app-sent-invitations [result]="sent" [societyName]="c.name" />
+                }
+              } @else {
+                <ul class="checklist">
+                  @for (item of steps().slice(0, 4); track item.key) {
+                    <li [class.done]="item.done">
+                      <mat-icon aria-hidden="true">{{
+                        item.done
+                          ? 'check_circle'
+                          : item.required
+                            ? 'error'
+                            : 'radio_button_unchecked'
+                      }}</mat-icon>
+                      <span>
+                        <strong>{{ item.label }}</strong>
+                        {{
+                          item.done
+                            ? ''
+                            : item.required
+                              ? '(required)'
+                              : '(optional, can be done later)'
+                        }}
+                        <span class="detail">{{ item.detail }}</span>
+                      </span>
+                      @if (!item.done) {
+                        <button mat-button type="button" (click)="go(item.key)">Open</button>
+                      }
+                    </li>
+                  }
+                </ul>
+                <p class="aside">
+                  Going live lets residents join.
+                  @if (c.residents.staged) {
+                    The {{ c.residents.staged }} residents in your sheet are invited straight away.
+                  }
+                </p>
+                <button
+                  mat-flat-button
+                  type="button"
+                  (click)="goLive()"
+                  [disabled]="!c.canGoLive || goingLive()"
+                >
+                  <mat-icon>rocket_launch</mat-icon> Go live
+                </button>
+              }
+            }
+          </app-section>
+        }
+      }
+
+      @if (step() !== 'live' && !live()) {
+        <div class="next">
+          <button mat-button type="button" (click)="next()">
+            {{ step() === 'profile' ? 'Next' : 'Skip for now' }}
+            <mat-icon iconPositionEnd>arrow_forward</mat-icon>
+          </button>
+        </div>
+      }
+    </div>
+  </div>
+} @else {
+  <app-empty-state icon="search_off" message="This society could not be found.">
+    <a mat-button routerLink="/societies">Back to societies</a>
+  </app-empty-state>
+}

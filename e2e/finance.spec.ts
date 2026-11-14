@@ -55,6 +55,8 @@ test.describe.serial('finance', () => {
       await call(request, 'post', '/api/societies', admin, {
         name: `E2E Finance ${stamp}`,
         address: 'E2E',
+        // A running society moving in: residents are added straight away.
+        startLive: true,
       })
     ).id;
     const wing = await call(request, 'post', `/api/societies/${societyId}/wings`, admin, {

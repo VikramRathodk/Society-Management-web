@@ -9,3 +9,4 @@ export * from './maintenance.model';
 export * from './invitation.model';
 export * from './finance.model';
 export * from './reconciliation.model';
+export * from './onboarding.model';
