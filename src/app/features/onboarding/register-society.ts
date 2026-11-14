@@ -152,6 +152,7 @@ export class RegisterSociety {
     const s = this.submitted();
     if (s) this.lookup.patchValue({ number: s.view.number, phone: s.phone });
     this.mode.set('status');
+    this.submitted.set(null); // leave the thank-you page for the lookup
     this.check();
   }
 

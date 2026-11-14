@@ -79,6 +79,24 @@ describe('RegisterSociety', () => {
     await fixture.whenStable();
     expect(el().querySelector('[data-testid="application-number"]')?.textContent).toBe('#42');
     expect(el().textContent).toContain('9876543210');
+
+    // "Check status" looks it up straight away.
+    [...el().querySelectorAll<HTMLButtonElement>('button')]
+      .find((b) => b.textContent?.includes('Check status'))!
+      .click();
+    const status = http.expectOne((r) => r.url === '/api/society-applications/public/status');
+    expect(status.request.params.get('number')).toBe('42');
+    expect(status.request.params.get('phone')).toBe('9876543210');
+    status.flush({
+      number: 42,
+      societyName: 'Lake View',
+      status: 'PENDING',
+      createdAt: '2026-11-14T10:00:00Z',
+      reviewedAt: null,
+      reason: null,
+    });
+    await fixture.whenStable();
+    expect(el().textContent).toContain("We haven't called yet");
   });
 
   it('needs a password from someone new', async () => {
