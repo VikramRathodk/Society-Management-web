@@ -163,7 +163,7 @@ function fileName(res: HttpResponse<Blob>): string | null {
 }
 
 /** Hands a blob to the browser as a file download. */
-function saveFile(blob: Blob, name: string): void {
+export function saveFile(blob: Blob, name: string): void {
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;

@@ -3,44 +3,30 @@
   subtitle="Society settings"
   back="/societies"
   backLabel="Back to societies"
-/>
+>
+  @if (society(); as s) {
+    <a mat-stroked-button [routerLink]="['/societies', s.id, 'setup']">
+      <mat-icon>checklist</mat-icon>
+      {{ s.status === 'SETUP' ? 'Continue setup' : 'Setup tools' }}
+    </a>
+  }
+</app-page-header>
 
 @if (loading()) {
   <app-skeleton variant="form" />
-} @else if (!society()) {
-  <app-empty-state icon="search_off" message="This society could not be found.">
-    <a mat-button routerLink="/societies">Back to societies</a>
-  </app-empty-state>
-} @else {
+} @else if (society(); as s) {
   <app-section
     title="Profile"
     subtitle="Shown to everyone in this society"
     padded
     class="settings-card"
   >
-    <form [formGroup]="form" (ngSubmit)="save()">
-      <mat-form-field appearance="outline">
-        <mat-label>Name</mat-label>
-        <input matInput formControlName="name" />
-        @if (form.controls.name.invalid) {
-          <mat-error>Name is required</mat-error>
-        }
-      </mat-form-field>
-
-      <mat-form-field appearance="outline">
-        <mat-label>Address</mat-label>
-        <textarea matInput formControlName="address" rows="3"></textarea>
-      </mat-form-field>
-
-      @if (error(); as message) {
-        <p class="form-error" role="alert">{{ message }}</p>
-      }
-
-      <div class="form-actions">
-        <button mat-flat-button type="submit" [disabled]="form.pristine || saving()">Save</button>
-      </div>
-    </form>
+    <app-society-profile-form [society]="s" (saved)="saved($event)" />
   </app-section>
 
   <app-society-rules [societyId]="id()" class="rules" />
+} @else {
+  <app-empty-state icon="search_off" message="This society could not be found.">
+    <a mat-button routerLink="/societies">Back to societies</a>
+  </app-empty-state>
 }

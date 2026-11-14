@@ -1,9 +1,12 @@
 import { DOCUMENT } from '@angular/common';
 import { Component, inject } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { RouterLink } from '@angular/router';
+import { catchError, of } from 'rxjs';
 
+import { OnboardingApi } from '../../core/api/onboarding.api';
 import { Avatar, Reveal, StatusPill } from '../../shared/ui';
 
 /**
@@ -277,6 +280,14 @@ export class LandingPreview {}
 })
 export class Landing {
   private readonly document = inject(DOCUMENT);
+
+  /** "Register your society" shows only while self-signup is open. */
+  protected readonly registerOpen = toSignal(
+    inject(OnboardingApi)
+      .selfSignupEnabled()
+      .pipe(catchError(() => of(false))),
+    { initialValue: false },
+  );
 
   protected readonly config = LANDING;
   protected readonly year = new Date().getFullYear();

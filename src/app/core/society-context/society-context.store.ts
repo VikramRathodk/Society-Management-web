@@ -3,7 +3,7 @@ import { Observable, catchError, forkJoin, map, of, tap } from 'rxjs';
 
 import { SocietyApi } from '../api/society.api';
 import { AuthStore } from '../auth/auth.store';
-import { Society } from '../models';
+import { Society, SocietyStatus } from '../models';
 
 const SOCIETY_KEY = 'sm.societyId';
 const VIEW_SOCIETY = 'SOCIETY.SETTINGS.VIEW';
@@ -11,6 +11,8 @@ const VIEW_SOCIETY = 'SOCIETY.SETTINGS.VIEW';
 export interface SocietyOption {
   id: number;
   name: string;
+  /** Known when the society itself was fetched (people who can view its settings). */
+  status?: SocietyStatus;
 }
 
 /** The society most screens work inside, chosen from the societies the user has access to. */
@@ -93,7 +95,7 @@ export class SocietyContextStore {
 }
 
 function toOption(society: Society): SocietyOption {
-  return { id: society.id, name: society.name };
+  return { id: society.id, name: society.name, status: society.status };
 }
 
 function placeholder(id: number): SocietyOption {

@@ -14,7 +14,7 @@ import { Society } from '../../core/models';
 import { SocietyContextStore } from '../../core/society-context/society-context.store';
 import { confirmDialog } from '../../shared/confirm-dialog';
 import { sortBy } from '../../shared/sort';
-import { EmptyState, PageHeader, Section, Skeleton } from '../../shared/ui';
+import { EmptyState, PageHeader, Section, Skeleton, StatusPill } from '../../shared/ui';
 import { SocietyCreateDialog } from './society-create-dialog';
 
 @Component({
@@ -30,6 +30,7 @@ import { SocietyCreateDialog } from './society-create-dialog';
     EmptyState,
     PageHeader,
     Section,
+    StatusPill,
   ],
   templateUrl: './society-list.html',
   styleUrl: './society-list.scss',
@@ -42,7 +43,7 @@ export class SocietyList {
 
   protected readonly societies = signal<Society[]>([]);
   protected readonly loading = signal(true);
-  protected readonly columns = ['name', 'address', 'actions'];
+  protected readonly columns = ['name', 'address', 'status', 'actions'];
 
   protected readonly loadError = signal(false);
   protected readonly subtitle = computed(() => {

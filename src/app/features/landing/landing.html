@@ -32,17 +32,28 @@
         <div class="hero-ctas" [appReveal]="210">
           @if (demoLink) {
             <a mat-flat-button class="big" [href]="demoLink">Request a demo</a>
+            @if (registerOpen()) {
+              <a mat-stroked-button class="big" routerLink="/register-society">
+                Register your society
+              </a>
+            }
             <a mat-stroked-button class="big" routerLink="/login">Log in</a>
           } @else {
             <a mat-flat-button class="big" routerLink="/login">Log in</a>
-            <a
-              mat-stroked-button
-              class="big"
-              href="#features"
-              (click)="scrollTo('features', $event)"
-            >
-              See what's inside
-            </a>
+            @if (registerOpen()) {
+              <a mat-stroked-button class="big" routerLink="/register-society">
+                Register your society
+              </a>
+            } @else {
+              <a
+                mat-stroked-button
+                class="big"
+                href="#features"
+                (click)="scrollTo('features', $event)"
+              >
+                See what's inside
+              </a>
+            }
           }
         </div>
         <ul class="assurances" [appReveal]="280">
@@ -230,6 +241,11 @@
           <p>Already invited by your society? Sign in with your phone number.</p>
           <div class="hero-ctas">
             <a mat-flat-button class="big on-dark" routerLink="/login">Log in</a>
+            @if (registerOpen()) {
+              <a mat-stroked-button class="big on-dark" routerLink="/register-society">
+                Register your society
+              </a>
+            }
           </div>
         }
       </div>

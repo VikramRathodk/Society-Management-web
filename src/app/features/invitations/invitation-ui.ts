@@ -102,7 +102,7 @@ export function qrFileName(i: Invitation): string {
   return `invite-${slug || i.id}.png`;
 }
 
-const escape = (s: string) =>
+export const escapeHtml = (s: string) =>
   s.replace(
     /[&<>"']/g,
     (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!,
@@ -112,7 +112,7 @@ const escape = (s: string) =>
 export function printCardHtml(issued: IssuedInvitation, qrSrc: string): string {
   const i = issued.invitation;
   return `<!doctype html>
-<html><head><meta charset="utf-8"><title>Invitation for ${escape(i.name)}</title>
+<html><head><meta charset="utf-8"><title>Invitation for ${escapeHtml(i.name)}</title>
 <style>
   @page { margin: 16mm; }
   body { font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; color: #1f1b16; margin: 0; }
@@ -125,12 +125,12 @@ export function printCardHtml(issued: IssuedInvitation, qrSrc: string): string {
   .expiry { margin: 0; font-size: 12px; color: #52443a; }
 </style></head>
 <body><div class="card">
-  <p class="society">${escape(i.societyName)}</p>
-  <p class="who">${escape(i.name)} · ${escape(invitedAs(i))}</p>
+  <p class="society">${escapeHtml(i.societyName)}</p>
+  <p class="who">${escapeHtml(i.name)} · ${escapeHtml(invitedAs(i))}</p>
   <p class="scan">Scan to join</p>
   <img src="${qrSrc}" alt="QR code for the invitation link">
-  <p class="link">${escape(issued.inviteUrl)}</p>
-  <p class="expiry">Valid until ${escape(dayLabel(i.expiresAt))}</p>
+  <p class="link">${escapeHtml(issued.inviteUrl)}</p>
+  <p class="expiry">Valid until ${escapeHtml(dayLabel(i.expiresAt))}</p>
 </div>
 <script>window.onload = () => { window.print(); };</script>
 </body></html>`;

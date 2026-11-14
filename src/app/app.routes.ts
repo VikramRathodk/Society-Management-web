@@ -31,6 +31,13 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./features/invitations/accept-invitation').then((m) => m.AcceptInvitation),
   },
+  // Public: a society registers itself (signed in or not), and checks on its registration.
+  {
+    path: 'register-society',
+    title: 'Register your society',
+    loadComponent: () =>
+      import('./features/onboarding/register-society').then((m) => m.RegisterSociety),
+  },
   {
     path: '',
     canMatch: [authGuard],
@@ -47,7 +54,15 @@ export const routes: Routes = [
         title: 'My profile',
         loadComponent: () => import('./features/profile/profile').then((m) => m.Profile),
       },
-      // Before 'societies' so that route's guard doesn't run for settings URLs.
+      // Before 'societies' so that route's guard doesn't run for settings and setup URLs.
+      {
+        path: 'societies/:id/setup',
+        title: 'Society setup',
+        canActivate: [societyPermissionGuard],
+        data: { permission: 'SOCIETY.SETTINGS.UPDATE' },
+        loadComponent: () =>
+          import('./features/onboarding/setup-wizard').then((m) => m.SetupWizard),
+      },
       {
         path: 'societies/:id/settings',
         title: 'Society settings',
@@ -324,6 +339,14 @@ export const routes: Routes = [
             loadComponent: () => import('./features/finance/audit-log').then((m) => m.AuditLog),
           },
         ],
+      },
+      {
+        path: 'registrations',
+        title: 'Registrations',
+        canMatch: [permissionGuard],
+        data: { permission: 'SOCIETY.APPLICATION.VIEW', platform: true },
+        loadComponent: () =>
+          import('./features/onboarding/application-list').then((m) => m.ApplicationList),
       },
       {
         path: 'roles/:code',
