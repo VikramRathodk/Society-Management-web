@@ -24,6 +24,7 @@ import { PendingInvitations } from '../features/invitations/pending-invitations'
 import { SetupBanner } from '../features/onboarding/setup-banner';
 import { confirmDialog } from '../shared/confirm-dialog';
 import { Command, CommandPaletteService } from './command-palette';
+import { Logo } from '../shared/ui';
 
 interface NavItem {
   label: string;
@@ -103,6 +104,7 @@ const NAV_ITEMS: NavItem[] = [
     MatTooltipModule,
     PendingInvitations,
     SetupBanner,
+    Logo,
   ],
   host: { '(document:keydown)': 'onKeydown($event)' },
   templateUrl: './shell.html',

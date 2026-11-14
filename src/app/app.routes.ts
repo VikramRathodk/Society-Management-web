@@ -7,7 +7,7 @@ import { permissionGuard, societyPermissionGuard } from './core/auth/permission.
 import { unsavedChangesGuard } from './core/unsaved-changes.guard';
 import { invitationsGuard } from './features/invitations/invitation-ui';
 
-// `title` is shown in the browser tab as "<title> · Society Management" (see AppTitleStrategy).
+// `title` is shown in the browser tab as "<title> · Sahvasa" (see AppTitleStrategy).
 export const routes: Routes = [
   {
     path: 'login',
@@ -20,7 +20,7 @@ export const routes: Routes = [
   {
     path: '',
     pathMatch: 'full',
-    title: 'Gate, dues and books for housing societies',
+    title: 'Society management platform',
     canMatch: [() => !inject(AuthStore).isAuthenticated()],
     loadComponent: () => import('./features/landing/landing').then((m) => m.Landing),
   },

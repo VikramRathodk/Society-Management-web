@@ -1,6 +1,6 @@
-# Society Management — Web
+# Sahvasa — Web
 
-Angular web client (admin / committee / gate portal) for the Society Management Spring Boot API.
+Sahvasa: the Angular web client (admin / committee / gate portal) for the Society Management Spring Boot API.
 The design and API contract are in [docs/ANGULAR_FRONTEND.md](docs/ANGULAR_FRONTEND.md).
 
 Built with Angular 21 (standalone components, signals, zoneless) and Angular Material.

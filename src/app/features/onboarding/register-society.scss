@@ -38,6 +38,9 @@
 
 .brand-name {
   font: var(--mat-sys-title-medium);
+  font-family: var(--app-font-display);
+  font-weight: 600;
+  color: var(--app-heading);
 }
 
 .modes {

@@ -15,7 +15,7 @@ import { AuthStore } from '../../core/auth/auth.store';
 import { errorMessage } from '../../core/auth/error.interceptor';
 import { ApplicationStatusView } from '../../core/models';
 import { SocietyContextStore } from '../../core/society-context/society-context.store';
-import { StatusPill } from '../../shared/ui';
+import { Logo, StatusPill } from '../../shared/ui';
 import { PHONE_PATTERN } from '../societies/society-create-dialog';
 import { APPLICATION_STATUS } from './onboarding-ui';
 
@@ -38,6 +38,7 @@ type Mode = 'register' | 'status';
     MatIconModule,
     MatInputModule,
     StatusPill,
+    Logo,
   ],
   templateUrl: './register-society.html',
   styleUrl: './register-society.scss',
@@ -151,8 +152,8 @@ export class RegisterSociety {
   protected showStatus(): void {
     const s = this.submitted();
     if (s) this.lookup.patchValue({ number: s.view.number, phone: s.phone });
-    this.mode.set('status');
     this.submitted.set(null); // leave the thank-you page for the lookup
+    this.mode.set('status');
     this.check();
   }
 

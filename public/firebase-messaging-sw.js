@@ -41,7 +41,7 @@ self.addEventListener('push', (event) => {
   }
   const n = payload.notification || {};
   const data = payload.data || {};
-  const title = n.title || data.title || 'Society Management';
+  const title = n.title || data.title || 'Sahvasa';
   const body = n.body || data.body;
 
   event.waitUntil(

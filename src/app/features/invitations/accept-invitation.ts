@@ -23,6 +23,7 @@ import { errorMessage } from '../../core/auth/error.interceptor';
 import { InvitationPreview, InvitationStatus } from '../../core/models';
 import { SocietyContextStore } from '../../core/society-context/society-context.store';
 import { dayLabel, residentTypeLabel } from './invitation-ui';
+import { Logo } from '../../shared/ui';
 
 type Load = { preview: InvitationPreview } | { error: string };
 
@@ -53,6 +54,7 @@ function passwordsMatch(group: AbstractControl): ValidationErrors | null {
     MatIconModule,
     MatInputModule,
     MatProgressSpinnerModule,
+    Logo,
   ],
   templateUrl: './accept-invitation.html',
   styleUrl: './accept-invitation.scss',
