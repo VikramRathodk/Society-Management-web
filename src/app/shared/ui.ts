@@ -3,7 +3,20 @@
  * separate files; they only use theme tokens (--mat-sys-*, --app-*), so light and dark both work.
  */
 import { NgTemplateOutlet } from '@angular/common';
-import { Component, booleanAttribute, computed, input } from '@angular/core';
+import {
+  Component,
+  DestroyRef,
+  Directive,
+  ElementRef,
+  afterNextRender,
+  booleanAttribute,
+  computed,
+  effect,
+  inject,
+  input,
+  numberAttribute,
+  signal,
+} from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { Params, RouterLink } from '@angular/router';
@@ -135,10 +148,111 @@ export class StatusPill {
   });
 }
 
+/** True when it's fine to animate: a real browser, a visible tab, and no reduced-motion setting. */
+export function motionAllowed(): boolean {
+  return (
+    typeof matchMedia === 'function' &&
+    typeof requestAnimationFrame === 'function' &&
+    document.visibilityState === 'visible' &&
+    !matchMedia('(prefers-reduced-motion: reduce)').matches
+  );
+}
+
+/** A value holding exactly one number, e.g. "₹1,86,000", "-₹250.50" or "12 flats differ". */
+const SINGLE_NUMBER = /^(\D*?)(\d[\d,]*(?:\.\d+)?)(\D*)$/;
+
+/**
+ * Shows a formatted value and counts its number up from the previous one when it changes
+ * ("₹0" → "₹1,86,000"). Values with no number or several ("31 Oct 2026") just appear.
+ */
+@Component({
+  selector: 'app-count-up',
+  template: `{{ text() }}`,
+})
+export class CountUp {
+  readonly value = input.required<string>();
+  protected readonly text = signal('');
+
+  constructor() {
+    let frame = 0;
+    let last = 0;
+    inject(DestroyRef).onDestroy(() => cancelAnimationFrame(frame));
+
+    effect(() => {
+      const value = this.value();
+      if (typeof cancelAnimationFrame === 'function') cancelAnimationFrame(frame);
+      const m = SINGLE_NUMBER.exec(value);
+      if (!m) {
+        this.text.set(value);
+        return;
+      }
+      const [, prefix, digits, suffix] = m;
+      const target = Number(digits.replace(/,/g, ''));
+      const from = last;
+      last = target;
+      if (from === target || !motionAllowed()) {
+        this.text.set(value);
+        return;
+      }
+      const decimals = digits.split('.')[1]?.length ?? 0;
+      const grouped = digits.includes(',');
+      const fmt = (n: number) =>
+        grouped
+          ? n.toLocaleString('en-IN', {
+              minimumFractionDigits: decimals,
+              maximumFractionDigits: decimals,
+            })
+          : n.toFixed(decimals);
+      const duration = 750;
+      const start = performance.now();
+      const step = (now: number) => {
+        const p = Math.min(1, (now - start) / duration);
+        const eased = 1 - Math.pow(1 - p, 4);
+        // End on the exact original string so formatting always matches the caller's.
+        this.text.set(p < 1 ? prefix + fmt(from + (target - from) * eased) + suffix : value);
+        if (p < 1) frame = requestAnimationFrame(step);
+      };
+      frame = requestAnimationFrame(step);
+    });
+  }
+}
+
+/**
+ * Fades and lifts an element in the first time it scrolls into view. Optional stagger in ms:
+ *   <article appReveal>…</article>   <li [appReveal]="i * 60">…</li>
+ * Content is visible by default; it only hides once JS knows it can animate it back in.
+ */
+@Directive({ selector: '[appReveal]' })
+export class Reveal {
+  readonly delay = input(0, { alias: 'appReveal', transform: numberAttribute });
+
+  constructor() {
+    const el = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
+    let observer: IntersectionObserver | undefined;
+    inject(DestroyRef).onDestroy(() => observer?.disconnect());
+
+    afterNextRender(() => {
+      if (typeof IntersectionObserver === 'undefined' || !motionAllowed()) return;
+      el.style.setProperty('--reveal-delay', `${this.delay() || 0}ms`);
+      el.classList.add('reveal', 'reveal-pending');
+      observer = new IntersectionObserver(
+        (entries) => {
+          if (entries.some((e) => e.isIntersecting)) {
+            el.classList.remove('reveal-pending');
+            observer?.disconnect();
+          }
+        },
+        { rootMargin: '0px 0px -8% 0px' },
+      );
+      observer.observe(el);
+    });
+  }
+}
+
 /** A number with a label and icon, linking to the page behind it. */
 @Component({
   selector: 'app-stat-card',
-  imports: [RouterLink, MatIconModule],
+  imports: [RouterLink, MatIconModule, CountUp],
   template: `
     <a
       class="stat"
@@ -150,8 +264,10 @@ export class StatusPill {
       <span class="stat-icon"
         ><mat-icon>{{ icon() }}</mat-icon></span
       >
-      @if (value() !== null) {
-        <span class="stat-value">{{ value() }}</span>
+      @if (value(); as v) {
+        <span class="stat-value"><app-count-up [value]="v" /></span>
+      } @else if (value() === '') {
+        <span class="stat-value"></span>
       } @else {
         <span class="stat-value"><span class="sk-bar" style="width: 2.2em"></span></span>
       }

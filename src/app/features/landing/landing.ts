@@ -4,7 +4,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { RouterLink } from '@angular/router';
 
-import { Avatar, StatusPill } from '../../shared/ui';
+import { Avatar, Reveal, StatusPill } from '../../shared/ui';
 
 /**
  * Sales details. Sections that need them stay hidden until they're filled in, so the page never
@@ -203,6 +203,19 @@ interface Pillar {
         height: 100%;
         border-radius: inherit;
         background: var(--app-success);
+        animation: meter-fill 1.1s var(--app-ease-out) 600ms both;
+      }
+    }
+
+    @keyframes meter-fill {
+      from {
+        width: 0;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .p-meter span {
+        animation: none;
       }
     }
 
@@ -258,7 +271,7 @@ export class LandingPreview {}
 /** Public home page for signed-out visitors: what the app does, for whom, and how to start. */
 @Component({
   selector: 'app-landing',
-  imports: [RouterLink, MatButtonModule, MatIconModule, LandingPreview],
+  imports: [RouterLink, MatButtonModule, MatIconModule, LandingPreview, Reveal],
   templateUrl: './landing.html',
   styleUrl: './landing.scss',
 })

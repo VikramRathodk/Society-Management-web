@@ -22,14 +22,14 @@
   <section class="hero">
     <div class="wrap hero-grid">
       <div class="hero-text">
-        <p class="eyebrow">For housing societies and apartment committees</p>
-        <h1>Your society's gate, dues and books — in one calm place.</h1>
-        <p class="lead">
+        <p class="eyebrow" appReveal>For housing societies and apartment committees</p>
+        <h1 [appReveal]="70">Your society's gate, dues and books — in one calm place.</h1>
+        <p class="lead" [appReveal]="140">
           Guards log visitors and residents approve them from their phone. Bills go out every cycle
           with a UPI QR on each one. And every rupee lands in proper books, with a second person
           approving what the first one records.
         </p>
-        <div class="hero-ctas">
+        <div class="hero-ctas" [appReveal]="210">
           @if (demoLink) {
             <a mat-flat-button class="big" [href]="demoLink">Request a demo</a>
             <a mat-stroked-button class="big" routerLink="/login">Log in</a>
@@ -45,7 +45,7 @@
             </a>
           }
         </div>
-        <ul class="assurances">
+        <ul class="assurances" [appReveal]="280">
           <li><mat-icon aria-hidden="true">verified_user</mat-icon>Role-based access</li>
           <li><mat-icon aria-hidden="true">fact_check</mat-icon>Second-person approvals</li>
           <li><mat-icon aria-hidden="true">history</mat-icon>Full audit trail</li>
@@ -53,18 +53,18 @@
       </div>
 
       <!-- A picture of the product, drawn with the app's own pieces. -->
-      <app-landing-preview />
+      <app-landing-preview [appReveal]="180" />
     </div>
   </section>
 
   <!-- Three pillars -->
   <section id="features" class="section">
     <div class="wrap">
-      <p class="eyebrow">What it does</p>
-      <h2>Three jobs every committee does, done properly.</h2>
+      <p class="eyebrow" appReveal>What it does</p>
+      <h2 [appReveal]="60">Three jobs every committee does, done properly.</h2>
       <div class="pillars">
         @for (p of pillars; track p.title) {
-          <article class="pillar">
+          <article class="pillar" [appReveal]="$index * 90">
             <span class="pillar-icon"
               ><mat-icon aria-hidden="true">{{ p.icon }}</mat-icon></span
             >
@@ -85,11 +85,11 @@
   <!-- Roles -->
   <section id="roles" class="section tinted">
     <div class="wrap">
-      <p class="eyebrow">Who it's for</p>
-      <h2>Everyone opens it to a screen made for them.</h2>
+      <p class="eyebrow" appReveal>Who it's for</p>
+      <h2 [appReveal]="60">Everyone opens it to a screen made for them.</h2>
       <div class="roles">
         @for (r of roles; track r.title) {
-          <article class="role">
+          <article class="role" [appReveal]="$index * 90">
             <span class="role-icon"
               ><mat-icon aria-hidden="true">{{ r.icon }}</mat-icon></span
             >
@@ -104,9 +104,9 @@
   <!-- Everything else -->
   <section class="section">
     <div class="wrap">
-      <p class="eyebrow">And the rest</p>
-      <h2>The everyday things, already there.</h2>
-      <ul class="features">
+      <p class="eyebrow" appReveal>And the rest</p>
+      <h2 [appReveal]="60">The everyday things, already there.</h2>
+      <ul class="features" appReveal>
         @for (f of features; track f.title) {
           <li>
             <mat-icon aria-hidden="true">{{ f.icon }}</mat-icon>
@@ -124,15 +124,15 @@
   <section class="section">
     <div class="wrap trust">
       <div>
-        <p class="eyebrow">Transparency</p>
-        <h2>Nothing about money changes quietly.</h2>
-        <p class="lead">
+        <p class="eyebrow" appReveal>Transparency</p>
+        <h2 [appReveal]="60">Nothing about money changes quietly.</h2>
+        <p class="lead" [appReveal]="140">
           Whoever records an entry, someone else approves it. Every change to accounts, entries and
           settings is written to the audit log with who did it and when. Close a period with a lock
           date and it stays closed.
         </p>
       </div>
-      <ol class="log" aria-label="Example audit trail">
+      <ol class="log" [appReveal]="120" aria-label="Example audit trail">
         <li>
           <mat-icon aria-hidden="true">add_circle</mat-icon>
           <span><strong>Ramesh K.</strong> recorded an expense: Lift maintenance ₹12,000</span>
@@ -155,11 +155,11 @@
   <!-- How it works -->
   <section id="how" class="section tinted">
     <div class="wrap">
-      <p class="eyebrow">How it works</p>
-      <h2>Up and running in an afternoon.</h2>
+      <p class="eyebrow" appReveal>How it works</p>
+      <h2 [appReveal]="60">Up and running in an afternoon.</h2>
       <ol class="steps">
         @for (s of steps; track s.title; let i = $index) {
-          <li>
+          <li [appReveal]="i * 90">
             <span class="step-no">{{ i + 1 }}</span>
             <h3>{{ s.title }}</h3>
             <p>{{ s.text }}</p>
@@ -173,11 +173,11 @@
   @if (config.plans.length) {
     <section id="pricing" class="section">
       <div class="wrap">
-        <p class="eyebrow">Pricing</p>
-        <h2>Simple, by the size of your society.</h2>
+        <p class="eyebrow" appReveal>Pricing</p>
+        <h2 [appReveal]="60">Simple, by the size of your society.</h2>
         <div class="plans">
           @for (plan of config.plans; track plan.name) {
-            <article class="plan">
+            <article class="plan" [appReveal]="$index * 90">
               <h3>{{ plan.name }}</h3>
               <p class="price">
                 {{ plan.price }} <small>{{ plan.per }}</small>
@@ -198,9 +198,9 @@
   <!-- FAQ -->
   <section id="faq" class="section">
     <div class="wrap narrow">
-      <p class="eyebrow">Questions</p>
-      <h2>Things committees usually ask.</h2>
-      <div class="faqs">
+      <p class="eyebrow" appReveal>Questions</p>
+      <h2 [appReveal]="60">Things committees usually ask.</h2>
+      <div class="faqs" appReveal>
         @for (f of faqs; track f.q) {
           <details>
             <summary>{{ f.q }}<mat-icon aria-hidden="true">expand_more</mat-icon></summary>
@@ -214,7 +214,7 @@
   <!-- Closing call to action -->
   <section class="section">
     <div class="wrap">
-      <div class="closing">
+      <div class="closing" appReveal>
         <h2>Bring the gate, the dues and the books together.</h2>
         @if (demoLink) {
           <p>Tell us about your society and we'll show you around.</p>

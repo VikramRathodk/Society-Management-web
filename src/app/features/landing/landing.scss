@@ -233,6 +233,23 @@ mat-icon {
   border-radius: 20px;
   background: var(--mat-sys-surface-container-lowest);
   box-shadow: var(--app-card-shadow);
+  // Hover lift uses `translate`; the scroll reveal uses `transform` + opacity (with its stagger delay).
+  transition:
+    translate 260ms var(--app-ease-out),
+    box-shadow 260ms ease,
+    opacity 650ms var(--app-ease-out) var(--reveal-delay, 0ms),
+    transform 650ms var(--app-ease-out) var(--reveal-delay, 0ms);
+
+  &.reveal-pending {
+    transition: none;
+  }
+
+  @media (hover: hover) {
+    &:hover {
+      translate: 0 -4px;
+      box-shadow: var(--app-card-shadow-hover);
+    }
+  }
 
   > p {
     color: var(--mat-sys-on-surface-variant);
@@ -429,6 +446,23 @@ mat-icon {
 
 details {
   border-bottom: 1px solid var(--app-card-border);
+  // Answers slide open instead of snapping (browsers without ::details-content just snap).
+  interpolate-size: allow-keywords;
+
+  &::details-content {
+    block-size: 0;
+    overflow: hidden;
+    opacity: 0;
+    transition:
+      block-size 320ms var(--app-ease-out),
+      opacity 240ms ease,
+      content-visibility 320ms allow-discrete;
+  }
+
+  &[open]::details-content {
+    block-size: auto;
+    opacity: 1;
+  }
 
   summary {
     display: flex;
@@ -582,7 +616,17 @@ details {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  details summary mat-icon {
+  details summary mat-icon,
+  details::details-content,
+  .pillar,
+  .role,
+  .plan {
     transition: none;
+  }
+
+  .pillar:hover,
+  .role:hover,
+  .plan:hover {
+    translate: none;
   }
 }

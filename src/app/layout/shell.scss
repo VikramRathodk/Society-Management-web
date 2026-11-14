@@ -152,6 +152,8 @@
 .page {
   max-width: 1200px;
   margin: 0 auto;
+  // Only the page body animates on navigation; the toolbar and sidenav stay put.
+  view-transition-name: page;
 }
 
 // Phones: keep the switcher, theme and logout; drop the extras.
