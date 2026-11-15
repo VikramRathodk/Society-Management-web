@@ -144,6 +144,47 @@ export const routes: Routes = [
         loadComponent: () => import('./features/notices/notice-list').then((m) => m.NoticeList),
       },
       {
+        path: 'policies/new',
+        title: 'New policy',
+        canMatch: [permissionGuard],
+        canDeactivate: [unsavedChangesGuard],
+        data: { permission: 'POLICY.RULE.CREATE' },
+        loadComponent: () =>
+          import('./features/policies/policy-editor').then((m) => m.PolicyEditor),
+      },
+      {
+        path: 'policies/:id/edit',
+        title: 'Edit policy',
+        canMatch: [permissionGuard],
+        canDeactivate: [unsavedChangesGuard],
+        data: { permission: 'POLICY.RULE.UPDATE' },
+        loadComponent: () =>
+          import('./features/policies/policy-editor').then((m) => m.PolicyEditor),
+      },
+      {
+        path: 'policies/:id/acknowledgements',
+        title: 'Who has accepted',
+        canMatch: [permissionGuard],
+        data: { permission: 'POLICY.ACKNOWLEDGEMENT.VIEW' },
+        loadComponent: () =>
+          import('./features/policies/acknowledgement-report').then((m) => m.AcknowledgementReport),
+      },
+      {
+        path: 'policies/:id',
+        title: 'Policy',
+        canMatch: [permissionGuard],
+        data: { permission: 'POLICY.RULE.VIEW' },
+        loadComponent: () =>
+          import('./features/policies/policy-detail').then((m) => m.PolicyDetail),
+      },
+      {
+        path: 'policies',
+        title: 'Rules & policies',
+        canMatch: [permissionGuard],
+        data: { permission: 'POLICY.RULE.VIEW' },
+        loadComponent: () => import('./features/policies/policy-list').then((m) => m.PolicyList),
+      },
+      {
         path: 'complaints/new',
         title: 'Raise complaint',
         canMatch: [permissionGuard],

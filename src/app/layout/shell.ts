@@ -52,6 +52,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Gate', icon: 'door_front', link: '/gate', permission: 'VISITOR.ENTRY.UPDATE' },
   { label: 'Visitors', icon: 'badge', link: '/visitors', permission: 'VISITOR.ENTRY.VIEW' },
   { label: 'Notices', icon: 'campaign', link: '/notices', permission: 'NOTICE.POST.VIEW' },
+  { label: 'Rules', icon: 'gavel', link: '/policies', permission: 'POLICY.RULE.VIEW' },
   {
     label: 'Complaints',
     icon: 'report_problem',
@@ -176,6 +177,15 @@ export class Shell {
         icon: 'add_comment',
         keywords: 'new complaint ticket issue',
         run: go('/complaints/new'),
+      });
+    if (can('POLICY.RULE.CREATE'))
+      list.push({
+        id: 'act:policy',
+        group: 'Actions',
+        label: 'New policy',
+        icon: 'gavel',
+        keywords: 'rule rules policy by-laws bylaws draft',
+        run: go('/policies/new'),
       });
     if (can('MAINTENANCE.PAYMENT.CREATE'))
       list.push({

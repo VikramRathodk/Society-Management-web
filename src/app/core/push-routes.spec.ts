@@ -14,6 +14,16 @@ describe('pushRoute', () => {
     );
     expect(pushRoute({ type: 'INVITATION_APPROVED', invitationId: '3' })).toBe('/invitations');
     expect(pushRoute({ type: 'INVITATION_REJECTED', invitationId: '3' })).toBe('/invitations');
+    expect(pushRoute({ type: 'POLICY_PUBLISHED', policyId: '7', version: '2' })).toBe(
+      '/policies/7',
+    );
+    expect(pushRoute({ type: 'POLICY_SUBMITTED', policyId: '7' })).toBe('/policies/7');
+    expect(pushRoute({ type: 'POLICY_SENT_BACK', policyId: '7' })).toBe('/policies/7');
+    expect(pushRoute({ type: 'POLICY_APPROVED', policyId: '7' })).toBe('/policies/7');
+    expect(pushRoute({ type: 'POLICY_ACKNOWLEDGEMENT_REMINDER', policyId: '7' })).toBe(
+      '/policies/7',
+    );
+    expect(pushRoute({ type: 'POLICY_PUBLISHED' })).toBe('/policies');
     expect(pushRoute({ type: 'SOMETHING_NEW' })).toBe('/');
   });
 });

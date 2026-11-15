@@ -10,12 +10,20 @@ import { ComplaintApi } from '../../core/api/complaint.api';
 import { MaintenanceApi } from '../../core/api/maintenance.api';
 import { FinanceSummaryCard } from '../finance/finance-summary-card';
 import { NoticeApi } from '../../core/api/notice.api';
+import { PolicyApi } from '../../core/api/policy.api';
 import { StructureApi } from '../../core/api/structure.api';
 import { UserApi } from '../../core/api/user.api';
 import { VisitorApi } from '../../core/api/visitor.api';
 import { AuthStore } from '../../core/auth/auth.store';
 import { HasPermission } from '../../core/auth/has-permission.directive';
-import { Complaint, FlatDues, Notice, Visitor, VisitorStatus } from '../../core/models';
+import {
+  Complaint,
+  FlatDues,
+  Notice,
+  PolicySummary,
+  Visitor,
+  VisitorStatus,
+} from '../../core/models';
 import { SocietyContextStore } from '../../core/society-context/society-context.store';
 import { Section, Skeleton, StatCard, Tone } from '../../shared/ui';
 import { ComplaintRow } from '../complaints/complaint-ui';
@@ -42,6 +50,8 @@ interface DashboardData {
   openComplaints?: Complaint[] | null;
   notices?: Notice[] | null;
   dues?: FlatDues[] | null;
+  policiesToAccept?: PolicySummary[] | null;
+  policiesToApprove?: PolicySummary[] | null;
 }
 
 interface Card {
@@ -82,6 +92,7 @@ export class Dashboard {
   private readonly structureApi = inject(StructureApi);
   private readonly complaintApi = inject(ComplaintApi);
   private readonly noticeApi = inject(NoticeApi);
+  private readonly policyApi = inject(PolicyApi);
   private readonly maintenanceApi = inject(MaintenanceApi);
   private readonly maintenance = inject(MaintenanceAccess);
   protected readonly auth = inject(AuthStore);
@@ -220,6 +231,28 @@ export class Dashboard {
         tone: overdue > 0 ? 'warning' : 'neutral',
       });
     }
+    // Only when there is something to accept: most of the time there isn't.
+    const toAccept = d.policiesToAccept?.length ?? 0;
+    if (toAccept > 0) {
+      cards.push({
+        label: toAccept === 1 ? 'Policy to accept' : 'Policies to accept',
+        icon: 'fact_check',
+        value: value(toAccept),
+        link: toAccept === 1 ? `/policies/${d.policiesToAccept![0].id}` : '/policies',
+        tone: 'warning',
+      });
+    }
+    if (this.can('POLICY.RULE.APPROVE') && this.ctx.selectedSocietyId() != null) {
+      const waiting = d.policiesToApprove?.length ?? 0;
+      cards.push({
+        label: 'Policies to approve',
+        icon: 'gavel',
+        value: value(d.policiesToApprove === null ? null : waiting),
+        link: '/policies',
+        queryParams: { view: 'awaiting-approval' },
+        tone: waiting > 0 ? 'warning' : 'neutral',
+      });
+    }
     if (this.can('USER.ACCOUNT.VIEW')) {
       cards.push({
         label: 'Users',
@@ -325,6 +358,16 @@ export class Dashboard {
     }
     if (this.can('MAINTENANCE.BILL.VIEW') && societyId != null) {
       requests.dues = settle(this.maintenanceApi.dues(societyId, false, { silent: true }));
+    }
+    if (this.can('POLICY.ACKNOWLEDGEMENT.CREATE') && societyId != null) {
+      requests.policiesToAccept = settle(
+        this.policyApi.pendingAcknowledgements(societyId, { silent: true }),
+      );
+    }
+    if (this.can('POLICY.RULE.APPROVE') && societyId != null) {
+      requests.policiesToApprove = settle(
+        this.policyApi.list(societyId, { filter: 'awaiting-approval' }, { silent: true }),
+      );
     }
     return Object.keys(requests).length ? forkJoin(requests) : of({});
   }

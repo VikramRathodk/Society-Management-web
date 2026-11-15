@@ -13,6 +13,12 @@ function routeFor(data) {
     case 'COMPLAINT_RAISED':
     case 'COMPLAINT_STATUS_CHANGED':
       return data.complaintId ? `/complaints/${data.complaintId}` : '/complaints';
+    case 'POLICY_SUBMITTED':
+    case 'POLICY_SENT_BACK':
+    case 'POLICY_APPROVED':
+    case 'POLICY_PUBLISHED':
+    case 'POLICY_ACKNOWLEDGEMENT_REMINDER':
+      return data.policyId ? `/policies/${data.policyId}` : '/policies';
     case 'INVITATION_RECEIVED':
       return '/dashboard';
     case 'INVITATION_NEEDS_APPROVAL':

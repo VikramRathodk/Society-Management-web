@@ -1,0 +1,266 @@
+<app-page-header
+  [title]="summary()?.title ?? 'Policy'"
+  [subtitle]="
+    summary()
+      ? summary()!.category.name +
+        (summary()!.currentVersion ? ' · version ' + summary()!.currentVersion : '')
+      : null
+  "
+  back="/policies"
+  backLabel="Back to rules"
+>
+  @if (summary(); as s) {
+    @if (s.status === 'DRAFT') {
+      <app-status-pill headerMeta tone="neutral">Not published</app-status-pill>
+    } @else if (s.status === 'ARCHIVED') {
+      <app-status-pill headerMeta tone="neutral" icon="inventory_2">Archived</app-status-pill>
+    }
+    @if (canFollowUp()) {
+      <a mat-stroked-button [routerLink]="['/policies', s.id, 'acknowledgements']">
+        <mat-icon>fact_check</mat-icon>
+        Who has accepted
+      </a>
+    }
+    @if (canStartChange()) {
+      <button mat-flat-button (click)="startChange()" [disabled]="busy()">
+        <mat-icon>edit_note</mat-icon>
+        Change this policy
+      </button>
+    }
+    @if (canApprove() && s.status !== 'DRAFT') {
+      <button mat-icon-button [matMenuTriggerFor]="more" aria-label="More actions">
+        <mat-icon>more_vert</mat-icon>
+      </button>
+      <mat-menu #more="matMenu" xPosition="before">
+        @if (s.status === 'ACTIVE') {
+          <a
+            mat-menu-item
+            [routerLink]="['/policies', s.id, 'edit']"
+            [queryParams]="{ details: 1 }"
+          >
+            <mat-icon>drive_file_rename_outline</mat-icon>
+            Rename or move
+          </a>
+          <button mat-menu-item (click)="archive()">
+            <mat-icon>inventory_2</mat-icon>
+            Archive
+          </button>
+        } @else {
+          <button mat-menu-item (click)="restore()">
+            <mat-icon>unarchive</mat-icon>
+            Restore
+          </button>
+        }
+      </mat-menu>
+    }
+  }
+</app-page-header>
+
+@if (loading() && !policy()) {
+  <app-skeleton variant="form" />
+} @else if (loadError() === 'missing') {
+  <app-empty-state icon="search_off" message="This policy doesn't exist or isn't published yet." />
+} @else if (loadError() === 'failed') {
+  <app-empty-state icon="cloud_off" message="Couldn't load the policy.">
+    <button mat-stroked-button (click)="retry()">Try again</button>
+  </app-empty-state>
+} @else if (policy(); as p) {
+  @if (mustAccept()) {
+    <div class="accept" role="region" aria-label="Accept this policy">
+      <mat-icon>fact_check</mat-icon>
+      <div>
+        <strong>Please read this policy and accept it.</strong>
+        <span>The committee asks every resident to confirm they have read it.</span>
+      </div>
+      <button mat-flat-button (click)="accept()" [disabled]="busy()">I have read and accept</button>
+    </div>
+  }
+
+  <div class="layout">
+    <div class="text-column">
+      @if (shown(); as v) {
+        <app-section padded>
+          @if (!current()) {
+            <p class="notice">
+              <mat-icon>visibility_off</mat-icon>
+              Not published yet — only the committee sees this draft.
+            </p>
+          } @else if (!v.inForce) {
+            <p class="notice upcoming">
+              <mat-icon>schedule</mat-icon>
+              This version takes effect on {{ v.effectiveFrom | date: 'd MMMM y' }}. Until then
+              version {{ summary()?.inForceVersion }} applies.
+              @if (summary()?.inForceVersion; as n) {
+                <button mat-button (click)="showNumber(n)">Read version {{ n }}</button>
+              }
+            </p>
+          }
+          <app-rules-text [text]="v.body" />
+          @if (v.attachment; as a) {
+            <button class="attachment" mat-stroked-button (click)="openFile(v)">
+              <mat-icon>{{
+                a.contentType === 'application/pdf' ? 'picture_as_pdf' : 'image'
+              }}</mat-icon>
+              {{ a.name ?? 'Attachment' }}
+              <span class="size">{{ fileSize(a.sizeBytes) }}</span>
+            </button>
+          }
+          @if (acceptedAt(); as at) {
+            <p class="accepted">
+              <mat-icon>check_circle</mat-icon>
+              You accepted this {{ timeAgo(at) }}.
+            </p>
+          }
+        </app-section>
+      }
+    </div>
+
+    <div class="side">
+      @if (open(); as o) {
+        @if (current() || canDraft()) {
+          <app-section [title]="current() ? 'Change in progress' : 'Draft'" padded>
+            <div class="change-head">
+              <app-status-pill [tone]="status[o.status].tone">{{
+                status[o.status].label
+              }}</app-status-pill>
+              <span class="by">Version {{ o.number }} by {{ o.createdBy.name }}</span>
+            </div>
+            @if (o.changeSummary) {
+              <p class="summary">{{ o.changeSummary }}</p>
+            }
+            @if (o.status === 'DRAFT' && o.reviewReason) {
+              <p class="sent-back">
+                <mat-icon>reply</mat-icon>
+                <span>
+                  Sent back by {{ o.reviewedBy?.name }}: <em>{{ o.reviewReason }}</em>
+                </span>
+              </p>
+            }
+            <dl>
+              <dt>Takes effect</dt>
+              <dd>
+                {{ o.effectiveFrom ? (o.effectiveFrom | date: 'd MMM y') : 'When published' }}
+              </dd>
+              @if (p.summary.requiresAcknowledgement && o.number > 1) {
+                <dt>Residents</dt>
+                <dd>{{ o.materialChange ? 'Asked to accept again' : 'Keep their acceptance' }}</dd>
+              }
+              @if (o.submittedAt) {
+                <dt>Submitted</dt>
+                <dd [title]="o.submittedAt | date: 'medium'">{{ timeAgo(o.submittedAt) }}</dd>
+              }
+            </dl>
+            <div class="moves">
+              @if (actions().approve) {
+                <button mat-flat-button (click)="approve()" [disabled]="busy()">
+                  <mat-icon>verified</mat-icon>
+                  Approve and publish
+                </button>
+              }
+              @if (actions().sendBack) {
+                <button mat-stroked-button (click)="sendBack()" [disabled]="busy()">
+                  <mat-icon>reply</mat-icon>
+                  Send back
+                </button>
+              }
+              @if (actions().edit) {
+                <a mat-stroked-button [routerLink]="['/policies', p.summary.id, 'edit']">
+                  <mat-icon>edit</mat-icon>
+                  Edit
+                </a>
+              }
+              @if (actions().submit) {
+                <button mat-flat-button (click)="submit()" [disabled]="busy()">
+                  <mat-icon>send</mat-icon>
+                  Submit for approval
+                </button>
+              }
+              @if (actions().publish) {
+                <button mat-flat-button (click)="publish()" [disabled]="busy()">
+                  <mat-icon>publish</mat-icon>
+                  Publish
+                </button>
+              }
+              @if (actions().withdraw) {
+                <button mat-stroked-button (click)="withdraw()" [disabled]="busy()">
+                  <mat-icon>undo</mat-icon>
+                  Withdraw
+                </button>
+              }
+              @if (current()) {
+                <button mat-button (click)="showChanges()">
+                  <mat-icon>difference</mat-icon>
+                  See changes
+                </button>
+              }
+              @if (actions().discard) {
+                <button mat-button class="danger" (click)="discard()" [disabled]="busy()">
+                  <mat-icon>delete</mat-icon>
+                  {{ o.number === 1 ? 'Delete' : 'Discard' }}
+                </button>
+              }
+            </div>
+            @if (actions().approveBlocked) {
+              <p class="hint">You wrote this change, so another approver must approve it.</p>
+            } @else if (o.status === 'PENDING' && !actions().approve && !actions().withdraw) {
+              <p class="hint">Waiting for the chairman, secretary or an admin to approve it.</p>
+            }
+            @if (p.summary.status === 'ARCHIVED') {
+              <p class="hint">Restore the policy to publish this change.</p>
+            }
+          </app-section>
+        }
+      }
+
+      @if (current(); as c) {
+        <app-section title="Details" padded>
+          <dl>
+            <dt>Category</dt>
+            <dd>{{ p.summary.category.name }}</dd>
+            <dt>In force since</dt>
+            <dd>
+              {{ inForceSince() ? (inForceSince() | date: 'd MMM y') : 'Not yet' }}
+            </dd>
+            <dt>Published</dt>
+            <dd [title]="c.publishedAt | date: 'medium'">
+              {{ c.publishedAt | date: 'd MMM y' }} by {{ c.publishedBy?.name }}
+            </dd>
+            <dt>Residents</dt>
+            <dd>
+              {{ p.summary.requiresAcknowledgement ? 'Asked to accept it' : 'Not asked to accept' }}
+            </dd>
+          </dl>
+        </app-section>
+      }
+
+      @if (p.versions.length > 0) {
+        <app-section title="History">
+          <ol class="history">
+            @for (v of p.versions; track v.id) {
+              <li>
+                <button class="version" (click)="showVersion(v)">
+                  <span class="number">v{{ v.number }}</span>
+                  <span class="what">
+                    <span class="line">
+                      {{ v.changeSummary ?? (v.number === 1 ? 'First version' : 'Changes') }}
+                    </span>
+                    <span class="when">
+                      @if (v.publishedAt) {
+                        {{ v.effectiveFrom | date: 'd MMM y' }} · {{ v.publishedBy?.name }}
+                      } @else {
+                        {{ status[v.status].label }} · {{ v.createdBy.name }}
+                      }
+                    </span>
+                  </span>
+                  @if (v.status === 'PUBLISHED') {
+                    <app-status-pill tone="success" outline>Current</app-status-pill>
+                  }
+                </button>
+              </li>
+            }
+          </ol>
+        </app-section>
+      }
+    </div>
+  </div>
+}

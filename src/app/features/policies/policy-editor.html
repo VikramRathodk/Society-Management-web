@@ -1,0 +1,164 @@
+<app-page-header
+  [title]="isNew() ? 'New policy' : 'Edit ' + (policy()?.summary?.title ?? 'policy')"
+  [subtitle]="
+    isNew()
+      ? 'Drafts are seen only by the committee until published'
+      : draft()
+        ? 'Version ' + versionNumber() + ' · draft'
+        : 'Title and category'
+  "
+  [back]="policy() ? '/policies/' + policy()!.summary.id : '/policies'"
+  backLabel="Back"
+/>
+
+@if (loading()) {
+  <app-skeleton variant="form" />
+} @else if (loadError(); as message) {
+  <app-empty-state icon="search_off" [message]="message" />
+} @else {
+  <form [formGroup]="form" (ngSubmit)="save()" novalidate class="layout">
+    <app-section title="Policy" padded>
+      <mat-form-field appearance="outline">
+        <mat-label>Title</mat-label>
+        <input matInput formControlName="title" maxlength="200" cdkFocusInitial />
+        @if (form.controls.title.invalid) {
+          <mat-error>Give the policy a title</mat-error>
+        }
+      </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>Category</mat-label>
+        <mat-select formControlName="categoryId">
+          @for (c of choices(); track c.id) {
+            <mat-option [value]="c.id">{{ c.name }}</mat-option>
+          }
+        </mat-select>
+        @if (form.controls.categoryId.invalid) {
+          <mat-error>Choose a category</mat-error>
+        }
+      </mat-form-field>
+      <mat-slide-toggle formControlName="requiresAcknowledgement">
+        Residents must read and accept it
+      </mat-slide-toggle>
+      @if (!detailsEditable()) {
+        <p class="hint">Once published, only the chairman, secretary or an admin changes these.</p>
+      }
+    </app-section>
+
+    @if (textEditable()) {
+      <app-section [title]="versionNumber() > 1 ? 'Version ' + versionNumber() : 'Text'" padded>
+        <div class="text-head">
+          <mat-button-toggle-group
+            [value]="mode()"
+            (change)="mode.set($event.value)"
+            aria-label="Text view"
+            hideSingleSelectionIndicator
+          >
+            <mat-button-toggle value="write">Write</mat-button-toggle>
+            <mat-button-toggle value="preview">Preview</mat-button-toggle>
+          </mat-button-toggle-group>
+          <span class="tip">
+            <code>#</code> heading · <code>-</code> bullet · <code>1.</code> numbered · blank line
+            between paragraphs
+          </span>
+        </div>
+        @if (mode() === 'write') {
+          <mat-form-field appearance="outline" class="body">
+            <mat-label>Policy text</mat-label>
+            <textarea
+              matInput
+              formControlName="body"
+              rows="16"
+              [attr.maxlength]="maxBody"
+            ></textarea>
+            <mat-hint align="end">{{ form.controls.body.value.length }} / {{ maxBody }}</mat-hint>
+          </mat-form-field>
+        } @else {
+          <div class="preview">
+            <app-rules-text [text]="form.controls.body.value" />
+          </div>
+        }
+
+        <div class="row">
+          <mat-form-field appearance="outline">
+            <mat-label>Takes effect on</mat-label>
+            <input matInput type="date" formControlName="effectiveFrom" />
+            <mat-hint>Leave empty: the day it is published</mat-hint>
+          </mat-form-field>
+          <mat-form-field appearance="outline" class="grow">
+            <mat-label>{{ versionNumber() > 1 ? 'What changed' : 'Note (optional)' }}</mat-label>
+            <input matInput formControlName="changeSummary" maxlength="500" />
+            <mat-hint>Shown in the policy's history</mat-hint>
+          </mat-form-field>
+        </div>
+
+        @if (versionNumber() > 1 && form.controls.requiresAcknowledgement.value) {
+          <mat-checkbox formControlName="materialChange">
+            Ask residents to accept again (untick for a typo or wording fix)
+          </mat-checkbox>
+        }
+
+        <div class="file">
+          <span class="file-label">Attachment (PDF or image, up to 5 MB)</span>
+          @if (chosenFile(); as f) {
+            <span class="file-name">
+              <mat-icon>attach_file</mat-icon>
+              {{ f.name }} · {{ fileSize(f.size) }}
+            </span>
+            <button mat-button type="button" (click)="file.set(null)">Undo</button>
+          } @else if (currentAttachment() && file() !== 'remove') {
+            <button mat-button type="button" (click)="openCurrentFile()">
+              <mat-icon>attach_file</mat-icon>
+              {{ currentAttachment()!.name ?? 'Attachment' }}
+            </button>
+            <button mat-button type="button" (click)="file.set('remove')">Remove</button>
+          } @else if (file() === 'remove') {
+            <span class="file-name">Removed on save</span>
+            <button mat-button type="button" (click)="file.set(null)">Undo</button>
+          }
+          <button mat-stroked-button type="button" (click)="picker.click()">
+            <mat-icon>upload_file</mat-icon>
+            {{ currentAttachment() || chosenFile() ? 'Replace' : 'Choose file' }}
+          </button>
+          <input
+            #picker
+            type="file"
+            accept="application/pdf,image/jpeg,image/png,image/webp"
+            (change)="chooseFile($event)"
+            hidden
+          />
+          @if (fileError(); as message) {
+            <p class="error" role="alert">{{ message }}</p>
+          }
+        </div>
+      </app-section>
+    }
+
+    @if (error(); as message) {
+      <p class="error" role="alert">{{ message }}</p>
+    }
+
+    <div class="actions">
+      <button mat-button type="button" (click)="cancel()">Cancel</button>
+      <button mat-stroked-button type="submit" [disabled]="saving()">
+        {{ textEditable() ? 'Save draft' : 'Save' }}
+      </button>
+      @if (textEditable() && isAuthor() && approvalRequired() && approvesOwn()) {
+        <button mat-flat-button type="button" (click)="save('publish')" [disabled]="saving()">
+          <mat-icon>verified</mat-icon>
+          Save and publish
+        </button>
+      } @else if (textEditable() && isAuthor() && approvalRequired()) {
+        <button mat-flat-button type="button" (click)="save('submit')" [disabled]="saving()">
+          <mat-icon>send</mat-icon>
+          Save and submit for approval
+        </button>
+      }
+      @if (textEditable() && !isNew() && !approvalRequired()) {
+        <button mat-flat-button type="button" (click)="save('publish')" [disabled]="saving()">
+          <mat-icon>publish</mat-icon>
+          Save and publish
+        </button>
+      }
+    </div>
+  </form>
+}
