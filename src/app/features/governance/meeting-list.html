@@ -1,0 +1,89 @@
+<app-page-header title="Meetings" [subtitle]="subtitle()">
+  <a mat-stroked-button routerLink="/resolutions">
+    <mat-icon>gavel</mat-icon>
+    Resolutions
+  </a>
+  @if (organises()) {
+    <a mat-flat-button routerLink="/meetings/new">
+      <mat-icon>add</mat-icon>
+      New meeting
+    </a>
+  }
+</app-page-header>
+
+<div class="toolbar">
+  <mat-chip-listbox
+    class="views"
+    aria-label="Show"
+    [hideSingleSelectionIndicator]="true"
+    (change)="setView($event.value)"
+  >
+    @for (v of views(); track v.value) {
+      <mat-chip-option [value]="v.value" [selected]="view() === v.value">{{
+        v.label
+      }}</mat-chip-option>
+    }
+  </mat-chip-listbox>
+
+  <mat-form-field appearance="outline" class="kind" subscriptSizing="dynamic">
+    <mat-label>Kind</mat-label>
+    <mat-select [value]="kind()" (selectionChange)="kind.set($event.value)">
+      <mat-option [value]="null">All meetings</mat-option>
+      <mat-option value="AGM">Annual general meetings</mat-option>
+      <mat-option value="SGM">Special general meetings</mat-option>
+      <mat-option value="COMMITTEE">Committee meetings</mat-option>
+    </mat-select>
+  </mat-form-field>
+</div>
+
+@if (loading() && meetings().length === 0) {
+  <app-skeleton variant="list" />
+} @else if (loadError()) {
+  <app-empty-state icon="cloud_off" message="Couldn't load meetings.">
+    <button mat-stroked-button (click)="retry()">Try again</button>
+  </app-empty-state>
+} @else if (meetings().length === 0) {
+  <app-empty-state icon="event" [message]="emptyMessage()">
+    @if (organises() && view() !== 'past') {
+      <a mat-stroked-button routerLink="/meetings/new">Plan a meeting</a>
+    }
+  </app-empty-state>
+} @else {
+  <div class="list">
+    @for (m of meetings(); track m.id) {
+      <a class="item" [routerLink]="['/meetings', m.id]">
+        <div class="date" aria-hidden="true">
+          <span class="month">{{ m.scheduledAt | date: 'MMM' }}</span>
+          <span class="day">{{ m.scheduledAt | date: 'd' }}</span>
+        </div>
+        <div class="main">
+          <div class="title">{{ m.title }}</div>
+          <div class="meta">
+            <span>{{ kinds[m.kind].short }}</span>
+            <span>· {{ m.scheduledAt | date: 'EEE d MMM y, h:mm a' }}</span>
+            @if (m.place) {
+              <span>· {{ m.place }}</span>
+            } @else if (m.onlineLink) {
+              <span>· Online</span>
+            }
+            <span>· {{ m.agenda.length }} {{ m.agenda.length === 1 ? 'item' : 'items' }}</span>
+          </div>
+        </div>
+        <div class="badges">
+          @if (votingOpen(m); as n) {
+            <app-status-pill tone="warning" icon="how_to_vote">Vote now</app-status-pill>
+          }
+          @if (m.yourRsvp) {
+            <app-status-pill tone="neutral" outline>{{
+              m.yourRsvp === 'YES' ? 'Going' : m.yourRsvp === 'NO' ? 'Not going' : 'Maybe'
+            }}</app-status-pill>
+          }
+          <app-status-pill [tone]="status[m.status].tone">{{
+            status[m.status].label
+          }}</app-status-pill>
+        </div>
+        <mat-icon class="chevron" aria-hidden="true">chevron_right</mat-icon>
+      </a>
+    }
+  </div>
+}

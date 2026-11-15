@@ -1,0 +1,68 @@
+.quorum {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin-bottom: 16px;
+  padding: 12px 16px;
+  border-radius: var(--app-radius);
+  background: color-mix(in srgb, var(--app-warning) 14%, var(--mat-sys-surface));
+
+  &.met {
+    background: color-mix(in srgb, var(--app-success) 14%, var(--mat-sys-surface));
+  }
+
+  > div {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 220px;
+  }
+
+  span {
+    color: var(--mat-sys-on-surface-variant);
+    font: var(--mat-sys-body-small);
+  }
+
+  .count {
+    font: var(--mat-sys-label-large);
+  }
+}
+
+.search {
+  width: 100%;
+  max-width: 360px;
+  margin-bottom: 8px;
+}
+
+.people {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  li {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 4px 12px;
+    padding: 4px 0;
+    border-bottom: 1px solid var(--mat-sys-surface-container-high);
+  }
+
+  .none {
+    padding: 12px 0;
+    color: var(--mat-sys-on-surface-variant);
+  }
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.rsvp {
+  color: var(--mat-sys-on-surface-variant);
+  font: var(--mat-sys-body-small);
+}

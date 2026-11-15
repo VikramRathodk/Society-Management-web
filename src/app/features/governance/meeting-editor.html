@@ -1,0 +1,137 @@
+<app-page-header
+  [title]="isNew() ? 'New meeting' : 'Edit meeting'"
+  subtitle="Saved as a draft; members see it once you send the notice"
+  [back]="meeting() ? '/meetings/' + meeting()!.id : '/meetings'"
+  backLabel="Back"
+/>
+
+@if (loading()) {
+  <app-skeleton variant="form" />
+} @else if (loadError(); as message) {
+  <app-empty-state icon="search_off" [message]="message" />
+} @else {
+  <form [formGroup]="form" (ngSubmit)="save()" novalidate class="layout">
+    <app-section title="Meeting" padded>
+      <div class="row">
+        <mat-form-field appearance="outline" class="kind">
+          <mat-label>Kind</mat-label>
+          <mat-select formControlName="kind">
+            @for (k of kinds; track k[0]) {
+              <mat-option [value]="k[0]">{{ k[1].label }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="when">
+          <mat-label>Date and time</mat-label>
+          <input matInput type="datetime-local" formControlName="scheduledAt" />
+          @if (form.controls.scheduledAt.invalid) {
+            <mat-error>Choose when</mat-error>
+          }
+        </mat-form-field>
+      </div>
+      <mat-form-field appearance="outline">
+        <mat-label>Title</mat-label>
+        <input matInput formControlName="title" maxlength="200" cdkFocusInitial />
+        @if (form.controls.title.invalid) {
+          <mat-error>Give the meeting a title</mat-error>
+        }
+      </mat-form-field>
+      <div class="row">
+        <mat-form-field appearance="outline" class="grow">
+          <mat-label>Place</mat-label>
+          <input matInput formControlName="place" maxlength="300" placeholder="Clubhouse" />
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="grow">
+          <mat-label>Online link</mat-label>
+          <input matInput formControlName="onlineLink" maxlength="500" placeholder="https://" />
+          @if (form.controls.onlineLink.invalid) {
+            <mat-error>Starts with https://</mat-error>
+          }
+        </mat-form-field>
+      </div>
+      <mat-form-field appearance="outline">
+        <mat-label>Notes for members (optional)</mat-label>
+        <textarea matInput formControlName="description" rows="3" maxlength="4000"></textarea>
+      </mat-form-field>
+    </app-section>
+
+    <app-section title="Agenda" padded>
+      <p class="hint">
+        Items with a resolution are voted on in the app (secret ballot, one vote per member flat).
+      </p>
+      <ol class="agenda" formArrayName="agenda">
+        @for (
+          item of agenda.controls;
+          track item;
+          let i = $index;
+          let first = $first;
+          let last = $last
+        ) {
+          <li [formGroupName]="i">
+            <div class="item-head">
+              <span class="number">{{ i + 1 }}</span>
+              <mat-form-field appearance="outline" class="grow" subscriptSizing="dynamic">
+                <mat-label>Item</mat-label>
+                <input matInput formControlName="title" maxlength="300" />
+              </mat-form-field>
+              <button
+                mat-icon-button
+                type="button"
+                [disabled]="first"
+                (click)="moveItem(i, -1)"
+                [attr.aria-label]="'Move item ' + (i + 1) + ' up'"
+              >
+                <mat-icon>arrow_upward</mat-icon>
+              </button>
+              <button
+                mat-icon-button
+                type="button"
+                [disabled]="last"
+                (click)="moveItem(i, 1)"
+                [attr.aria-label]="'Move item ' + (i + 1) + ' down'"
+              >
+                <mat-icon>arrow_downward</mat-icon>
+              </button>
+              <button
+                mat-icon-button
+                type="button"
+                (click)="removeItem(i)"
+                [attr.aria-label]="'Remove item ' + (i + 1)"
+                matTooltip="Remove"
+              >
+                <mat-icon>delete</mat-icon>
+              </button>
+            </div>
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>Details (optional)</mat-label>
+              <textarea matInput formControlName="description" rows="2" maxlength="4000"></textarea>
+            </mat-form-field>
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>Proposed resolution (optional, to vote on)</mat-label>
+              <textarea
+                matInput
+                formControlName="resolutionText"
+                rows="2"
+                maxlength="4000"
+                placeholder="Resolved that…"
+              ></textarea>
+            </mat-form-field>
+          </li>
+        }
+      </ol>
+      <button mat-stroked-button type="button" (click)="addItem()">
+        <mat-icon>add</mat-icon>
+        Add item
+      </button>
+    </app-section>
+
+    @if (error(); as message) {
+      <p class="error" role="alert">{{ message }}</p>
+    }
+
+    <div class="actions">
+      <button mat-button type="button" (click)="cancel()">Cancel</button>
+      <button mat-flat-button type="submit" [disabled]="saving()">Save draft</button>
+    </div>
+  </form>
+}

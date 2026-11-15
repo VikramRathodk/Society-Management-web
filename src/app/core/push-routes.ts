@@ -21,6 +21,16 @@ export function pushRoute(data: PushData): string {
     case 'POLICY_PUBLISHED':
     case 'POLICY_ACKNOWLEDGEMENT_REMINDER':
       return data['policyId'] ? `/policies/${data['policyId']}` : '/policies';
+    case 'MEETING_NOTICE':
+    case 'MEETING_CANCELLED':
+    case 'MEETING_ADJOURNED':
+    case 'MEETING_REMINDER':
+    case 'VOTING_OPEN':
+    case 'VOTING_CLOSED':
+    case 'MINUTES_SUBMITTED':
+    case 'MINUTES_SENT_BACK':
+    case 'MINUTES_PUBLISHED':
+      return data['meetingId'] ? `/meetings/${data['meetingId']}` : '/meetings';
     case 'INVITATION_RECEIVED':
       return '/dashboard'; // the pending-invitations banner is on every page
     case 'INVITATION_NEEDS_APPROVAL':

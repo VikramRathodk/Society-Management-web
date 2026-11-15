@@ -24,6 +24,20 @@ describe('pushRoute', () => {
       '/policies/7',
     );
     expect(pushRoute({ type: 'POLICY_PUBLISHED' })).toBe('/policies');
+    for (const type of [
+      'MEETING_NOTICE',
+      'MEETING_CANCELLED',
+      'MEETING_ADJOURNED',
+      'MEETING_REMINDER',
+      'VOTING_OPEN',
+      'VOTING_CLOSED',
+      'MINUTES_SUBMITTED',
+      'MINUTES_SENT_BACK',
+      'MINUTES_PUBLISHED',
+    ]) {
+      expect(pushRoute({ type, meetingId: '4' })).toBe('/meetings/4');
+    }
+    expect(pushRoute({ type: 'MEETING_NOTICE' })).toBe('/meetings');
     expect(pushRoute({ type: 'SOMETHING_NEW' })).toBe('/');
   });
 });
