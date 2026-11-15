@@ -142,7 +142,12 @@
       <button mat-stroked-button type="submit" [disabled]="saving()">
         {{ textEditable() ? 'Save draft' : 'Save' }}
       </button>
-      @if (textEditable() && isAuthor() && approvalRequired()) {
+      @if (textEditable() && isAuthor() && approvalRequired() && approvesOwn()) {
+        <button mat-flat-button type="button" (click)="save('publish')" [disabled]="saving()">
+          <mat-icon>verified</mat-icon>
+          Save and publish
+        </button>
+      } @else if (textEditable() && isAuthor() && approvalRequired()) {
         <button mat-flat-button type="button" (click)="save('submit')" [disabled]="saving()">
           <mat-icon>send</mat-icon>
           Save and submit for approval

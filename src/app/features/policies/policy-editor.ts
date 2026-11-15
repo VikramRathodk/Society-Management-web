@@ -122,6 +122,13 @@ export class PolicyEditor implements HasUnsavedChanges {
   protected readonly isAuthor = computed(
     () => this.isNew() || this.draft()?.createdBy.id === this.auth.user()?.id,
   );
+  /** Secretary and above approve their own policy (the chairman when the society allows it). */
+  protected readonly approvesOwn = computed(
+    () =>
+      this.canApprove() &&
+      (this.auth.can('POLICY.RULE.SELF_APPROVE', this.societyId()) ||
+        (this.policy()?.workflow?.selfApprovalAllowed ?? false)),
+  );
   /** Categories to choose from: shown ones, plus the policy's own even if hidden since. */
   protected readonly choices = computed(() =>
     this.categories().filter((c) => !c.hidden || c.id === this.policy()?.summary.category.id),
@@ -251,7 +258,14 @@ export class PolicyEditor implements HasUnsavedChanges {
         switchMap((p) => {
           const open = p.open;
           if (!open || next === 'stay') return of(p);
-          return next === 'submit' ? this.api.submit(open.id) : this.api.publish(open.id);
+          // A new policy learns only now whether the society needs approval.
+          if (next === 'submit' && p.workflow?.approvalRequired !== false) {
+            return this.api.submit(open.id);
+          }
+          // Approval on and approving their own: approve the draft directly.
+          return p.workflow?.approvalRequired === false
+            ? this.api.publish(open.id)
+            : this.api.approve(open.id);
         }),
       )
       .subscribe({
@@ -259,7 +273,11 @@ export class PolicyEditor implements HasUnsavedChanges {
           this.saved = true;
           this.saving.set(false);
           const message =
-            next === 'submit' ? 'Sent for approval' : next === 'publish' ? 'Published' : 'Saved';
+            next === 'stay'
+              ? 'Saved'
+              : p.open?.status === 'PENDING'
+                ? 'Sent for approval'
+                : 'Published';
           this.snack.open(message, undefined, { duration: 3000 });
           this.router.navigate(['/policies', p.summary.id]);
         },

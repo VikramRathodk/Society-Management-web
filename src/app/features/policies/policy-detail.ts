@@ -118,13 +118,18 @@ export class PolicyDetail {
     const draft = o.status === 'DRAFT';
     const pending = o.status === 'PENDING';
     const editor = mine || this.canApprove();
-    const selfOk = !mine || (p.workflow?.selfApprovalAllowed ?? false);
+    // Secretary and above approve their own; the chairman only when the society allows it.
+    const ownOk =
+      this.can('POLICY.RULE.SELF_APPROVE') || (p.workflow?.selfApprovalAllowed ?? false);
+    const selfOk = !mine || ownOk;
+    // Approving your own draft needs no submission first.
+    const selfPublish = draft && mine && this.canApprove() && ownOk && this.approvalRequired();
     return {
       edit: draft && editor && this.can('POLICY.RULE.UPDATE'),
-      submit: draft && mine && this.approvalRequired() && !archived,
+      submit: draft && mine && this.approvalRequired() && !archived && !selfPublish,
       publish: (draft || pending) && editor && !this.approvalRequired() && !archived,
       withdraw: pending && mine,
-      approve: pending && this.canApprove() && selfOk && !archived,
+      approve: (pending || selfPublish) && this.canApprove() && selfOk && !archived,
       approveBlocked: pending && this.canApprove() && !selfOk,
       sendBack: pending && this.canApprove(),
       discard: draft && editor,
