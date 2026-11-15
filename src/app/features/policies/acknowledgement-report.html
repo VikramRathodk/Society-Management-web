@@ -1,0 +1,121 @@
+<app-page-header
+  title="Who has accepted"
+  [subtitle]="report() ? report()!.title + ' · version ' + report()!.version : null"
+  [back]="'/policies/' + id()"
+  backLabel="Back to the policy"
+>
+  @if (report(); as r) {
+    <button mat-stroked-button (click)="export()">
+      <mat-icon>download</mat-icon>
+      Export
+    </button>
+    <button mat-flat-button (click)="remind()" [disabled]="busy() || r.pendingFlats === 0">
+      <mat-icon>notifications_active</mat-icon>
+      Remind
+    </button>
+  }
+</app-page-header>
+
+@if (loading() && !report()) {
+  <app-skeleton variant="list" />
+} @else if (loadError(); as message) {
+  <app-empty-state icon="info" [message]="message">
+    <button mat-stroked-button (click)="retry()">Try again</button>
+  </app-empty-state>
+} @else if (report(); as r) {
+  @if (r.version !== r.currentVersion) {
+    <p class="note">
+      Version {{ r.currentVersion }} was a small correction, so acceptances of version
+      {{ r.version }} still count.
+    </p>
+  }
+
+  <div class="stats">
+    <app-stat-card
+      icon="task_alt"
+      label="Flats accepted"
+      [value]="r.doneFlats + ' of ' + r.totalFlats"
+      tone="success"
+    />
+    <app-stat-card
+      icon="pending_actions"
+      label="Flats to go"
+      [value]="'' + r.pendingFlats"
+      [tone]="r.pendingFlats ? 'warning' : 'neutral'"
+    />
+    <app-stat-card icon="group" label="People accepted" [value]="'' + r.people" />
+  </div>
+
+  <div
+    class="progress"
+    role="progressbar"
+    [attr.aria-valuenow]="percent()"
+    aria-valuemin="0"
+    aria-valuemax="100"
+    [attr.aria-label]="percent() + '% of flats accepted'"
+  >
+    <span [style.width.%]="percent()"></span>
+  </div>
+
+  <mat-chip-listbox
+    class="filters"
+    aria-label="Show flats"
+    [hideSingleSelectionIndicator]="true"
+    (change)="setState($event.value)"
+  >
+    @for (s of states; track s.value) {
+      <mat-chip-option [value]="s.value" [selected]="state() === s.value">{{
+        s.label
+      }}</mat-chip-option>
+    }
+  </mat-chip-listbox>
+
+  @if (r.flats.length === 0) {
+    <app-empty-state
+      [icon]="state() === 'pending' ? 'celebration' : 'inbox'"
+      [message]="
+        r.totalFlats === 0
+          ? 'No residents yet.'
+          : state() === 'pending'
+            ? 'Every flat has accepted.'
+            : 'No flats here.'
+      "
+    />
+  } @else {
+    <div class="list">
+      @for (f of r.flats; track f.flatId) {
+        <div class="flat">
+          <div class="flat-head">
+            <span class="flat-name">{{ f.wing }} · {{ f.flatNumber }}</span>
+            @if (f.done) {
+              <app-status-pill tone="success" icon="check">Accepted</app-status-pill>
+            } @else {
+              <app-status-pill tone="warning">Not yet</app-status-pill>
+            }
+            @if (f.lastRemindedAt) {
+              <span class="reminded" [title]="f.lastRemindedAt | date: 'medium'">
+                Reminded {{ timeAgo(f.lastRemindedAt) }}
+              </span>
+            }
+          </div>
+          <ul class="members">
+            @for (m of f.members; track m.userId) {
+              <li>
+                <span class="name">{{ m.name }}</span>
+                <span class="type">{{ resident(m.residentType) }}</span>
+                @if (m.acknowledgedAt) {
+                  <span class="when done" [title]="m.acknowledgedAt | date: 'medium'">
+                    <mat-icon>check</mat-icon>
+                    {{ m.acknowledgedAt | date: 'd MMM y' }}
+                  </span>
+                } @else {
+                  <span class="when">—</span>
+                }
+              </li>
+            }
+          </ul>
+        </div>
+      }
+    </div>
+  }
+}

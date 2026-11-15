@@ -10,3 +10,4 @@ export * from './invitation.model';
 export * from './finance.model';
 export * from './reconciliation.model';
 export * from './onboarding.model';
+export * from './policy.model';
