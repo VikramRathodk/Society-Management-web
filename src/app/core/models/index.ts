@@ -12,3 +12,4 @@ export * from './reconciliation.model';
 export * from './onboarding.model';
 export * from './policy.model';
 export * from './governance.model';
+export * from './subscription.model';

@@ -38,6 +38,11 @@ describe('pushRoute', () => {
       expect(pushRoute({ type, meetingId: '4' })).toBe('/meetings/4');
     }
     expect(pushRoute({ type: 'MEETING_NOTICE' })).toBe('/meetings');
+    for (const type of ['PLATFORM_INVOICE', 'PLATFORM_PAYMENT', 'PLATFORM_INVOICE_REMINDER']) {
+      expect(pushRoute({ type, invoiceId: '12' })).toBe('/subscription/invoices/12');
+    }
+    expect(pushRoute({ type: 'PLATFORM_INVOICE' })).toBe('/subscription');
+    expect(pushRoute({ type: 'SUBSCRIPTION_STATUS', status: 'SUSPENDED' })).toBe('/subscription');
     expect(pushRoute({ type: 'SOMETHING_NEW' })).toBe('/');
   });
 });

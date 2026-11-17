@@ -7,6 +7,7 @@ import { permissionGuard, societyPermissionGuard } from './core/auth/permission.
 import { unsavedChangesGuard } from './core/unsaved-changes.guard';
 import { meetingsGuard } from './features/governance/governance-ui';
 import { invitationsGuard } from './features/invitations/invitation-ui';
+import { planModuleGuard } from './core/subscription/subscription-access.store';
 
 // `title` is shown in the browser tab as "<title> · Sahvasa" (see AppTitleStrategy).
 export const routes: Routes = [
@@ -147,7 +148,7 @@ export const routes: Routes = [
       {
         path: 'meetings/new',
         title: 'New meeting',
-        canMatch: [permissionGuard],
+        canMatch: [planModuleGuard('GOVERNANCE'), permissionGuard],
         canDeactivate: [unsavedChangesGuard],
         data: { permission: 'GOVERNANCE.MEETING.CREATE' },
         loadComponent: () =>
@@ -156,7 +157,7 @@ export const routes: Routes = [
       {
         path: 'meetings/:id/edit',
         title: 'Edit meeting',
-        canMatch: [permissionGuard],
+        canMatch: [planModuleGuard('GOVERNANCE'), permissionGuard],
         canDeactivate: [unsavedChangesGuard],
         data: { permission: 'GOVERNANCE.MEETING.CREATE' },
         loadComponent: () =>
@@ -165,7 +166,7 @@ export const routes: Routes = [
       {
         path: 'meetings/:id/attendance',
         title: 'Attendance',
-        canMatch: [permissionGuard],
+        canMatch: [planModuleGuard('GOVERNANCE'), permissionGuard],
         data: { permission: 'GOVERNANCE.MINUTES.CREATE' },
         loadComponent: () =>
           import('./features/governance/meeting-attendance').then((m) => m.MeetingAttendance),
@@ -173,7 +174,7 @@ export const routes: Routes = [
       {
         path: 'meetings/:id/minutes',
         title: 'Minutes',
-        canMatch: [permissionGuard],
+        canMatch: [planModuleGuard('GOVERNANCE'), permissionGuard],
         canDeactivate: [unsavedChangesGuard],
         data: { permission: 'GOVERNANCE.MINUTES.CREATE' },
         loadComponent: () =>
@@ -182,28 +183,28 @@ export const routes: Routes = [
       {
         path: 'meetings/:id',
         title: 'Meeting',
-        canMatch: [meetingsGuard],
+        canMatch: [planModuleGuard('GOVERNANCE'), meetingsGuard],
         loadComponent: () =>
           import('./features/governance/meeting-detail').then((m) => m.MeetingDetail),
       },
       {
         path: 'meetings',
         title: 'Meetings',
-        canMatch: [meetingsGuard],
+        canMatch: [planModuleGuard('GOVERNANCE'), meetingsGuard],
         loadComponent: () =>
           import('./features/governance/meeting-list').then((m) => m.MeetingList),
       },
       {
         path: 'resolutions',
         title: 'Resolutions',
-        canMatch: [meetingsGuard],
+        canMatch: [planModuleGuard('GOVERNANCE'), meetingsGuard],
         loadComponent: () =>
           import('./features/governance/resolution-list').then((m) => m.ResolutionList),
       },
       {
         path: 'policies/new',
         title: 'New policy',
-        canMatch: [permissionGuard],
+        canMatch: [planModuleGuard('POLICIES'), permissionGuard],
         canDeactivate: [unsavedChangesGuard],
         data: { permission: 'POLICY.RULE.CREATE' },
         loadComponent: () =>
@@ -212,7 +213,7 @@ export const routes: Routes = [
       {
         path: 'policies/:id/edit',
         title: 'Edit policy',
-        canMatch: [permissionGuard],
+        canMatch: [planModuleGuard('POLICIES'), permissionGuard],
         canDeactivate: [unsavedChangesGuard],
         data: { permission: 'POLICY.RULE.UPDATE' },
         loadComponent: () =>
@@ -221,7 +222,7 @@ export const routes: Routes = [
       {
         path: 'policies/:id/acknowledgements',
         title: 'Who has accepted',
-        canMatch: [permissionGuard],
+        canMatch: [planModuleGuard('POLICIES'), permissionGuard],
         data: { permission: 'POLICY.ACKNOWLEDGEMENT.VIEW' },
         loadComponent: () =>
           import('./features/policies/acknowledgement-report').then((m) => m.AcknowledgementReport),
@@ -229,7 +230,7 @@ export const routes: Routes = [
       {
         path: 'policies/:id',
         title: 'Policy',
-        canMatch: [permissionGuard],
+        canMatch: [planModuleGuard('POLICIES'), permissionGuard],
         data: { permission: 'POLICY.RULE.VIEW' },
         loadComponent: () =>
           import('./features/policies/policy-detail').then((m) => m.PolicyDetail),
@@ -237,7 +238,7 @@ export const routes: Routes = [
       {
         path: 'policies',
         title: 'Rules & policies',
-        canMatch: [permissionGuard],
+        canMatch: [planModuleGuard('POLICIES'), permissionGuard],
         data: { permission: 'POLICY.RULE.VIEW' },
         loadComponent: () => import('./features/policies/policy-list').then((m) => m.PolicyList),
       },
@@ -267,7 +268,7 @@ export const routes: Routes = [
       },
       {
         path: 'maintenance',
-        canMatch: [permissionGuard],
+        canMatch: [planModuleGuard('MAINTENANCE'), permissionGuard],
         data: { permission: 'MAINTENANCE.BILL.VIEW' },
         children: [
           {
@@ -353,7 +354,7 @@ export const routes: Routes = [
       },
       {
         path: 'finance',
-        canMatch: [permissionGuard],
+        canMatch: [planModuleGuard('FINANCE'), permissionGuard],
         data: { permission: 'FINANCE.ACCOUNT.VIEW' },
         children: [
           {
@@ -437,6 +438,28 @@ export const routes: Routes = [
             loadComponent: () => import('./features/finance/audit-log').then((m) => m.AuditLog),
           },
         ],
+      },
+      {
+        path: 'subscription/invoices/:id',
+        title: 'Invoice',
+        loadComponent: () =>
+          import('./features/subscription/platform-invoice').then((m) => m.PlatformInvoicePage),
+      },
+      {
+        path: 'subscription',
+        title: 'Subscription',
+        canMatch: [permissionGuard],
+        data: { permission: 'SOCIETY.SUBSCRIPTION.VIEW' },
+        loadComponent: () =>
+          import('./features/subscription/society-subscription').then((m) => m.SocietySubscriptionPage),
+      },
+      {
+        path: 'billing',
+        title: 'Billing',
+        canMatch: [permissionGuard],
+        data: { permission: 'PLATFORM.BILLING.VIEW', platform: true },
+        loadComponent: () =>
+          import('./features/subscription/platform-billing').then((m) => m.PlatformBilling),
       },
       {
         path: 'registrations',

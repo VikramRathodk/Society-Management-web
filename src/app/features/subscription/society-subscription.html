@@ -1,0 +1,159 @@
+<app-page-header title="Subscription" [subtitle]="ctx.selectedSociety()?.name ?? null">
+  @if (status(); as s) {
+    <app-status-pill headerMeta [tone]="s.tone">{{ s.label }}</app-status-pill>
+  }
+  @if (subscription() && canUpdate() && subscription()!.status !== 'CANCELLED') {
+    <button mat-stroked-button (click)="askForChange()">
+      <mat-icon>swap_vert</mat-icon>
+      Ask for another plan
+    </button>
+  }
+</app-page-header>
+
+@if (loading()) {
+  <app-skeleton variant="form" />
+} @else if (loadError() === 'none') {
+  <app-empty-state
+    icon="workspace_premium"
+    message="This society has no subscription yet. Everything is free for now."
+  />
+} @else if (loadError() === 'failed') {
+  <app-empty-state icon="cloud_off" message="Couldn't load the subscription.">
+    <button mat-stroked-button (click)="retry()">Try again</button>
+  </app-empty-state>
+} @else if (subscription(); as s) {
+  @if (s.status === 'SUSPENDED') {
+    <div class="notice" data-tone="danger" role="alert">
+      <mat-icon>block</mat-icon>
+      <p>
+        <strong>Suspended.</strong> Bills, vouchers, policies and meetings are read-only until the
+        overdue invoice is paid. Visitors, complaints and notices keep working.
+      </p>
+    </div>
+  } @else if (s.status === 'PAST_DUE' && oldestOverdue(); as o) {
+    <div class="notice" data-tone="warning" role="status">
+      <mat-icon>schedule</mat-icon>
+      <p>
+        Invoice {{ o.number }} was due on {{ dayLabel(o.dueOn) }}. Pay it to avoid the suspension of
+        paid features.
+      </p>
+    </div>
+  } @else if (s.status === 'TRIAL' && s.trialEndsOn) {
+    <div class="notice" role="status">
+      <mat-icon>celebration</mat-icon>
+      <p>
+        Free trial until <strong>{{ dayLabel(s.trialEndsOn) }}</strong>. The first invoice comes on
+        {{ dayLabel(s.nextInvoiceOn) }}.
+      </p>
+    </div>
+  }
+
+  <div class="layout">
+    <div class="stack">
+      <app-section [title]="s.plan.name + ' plan'" [subtitle]="s.plan.description">
+        <dl class="facts padded">
+          <dt>Includes</dt>
+          <dd>{{ modulesLabel(s.plan.modules) }}, plus sign-in, residents, visitors, notices and complaints</dd>
+          <dt>Billed</dt>
+          <dd>{{ cycleLabel(s.cycle) }}</dd>
+          <dt>Flats</dt>
+          <dd>{{ s.flats }}</dd>
+          <dt>Each period</dt>
+          <dd>{{ inr(s.chargePerPeriod) }} <span class="muted">before discount and GST</span></dd>
+          <dt>This period</dt>
+          <dd>{{ periodLabel(s.currentPeriodStart, s.currentPeriodEnd) }}</dd>
+          <dt>Next invoice</dt>
+          <dd>{{ dayLabel(s.nextInvoiceOn) }}</dd>
+          @if (s.pendingPlan || s.pendingCycle) {
+            <dt>From next period</dt>
+            <dd>{{ (s.pendingPlan ?? s.plan).name }} · {{ cycleLabel(s.pendingCycle ?? s.cycle) }}</dd>
+          }
+          @if (s.discountPercent && s.discountPeriodsLeft) {
+            <dt>Discount</dt>
+            <dd>{{ s.discountPercent }}% for {{ s.discountPeriodsLeft }} more period(s)</dd>
+          }
+        </dl>
+      </app-section>
+
+      <app-section title="Invoices">
+        @if (invoices().length === 0) {
+          <p class="muted padded">No invoices yet.</p>
+        } @else {
+          <div class="rows">
+            @for (i of invoices(); track i.id) {
+              <div class="row">
+                <a class="main" [routerLink]="['/subscription/invoices', i.id]">
+                  <span class="title">
+                    {{ i.number }}
+                    <app-status-pill [tone]="i.overdue ? 'danger' : invoiceStatus[i.status].tone">
+                      {{ i.overdue ? 'Overdue' : invoiceStatus[i.status].label }}
+                    </app-status-pill>
+                  </span>
+                  <span class="meta">
+                    {{ periodLabel(i.periodStart, i.periodEnd) }} · {{ i.planName }} · due
+                    {{ dayLabel(i.dueOn) }}
+                  </span>
+                </a>
+                <span class="side">
+                  <span class="amount">{{ inr(i.total) }}</span>
+                  @if (i.balance > 0 && canUpdate()) {
+                    <button mat-flat-button (click)="pay(i)" [disabled]="paying() !== null">
+                      <mat-icon>payments</mat-icon>
+                      {{ paying() === i.id ? 'Opening…' : 'Pay ' + inr(i.balance) }}
+                    </button>
+                  } @else if (i.balance > 0) {
+                    <span class="meta">{{ inr(i.balance) }} to pay</span>
+                  }
+                </span>
+              </div>
+            }
+          </div>
+        }
+      </app-section>
+    </div>
+
+    <div class="stack">
+      <app-section title="Billing contact">
+        <div class="padded contact">
+          @if (s.billingContactId == null) {
+            <p class="muted">
+              None set: invoices and reminders go to the secretary and above.
+            </p>
+          } @else {
+            <p>
+              <strong>{{ contactName() ?? '…' }}</strong>
+              @if (contactEmail(); as email) {
+                <br /><span class="muted">{{ email }}</span>
+              } @else if (contactName()) {
+                <br /><span class="danger-text">No email address — add one on their profile to get invoices by email.</span>
+              }
+            </p>
+          }
+          @if (canUpdate()) {
+            <button mat-stroked-button (click)="changeContact()">
+              <mat-icon>contact_mail</mat-icon>
+              {{ s.billingContactId == null ? 'Choose' : 'Change' }}
+            </button>
+          }
+        </div>
+      </app-section>
+
+      <app-section title="History">
+        <ul class="history padded">
+          @for (e of history(); track $index) {
+            <li>
+              <span class="title">{{ eventLabel(e.kind) }}</span>
+              @if (e.to) {
+                <span class="meta">{{ e.from ? e.from + ' → ' : '' }}{{ e.to }}</span>
+              }
+              @if (e.note) {
+                <span class="meta">{{ e.note }}</span>
+              }
+              <span class="meta">{{ dayLabel(e.at.substring(0, 10)) }}</span>
+            </li>
+          }
+        </ul>
+      </app-section>
+    </div>
+  </div>
+}

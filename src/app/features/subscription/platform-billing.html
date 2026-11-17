@@ -1,0 +1,187 @@
+<app-page-header title="Billing" subtitle="What the platform charges societies">
+  @if (access.platformUpdate()) {
+    <button mat-stroked-button (click)="startAll()">
+      <mat-icon>rocket_launch</mat-icon>
+      Start trials
+    </button>
+    <button mat-flat-button (click)="runBilling()" [disabled]="busy()">
+      <mat-icon>autorenew</mat-icon>
+      {{ busy() ? 'Running…' : 'Run billing now' }}
+    </button>
+  }
+</app-page-header>
+
+@if (loading()) {
+  <app-skeleton variant="tiles" />
+} @else if (loadError()) {
+  <app-empty-state icon="cloud_off" message="Couldn't load billing.">
+    <button mat-stroked-button (click)="load()">Try again</button>
+  </app-empty-state>
+} @else {
+  <div class="stats">
+    <app-stat-card icon="verified" label="Paying societies" [value]="'' + stats().paying" tone="success" />
+    <app-stat-card icon="celebration" label="On trial" [value]="'' + stats().trials" tone="primary" />
+    <app-stat-card icon="block" label="Suspended" [value]="'' + stats().suspended" tone="danger" />
+    <app-stat-card icon="schedule" label="Overdue" [value]="inr(stats().overdue)" tone="warning" />
+    <app-stat-card icon="account_balance_wallet" label="Collected" [value]="inr(stats().collected)" />
+  </div>
+
+  <mat-tab-group mat-stretch-tabs="false" animationDuration="0ms">
+    <mat-tab label="Societies">
+      <div class="tab-body">
+        @if (subscriptions().length === 0) {
+          <app-empty-state
+            icon="workspace_premium"
+            message="No subscriptions yet. Billing starts when it is switched on and societies go live (or with Start trials)."
+          />
+        } @else {
+          <div class="list">
+            @for (s of subscriptions(); track s.societyId) {
+              <div class="row">
+                <span class="main">
+                  <span class="title">
+                    {{ s.societyName }}
+                    <app-status-pill [tone]="subscriptionStatus[s.status].tone">
+                      {{ subscriptionStatus[s.status].label }}
+                    </app-status-pill>
+                  </span>
+                  <span class="meta">
+                    {{ s.plan.name }} · {{ cycleLabel(s.cycle) }} · {{ s.flats }} flats ·
+                    {{ inr(s.chargePerPeriod) }} a period
+                    @if (s.status === 'TRIAL' && s.trialEndsOn) {
+                      · trial until {{ dayLabel(s.trialEndsOn) }}
+                    } @else if (s.status !== 'CANCELLED') {
+                      · next invoice {{ dayLabel(s.nextInvoiceOn) }}
+                    }
+                    @if (s.pendingPlan || s.pendingCycle) {
+                      · then {{ (s.pendingPlan ?? s.plan).name }} {{ cycleLabel(s.pendingCycle ?? s.cycle) }}
+                    }
+                    @if (s.discountPercent && s.discountPeriodsLeft) {
+                      · {{ s.discountPercent }}% off × {{ s.discountPeriodsLeft }}
+                    }
+                  </span>
+                  @if (s.events.length && s.events[s.events.length - 1].kind === 'CHANGE_REQUESTED') {
+                    <span class="meta danger-text">
+                      Asked for {{ s.events[s.events.length - 1].to }}
+                      {{ s.events[s.events.length - 1].note ? '— ' + s.events[s.events.length - 1].note : '' }}
+                    </span>
+                  }
+                </span>
+                @if (access.platformUpdate() && s.status !== 'CANCELLED') {
+                  <span class="side">
+                    <button mat-icon-button [matMenuTriggerFor]="menu" [attr.aria-label]="'Actions for ' + s.societyName">
+                      <mat-icon>more_vert</mat-icon>
+                    </button>
+                    <mat-menu #menu="matMenu" xPosition="before">
+                      <button mat-menu-item (click)="changePlan(s)">
+                        <mat-icon>swap_vert</mat-icon>
+                        <span>Change plan</span>
+                      </button>
+                      <button mat-menu-item (click)="discount(s)">
+                        <mat-icon>percent</mat-icon>
+                        <span>Discount</span>
+                      </button>
+                      <button mat-menu-item (click)="issueDue(s)">
+                        <mat-icon>request_quote</mat-icon>
+                        <span>Issue due invoice</span>
+                      </button>
+                      <button mat-menu-item (click)="cancel(s)">
+                        <mat-icon>cancel</mat-icon>
+                        <span>Cancel subscription</span>
+                      </button>
+                    </mat-menu>
+                  </span>
+                }
+              </div>
+            }
+          </div>
+        }
+      </div>
+    </mat-tab>
+
+    <mat-tab [label]="'Invoices (' + invoices().length + ')'">
+      <div class="tab-body">
+        <div class="toolbar">
+          <mat-slide-toggle [checked]="overdueOnly()" (change)="overdueOnly.set($event.checked)">
+            Overdue only
+          </mat-slide-toggle>
+          <span class="grow"></span>
+          <span class="muted">Outstanding {{ inr(stats().outstanding) }}</span>
+        </div>
+        @if (shownInvoices().length === 0) {
+          <app-empty-state
+            icon="receipt_long"
+            [message]="overdueOnly() ? 'Nothing is overdue.' : 'No invoices yet.'"
+          />
+        } @else {
+          <div class="list">
+            @for (i of shownInvoices(); track trackInvoice(i)) {
+              <a class="row" [routerLink]="['/subscription/invoices', i.id]">
+                <span class="main">
+                  <span class="title">
+                    {{ i.number }}
+                    <app-status-pill [tone]="i.overdue ? 'danger' : invoiceStatus[i.status].tone">
+                      {{ i.overdue ? 'Overdue' : invoiceStatus[i.status].label }}
+                    </app-status-pill>
+                  </span>
+                  <span class="meta">
+                    {{ i.societyName }} · {{ periodLabel(i.periodStart, i.periodEnd) }} · due
+                    {{ dayLabel(i.dueOn) }}
+                  </span>
+                </span>
+                <span class="side">
+                  <span class="amount">{{ inr(i.total) }}</span>
+                  @if (i.balance > 0 && i.balance < i.total) {
+                    <span class="meta">{{ inr(i.balance) }} to pay</span>
+                  }
+                </span>
+              </a>
+            }
+          </div>
+        }
+      </div>
+    </mat-tab>
+
+    <mat-tab label="Plans">
+      <div class="tab-body">
+        @if (access.platformUpdate()) {
+          <div class="toolbar">
+            <span class="grow"></span>
+            <button mat-stroked-button (click)="editPlan(null)">
+              <mat-icon>add</mat-icon>
+              New plan
+            </button>
+          </div>
+        }
+        <div class="plans">
+          @for (p of plans(); track p.id) {
+            <app-section [title]="p.name" [subtitle]="p.code + (p.active ? '' : ' · not offered')">
+              <dl class="facts padded">
+                <dt>Monthly</dt>
+                <dd>{{ priceLabel(p) }}</dd>
+                <dt>Yearly</dt>
+                <dd>{{ priceLabel(p, 'YEARLY') }}</dd>
+                <dt>Modules</dt>
+                <dd>{{ modulesLabel(p.modules) }}</dd>
+                <dt>Trial</dt>
+                <dd>{{ p.trialDays ? p.trialDays + ' days' : 'None' }}</dd>
+                @if (p.maxFlats) {
+                  <dt>Up to</dt>
+                  <dd>{{ p.maxFlats }} flats</dd>
+                }
+              </dl>
+              @if (access.platformUpdate()) {
+                <div class="padded">
+                  <button mat-stroked-button (click)="editPlan(p)">
+                    <mat-icon>edit</mat-icon>
+                    Edit
+                  </button>
+                </div>
+              }
+            </app-section>
+          }
+        </div>
+      </div>
+    </mat-tab>
+  </mat-tab-group>
+}

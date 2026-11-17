@@ -23,6 +23,9 @@ import { canOpenMeetings } from '../features/governance/governance-ui';
 import { canOpenInvitations } from '../features/invitations/invitation-ui';
 import { PendingInvitations } from '../features/invitations/pending-invitations';
 import { SetupBanner } from '../features/onboarding/setup-banner';
+import { SubscriptionBanner } from '../features/subscription/subscription-banner';
+import { PlanModule } from '../core/models';
+import { SubscriptionAccessStore } from '../core/subscription/subscription-access.store';
 import { confirmDialog } from '../shared/confirm-dialog';
 import { Command, CommandPaletteService } from './command-palette';
 import { Logo } from '../shared/ui';
@@ -36,6 +39,8 @@ interface NavItem {
   platform?: boolean;
   /** Instead of a permission: shown when this returns true for the selected society. */
   visible?: (auth: AuthStore, societyId: number | null) => boolean;
+  /** A paid module: hidden when the society's plan doesn't include it. */
+  module?: PlanModule;
 }
 
 /** Add an entry here as each feature route lands. */
@@ -53,8 +58,20 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Gate', icon: 'door_front', link: '/gate', permission: 'VISITOR.ENTRY.UPDATE' },
   { label: 'Visitors', icon: 'badge', link: '/visitors', permission: 'VISITOR.ENTRY.VIEW' },
   { label: 'Notices', icon: 'campaign', link: '/notices', permission: 'NOTICE.POST.VIEW' },
-  { label: 'Rules', icon: 'gavel', link: '/policies', permission: 'POLICY.RULE.VIEW' },
-  { label: 'Meetings', icon: 'groups', link: '/meetings', visible: canOpenMeetings },
+  {
+    label: 'Rules',
+    icon: 'gavel',
+    link: '/policies',
+    permission: 'POLICY.RULE.VIEW',
+    module: 'POLICIES',
+  },
+  {
+    label: 'Meetings',
+    icon: 'groups',
+    link: '/meetings',
+    visible: canOpenMeetings,
+    module: 'GOVERNANCE',
+  },
   {
     label: 'Complaints',
     icon: 'report_problem',
@@ -66,12 +83,27 @@ const NAV_ITEMS: NavItem[] = [
     icon: 'receipt_long',
     link: '/maintenance',
     permission: 'MAINTENANCE.BILL.VIEW',
+    module: 'MAINTENANCE',
   },
   {
     label: 'Finance',
     icon: 'account_balance',
     link: '/finance',
     permission: 'FINANCE.ACCOUNT.VIEW',
+    module: 'FINANCE',
+  },
+  {
+    label: 'Subscription',
+    icon: 'workspace_premium',
+    link: '/subscription',
+    permission: 'SOCIETY.SUBSCRIPTION.VIEW',
+  },
+  {
+    label: 'Billing',
+    icon: 'request_quote',
+    link: '/billing',
+    permission: 'PLATFORM.BILLING.VIEW',
+    platform: true,
   },
   {
     label: 'Registrations',
@@ -107,6 +139,7 @@ const NAV_ITEMS: NavItem[] = [
     MatTooltipModule,
     PendingInvitations,
     SetupBanner,
+    SubscriptionBanner,
     Logo,
   ],
   host: { '(document:keydown)': 'onKeydown($event)' },
@@ -119,6 +152,7 @@ export class Shell {
   protected readonly auth = inject(AuthStore);
   protected readonly ctx = inject(SocietyContextStore);
   protected readonly theme = inject(ThemeStore);
+  private readonly plan = inject(SubscriptionAccessStore);
 
   protected readonly push = inject(PushService);
   private readonly palette = inject(CommandPaletteService);
@@ -148,6 +182,7 @@ export class Shell {
   protected readonly navItems = computed(() => {
     const societyId = this.ctx.selectedSocietyId();
     return NAV_ITEMS.filter((item) => {
+      if (item.module && !this.plan.allows(item.module)) return false;
       if (item.visible) return item.visible(this.auth, societyId);
       if (!item.permission) return true;
       return item.platform

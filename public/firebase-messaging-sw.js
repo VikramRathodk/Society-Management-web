@@ -29,6 +29,12 @@ function routeFor(data) {
     case 'MINUTES_SENT_BACK':
     case 'MINUTES_PUBLISHED':
       return data.meetingId ? `/meetings/${data.meetingId}` : '/meetings';
+    case 'PLATFORM_INVOICE':
+    case 'PLATFORM_PAYMENT':
+    case 'PLATFORM_INVOICE_REMINDER':
+      return data.invoiceId ? `/subscription/invoices/${data.invoiceId}` : '/subscription';
+    case 'SUBSCRIPTION_STATUS':
+      return '/subscription';
     case 'INVITATION_RECEIVED':
       return '/dashboard';
     case 'INVITATION_NEEDS_APPROVAL':
