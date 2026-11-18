@@ -19,6 +19,7 @@ import { PushService } from '../core/push';
 import { SocietyContextStore } from '../core/society-context/society-context.store';
 import { ThemeMode, ThemeStore } from '../core/theme';
 import { inviteDialog } from '../features/invitations/invite-dialog';
+import { canOpenMeetings } from '../features/governance/governance-ui';
 import { canOpenInvitations } from '../features/invitations/invitation-ui';
 import { PendingInvitations } from '../features/invitations/pending-invitations';
 import { SetupBanner } from '../features/onboarding/setup-banner';
@@ -53,6 +54,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Visitors', icon: 'badge', link: '/visitors', permission: 'VISITOR.ENTRY.VIEW' },
   { label: 'Notices', icon: 'campaign', link: '/notices', permission: 'NOTICE.POST.VIEW' },
   { label: 'Rules', icon: 'gavel', link: '/policies', permission: 'POLICY.RULE.VIEW' },
+  { label: 'Meetings', icon: 'groups', link: '/meetings', visible: canOpenMeetings },
   {
     label: 'Complaints',
     icon: 'report_problem',
@@ -186,6 +188,15 @@ export class Shell {
         icon: 'gavel',
         keywords: 'rule rules policy by-laws bylaws draft',
         run: go('/policies/new'),
+      });
+    if (can('GOVERNANCE.MEETING.CREATE'))
+      list.push({
+        id: 'act:meeting',
+        group: 'Actions',
+        label: 'New meeting',
+        icon: 'groups',
+        keywords: 'meeting agm sgm committee agenda notice',
+        run: go('/meetings/new'),
       });
     if (can('MAINTENANCE.PAYMENT.CREATE'))
       list.push({

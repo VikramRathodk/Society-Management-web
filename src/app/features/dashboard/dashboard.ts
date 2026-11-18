@@ -11,6 +11,7 @@ import { MaintenanceApi } from '../../core/api/maintenance.api';
 import { FinanceSummaryCard } from '../finance/finance-summary-card';
 import { NoticeApi } from '../../core/api/notice.api';
 import { PolicyApi } from '../../core/api/policy.api';
+import { GovernanceApi } from '../../core/api/governance.api';
 import { StructureApi } from '../../core/api/structure.api';
 import { UserApi } from '../../core/api/user.api';
 import { VisitorApi } from '../../core/api/visitor.api';
@@ -20,6 +21,7 @@ import {
   Complaint,
   FlatDues,
   Notice,
+  Meeting,
   PolicySummary,
   Visitor,
   VisitorStatus,
@@ -31,6 +33,7 @@ import { MaintenanceAccess } from '../maintenance/maintenance-ui';
 import { GateBoard } from '../visitors/gate-board';
 import { VisitorActions, VisitorPhotos, VisitorRow, timeAgo } from '../visitors/visitor-ui';
 import { DuesSpotlight, MoneyGlance, rupees } from './dashboard-ui';
+import { canOpenMeetings } from '../governance/governance-ui';
 
 /** Which home screen fits what the user can do (roles are configurable, so this goes by permissions). */
 export type Persona = 'committee' | 'gate' | 'resident';
@@ -52,6 +55,8 @@ interface DashboardData {
   dues?: FlatDues[] | null;
   policiesToAccept?: PolicySummary[] | null;
   policiesToApprove?: PolicySummary[] | null;
+  meetings?: Meeting[] | null;
+  heldMeetings?: Meeting[] | null;
 }
 
 interface Card {
@@ -93,6 +98,7 @@ export class Dashboard {
   private readonly complaintApi = inject(ComplaintApi);
   private readonly noticeApi = inject(NoticeApi);
   private readonly policyApi = inject(PolicyApi);
+  private readonly governanceApi = inject(GovernanceApi);
   private readonly maintenanceApi = inject(MaintenanceApi);
   private readonly maintenance = inject(MaintenanceAccess);
   protected readonly auth = inject(AuthStore);
@@ -242,6 +248,34 @@ export class Dashboard {
         tone: 'warning',
       });
     }
+    // The next meeting, and resolutions waiting for the caller's vote (announced or held meetings).
+    const next = d.meetings?.[0];
+    if (next) {
+      cards.push({
+        label: 'Next meeting',
+        icon: 'groups',
+        value: loading
+          ? null
+          : new Date(next.scheduledAt).toLocaleDateString(undefined, {
+              day: 'numeric',
+              month: 'short',
+            }),
+        link: `/meetings/${next.id}`,
+        tone: 'primary',
+      });
+    }
+    const ballots = [...(d.meetings ?? []), ...(d.heldMeetings ?? [])].flatMap((m) =>
+      m.agenda.filter((i) => i.canVote).map(() => m.id),
+    );
+    if (ballots.length > 0) {
+      cards.push({
+        label: ballots.length === 1 ? 'Resolution to vote on' : 'Resolutions to vote on',
+        icon: 'how_to_vote',
+        value: value(ballots.length),
+        link: `/meetings/${ballots[0]}`,
+        tone: 'warning',
+      });
+    }
     if (this.can('POLICY.RULE.APPROVE') && this.ctx.selectedSocietyId() != null) {
       const waiting = d.policiesToApprove?.length ?? 0;
       cards.push({
@@ -362,6 +396,16 @@ export class Dashboard {
     if (this.can('POLICY.ACKNOWLEDGEMENT.CREATE') && societyId != null) {
       requests.policiesToAccept = settle(
         this.policyApi.pendingAcknowledgements(societyId, { silent: true }),
+      );
+    }
+    if (canOpenMeetings(this.auth, societyId) && societyId != null) {
+      requests.meetings = settle(
+        this.governanceApi.list(societyId, 'upcoming', null, { silent: true }),
+      );
+      requests.heldMeetings = settle(
+        this.governanceApi
+          .list(societyId, 'past', null, { silent: true })
+          .pipe(map((list) => list.filter((m) => m.status === 'HELD'))),
       );
     }
     if (this.can('POLICY.RULE.APPROVE') && societyId != null) {

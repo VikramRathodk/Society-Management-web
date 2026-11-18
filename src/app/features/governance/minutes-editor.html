@@ -1,0 +1,90 @@
+<app-page-header
+  title="Minutes"
+  [subtitle]="meeting()?.title ?? null"
+  [back]="'/meetings/' + id()"
+  backLabel="Back to the meeting"
+/>
+
+@if (loading()) {
+  <app-skeleton variant="form" />
+} @else if (loadError(); as message) {
+  <app-empty-state icon="info" [message]="message">
+    <button mat-stroked-button (click)="back()">Back to the meeting</button>
+  </app-empty-state>
+} @else {
+  <div class="layout">
+    @if (minutes()?.reviewReason; as reason) {
+      <p class="banner">
+        <mat-icon>reply</mat-icon> Sent back by {{ minutes()?.reviewedBy?.name }}: {{ reason }}
+      </p>
+    }
+    <app-section padded>
+      <div class="head">
+        <mat-button-toggle-group
+          [value]="mode()"
+          (change)="mode.set($event.value)"
+          aria-label="Minutes view"
+          hideSingleSelectionIndicator
+        >
+          <mat-button-toggle value="write">Write</mat-button-toggle>
+          <mat-button-toggle value="preview">Preview</mat-button-toggle>
+        </mat-button-toggle-group>
+        <span class="tip">
+          <code>#</code> heading · <code>-</code> bullet · <code>1.</code> numbered
+        </span>
+      </div>
+      @if (mode() === 'write') {
+        <mat-form-field appearance="outline" class="body">
+          <mat-label>Minutes</mat-label>
+          <textarea
+            matInput
+            rows="22"
+            [value]="body()"
+            (input)="edit($any($event.target).value)"
+            [attr.maxlength]="maxBody"
+          ></textarea>
+          <mat-hint align="end">{{ body().length }} / {{ maxBody }}</mat-hint>
+        </mat-form-field>
+      } @else {
+        <div class="preview"><app-rules-text [text]="body()" /></div>
+      }
+
+      <div class="file">
+        <span class="file-label">Signed minutes (PDF or image, up to 5 MB)</span>
+        @if (minutes()?.attachment; as a) {
+          <span
+            ><mat-icon>attach_file</mat-icon> {{ a.name ?? 'Attachment' }} ·
+            {{ fileSize(a.sizeBytes) }}</span
+          >
+          <button mat-button type="button" (click)="removeFile()">Remove</button>
+        }
+        <button mat-stroked-button type="button" (click)="picker.click()" [disabled]="saving()">
+          <mat-icon>upload_file</mat-icon>
+          {{ minutes()?.attachment ? 'Replace' : 'Attach file' }}
+        </button>
+        <input
+          #picker
+          type="file"
+          accept="application/pdf,image/jpeg,image/png,image/webp"
+          (change)="chooseFile($event)"
+          hidden
+        />
+      </div>
+    </app-section>
+
+    @if (error(); as message) {
+      <p class="error" role="alert">{{ message }}</p>
+    }
+
+    <div class="actions">
+      <button mat-button type="button" (click)="back()">Cancel</button>
+      <button mat-stroked-button type="button" (click)="save()" [disabled]="saving()">
+        Save draft
+      </button>
+      <button mat-flat-button type="button" (click)="save(true)" [disabled]="saving()">
+        <mat-icon>send</mat-icon>
+        Save and submit for approval
+      </button>
+    </div>
+  </div>
+}

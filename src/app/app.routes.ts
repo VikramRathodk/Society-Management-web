@@ -5,6 +5,7 @@ import { authGuard, guestGuard } from './core/auth/auth.guard';
 import { AuthStore } from './core/auth/auth.store';
 import { permissionGuard, societyPermissionGuard } from './core/auth/permission.guard';
 import { unsavedChangesGuard } from './core/unsaved-changes.guard';
+import { meetingsGuard } from './features/governance/governance-ui';
 import { invitationsGuard } from './features/invitations/invitation-ui';
 
 // `title` is shown in the browser tab as "<title> · Sahvasa" (see AppTitleStrategy).
@@ -142,6 +143,62 @@ export const routes: Routes = [
         canMatch: [permissionGuard],
         data: { permission: 'NOTICE.POST.VIEW' },
         loadComponent: () => import('./features/notices/notice-list').then((m) => m.NoticeList),
+      },
+      {
+        path: 'meetings/new',
+        title: 'New meeting',
+        canMatch: [permissionGuard],
+        canDeactivate: [unsavedChangesGuard],
+        data: { permission: 'GOVERNANCE.MEETING.CREATE' },
+        loadComponent: () =>
+          import('./features/governance/meeting-editor').then((m) => m.MeetingEditor),
+      },
+      {
+        path: 'meetings/:id/edit',
+        title: 'Edit meeting',
+        canMatch: [permissionGuard],
+        canDeactivate: [unsavedChangesGuard],
+        data: { permission: 'GOVERNANCE.MEETING.CREATE' },
+        loadComponent: () =>
+          import('./features/governance/meeting-editor').then((m) => m.MeetingEditor),
+      },
+      {
+        path: 'meetings/:id/attendance',
+        title: 'Attendance',
+        canMatch: [permissionGuard],
+        data: { permission: 'GOVERNANCE.MINUTES.CREATE' },
+        loadComponent: () =>
+          import('./features/governance/meeting-attendance').then((m) => m.MeetingAttendance),
+      },
+      {
+        path: 'meetings/:id/minutes',
+        title: 'Minutes',
+        canMatch: [permissionGuard],
+        canDeactivate: [unsavedChangesGuard],
+        data: { permission: 'GOVERNANCE.MINUTES.CREATE' },
+        loadComponent: () =>
+          import('./features/governance/minutes-editor').then((m) => m.MinutesEditor),
+      },
+      {
+        path: 'meetings/:id',
+        title: 'Meeting',
+        canMatch: [meetingsGuard],
+        loadComponent: () =>
+          import('./features/governance/meeting-detail').then((m) => m.MeetingDetail),
+      },
+      {
+        path: 'meetings',
+        title: 'Meetings',
+        canMatch: [meetingsGuard],
+        loadComponent: () =>
+          import('./features/governance/meeting-list').then((m) => m.MeetingList),
+      },
+      {
+        path: 'resolutions',
+        title: 'Resolutions',
+        canMatch: [meetingsGuard],
+        loadComponent: () =>
+          import('./features/governance/resolution-list').then((m) => m.ResolutionList),
       },
       {
         path: 'policies/new',

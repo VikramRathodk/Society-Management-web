@@ -1,0 +1,71 @@
+<app-page-header
+  title="Attendance"
+  [subtitle]="meeting()?.title ?? null"
+  [back]="'/meetings/' + id()"
+  backLabel="Back to the meeting"
+>
+  @if (sheet()) {
+    <button mat-flat-button (click)="save()" [disabled]="saving() || !dirty()">
+      <mat-icon>save</mat-icon>
+      Save
+    </button>
+  }
+</app-page-header>
+
+@if (loading()) {
+  <app-skeleton variant="list" />
+} @else if (loadError(); as message) {
+  <app-empty-state icon="info" [message]="message">
+    <a mat-stroked-button [routerLink]="['/meetings', id()]">Back to the meeting</a>
+  </app-empty-state>
+} @else if (sheet(); as s) {
+  <div class="quorum" [class.met]="s.quorum.met" role="status">
+    <mat-icon>{{ s.quorum.met ? 'check_circle' : 'pending' }}</mat-icon>
+    <div>
+      <strong>Quorum {{ s.quorum.met ? 'met' : 'not yet met' }}</strong>
+      <span>
+        {{ s.quorum.present }} of {{ s.quorum.required }} needed · {{ s.quorum.members }}
+        {{ meeting()?.general ? 'member flats' : 'committee members' }}
+        @if (dirty()) {
+          · save to recount
+        }
+      </span>
+    </div>
+    <span class="count">{{ presentCount() }} people ticked</span>
+  </div>
+
+  <app-section padded>
+    <mat-form-field appearance="outline" class="search" subscriptSizing="dynamic">
+      <mat-icon matPrefix>search</mat-icon>
+      <mat-label>Find a name</mat-label>
+      <input matInput [value]="query()" (input)="query.set($any($event.target).value)" />
+    </mat-form-field>
+    <ul class="people">
+      @for (p of rows(); track p.user.id) {
+        <li>
+          <mat-checkbox
+            [checked]="present().has(p.user.id)"
+            (change)="toggle(p.user.id, $event.checked)"
+          >
+            {{ p.user.name }}
+          </mat-checkbox>
+          <span class="tags">
+            @if (p.committee) {
+              <app-status-pill tone="primary" outline>Committee</app-status-pill>
+            }
+            @if (meeting()?.general && p.flatIds.length === 0 && !p.committee) {
+              <app-status-pill tone="neutral" outline>Doesn't count</app-status-pill>
+            }
+            @if (p.rsvp) {
+              <span class="rsvp"
+                >said {{ p.rsvp === 'YES' ? 'yes' : p.rsvp === 'NO' ? 'no' : 'maybe' }}</span
+              >
+            }
+          </span>
+        </li>
+      } @empty {
+        <li class="none">Nobody matches.</li>
+      }
+    </ul>
+  </app-section>
+}

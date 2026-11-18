@@ -1,0 +1,364 @@
+<app-page-header
+  [title]="meeting()?.title ?? 'Meeting'"
+  [subtitle]="meeting() ? kinds[meeting()!.kind].label : null"
+  back="/meetings"
+  backLabel="Back to meetings"
+>
+  @if (meeting(); as m) {
+    <app-status-pill headerMeta [tone]="status[m.status].tone">{{
+      status[m.status].label
+    }}</app-status-pill>
+  }
+  @if (meeting(); as m) {
+    @if (m.status === 'DRAFT' && organises()) {
+      <a mat-stroked-button [routerLink]="['/meetings', m.id, 'edit']">
+        <mat-icon>edit</mat-icon>
+        Edit
+      </a>
+      @if (announces()) {
+        <button mat-flat-button (click)="sendNotice()" [disabled]="busy()">
+          <mat-icon>campaign</mat-icon>
+          Send notice
+        </button>
+      }
+    }
+    @if (inSession() && runs()) {
+      <a mat-stroked-button [routerLink]="['/meetings', m.id, 'attendance']">
+        <mat-icon>how_to_reg</mat-icon>
+        Attendance
+      </a>
+    }
+    @if (organises() || runs()) {
+      @if (m.status === 'DRAFT' || m.status === 'NOTICE_SENT') {
+        <button mat-icon-button [matMenuTriggerFor]="more" aria-label="More actions">
+          <mat-icon>more_vert</mat-icon>
+        </button>
+        <mat-menu #more="matMenu" xPosition="before">
+          @if (m.status === 'DRAFT') {
+            <button mat-menu-item (click)="remove()">
+              <mat-icon>delete</mat-icon>
+              Delete draft
+            </button>
+          } @else {
+            @if (inSession() && runs()) {
+              <button mat-menu-item (click)="markHeld()">
+                <mat-icon>task_alt</mat-icon>
+                Mark held
+              </button>
+            }
+            @if (announces()) {
+              <button mat-menu-item (click)="adjourn()">
+                <mat-icon>update</mat-icon>
+                Adjourn
+              </button>
+              <button mat-menu-item (click)="cancel()">
+                <mat-icon>event_busy</mat-icon>
+                Cancel meeting
+              </button>
+            }
+          }
+        </mat-menu>
+      }
+    }
+  }
+</app-page-header>
+
+@if (loading() && !meeting()) {
+  <app-skeleton variant="form" />
+} @else if (loadError() === 'missing') {
+  <app-empty-state icon="search_off" message="This meeting doesn't exist or isn't open to you." />
+} @else if (loadError() === 'failed') {
+  <app-empty-state icon="cloud_off" message="Couldn't load the meeting.">
+    <button mat-stroked-button (click)="retry()">Try again</button>
+  </app-empty-state>
+} @else if (meeting(); as m) {
+  @if (m.status === 'CANCELLED') {
+    <p class="banner danger"><mat-icon>event_busy</mat-icon> Cancelled: {{ m.cancelReason }}</p>
+  }
+  @if (m.status === 'ADJOURNED') {
+    <p class="banner warning">
+      <mat-icon>update</mat-icon>
+      Adjourned ({{ m.adjournReason }}).
+      @if (m.adjournedToId) {
+        <a mat-button [routerLink]="['/meetings', m.adjournedToId]">Go to the new meeting</a>
+      }
+    </p>
+  }
+  @if (m.adjournedFromId) {
+    <p class="banner">
+      <mat-icon>history</mat-icon>
+      Adjourned from an earlier meeting.
+      <a mat-button [routerLink]="['/meetings', m.adjournedFromId]">See it</a>
+    </p>
+  }
+
+  <div class="layout">
+    <div class="main-column">
+      <app-section title="Agenda">
+        @if (m.agenda.length === 0) {
+          <p class="quiet pad">No agenda items yet.</p>
+        }
+        <ol class="agenda">
+          @for (item of m.agenda; track item.id) {
+            <li>
+              <div class="item-head">
+                <span class="number">{{ item.position }}</span>
+                <div class="item-title">
+                  <strong>{{ item.title }}</strong>
+                  @if (item.description) {
+                    <p class="details">{{ item.description }}</p>
+                  }
+                </div>
+                @if (item.outcome; as o) {
+                  <app-status-pill [tone]="outcomes[o].tone" [icon]="outcomes[o].icon">{{
+                    outcomes[o].label
+                  }}</app-status-pill>
+                } @else if (item.votingStatus === 'OPEN') {
+                  <app-status-pill tone="warning" icon="how_to_vote">Voting open</app-status-pill>
+                }
+              </div>
+              @if (item.resolutionText) {
+                <div class="resolution">
+                  <div class="resolution-label">
+                    Resolution
+                    @if (item.resolutionNumber) {
+                      <span class="number-tag">{{ item.resolutionNumber }}</span>
+                    }
+                  </div>
+                  <p>{{ item.resolutionText }}</p>
+                  @if (item.proposedBy || item.secondedBy) {
+                    <p class="quiet small">
+                      @if (item.proposedBy) {
+                        Proposed by {{ item.proposedBy.name }}
+                      }
+                      @if (item.secondedBy) {
+                        · seconded by {{ item.secondedBy.name }}
+                      }
+                    </p>
+                  }
+                  @if (item.votingStatus !== 'NOT_OPEN') {
+                    <p class="quiet small">{{ turnoutText(item, m.electorate) }}</p>
+                  }
+                  @if (item.results; as r) {
+                    <div class="results" role="group" aria-label="Result">
+                      <span class="for">For {{ r.votesFor }}</span>
+                      <span class="against">Against {{ r.votesAgainst }}</span>
+                      <span class="abstain">Abstained {{ r.abstained }}</span>
+                    </div>
+                  }
+                  <div class="item-actions">
+                    @if (item.canVote) {
+                      <button mat-flat-button (click)="vote(item)">
+                        <mat-icon>how_to_vote</mat-icon>
+                        Vote
+                      </button>
+                    } @else if (item.youVoted && item.votingStatus === 'OPEN') {
+                      <span class="voted"><mat-icon>check</mat-icon> You have voted</span>
+                    }
+                    @if (runs()) {
+                      @if (
+                        item.votingStatus === 'NOT_OPEN' &&
+                        !item.outcome &&
+                        (m.status === 'NOTICE_SENT' || m.status === 'HELD')
+                      ) {
+                        <button mat-stroked-button (click)="openVoting(item)">Open voting</button>
+                        <button mat-button (click)="defer(item)">Defer</button>
+                      }
+                      @if (item.votingStatus === 'OPEN') {
+                        <button mat-stroked-button (click)="closeVoting(item)">Close voting</button>
+                      }
+                    }
+                  </div>
+                </div>
+              } @else if (
+                runs() && !item.outcome && (m.status === 'NOTICE_SENT' || m.status === 'HELD')
+              ) {
+                <div class="item-actions">
+                  <button mat-button (click)="defer(item)">Defer</button>
+                </div>
+              }
+            </li>
+          }
+        </ol>
+      </app-section>
+
+      <app-section title="Minutes" padded>
+        @if (minutes(); as mi) {
+          @if (mi.status !== 'PUBLISHED') {
+            <p class="banner" [class.warning]="mi.status === 'PENDING'">
+              <mat-icon>{{ mi.status === 'PENDING' ? 'hourglass_top' : 'edit_note' }}</mat-icon>
+              {{ mi.status === 'PENDING' ? 'Waiting for approval' : 'Draft' }} · written by
+              {{ mi.draftedBy.name }}
+            </p>
+            @if (mi.status === 'DRAFT' && mi.reviewReason) {
+              <p class="banner warning">
+                <mat-icon>reply</mat-icon> Sent back by {{ mi.reviewedBy?.name }}:
+                {{ mi.reviewReason }}
+              </p>
+            }
+          } @else {
+            <p class="quiet small">
+              Published {{ mi.publishedAt | date: 'd MMM y' }}, approved by
+              {{ mi.approvedBy?.name }}
+            </p>
+          }
+          <app-rules-text [text]="mi.body" />
+          @if (mi.attachment; as a) {
+            <button mat-stroked-button class="attachment" (click)="openMinutesFile()">
+              <mat-icon>{{
+                a.contentType === 'application/pdf' ? 'picture_as_pdf' : 'image'
+              }}</mat-icon>
+              {{ a.name ?? 'Signed minutes' }}
+              <span class="quiet small">{{ fileSize(a.sizeBytes) }}</span>
+            </button>
+          }
+          @if (mi.addenda.length) {
+            <h3 class="sub">Corrections</h3>
+            <ul class="addenda">
+              @for (a of mi.addenda; track a.id) {
+                <li>
+                  <span class="quiet small"
+                    >{{ a.createdAt | date: 'd MMM y' }} · {{ a.createdBy.name }}</span
+                  >
+                  <p>{{ a.text }}</p>
+                </li>
+              }
+            </ul>
+          }
+          <div class="item-actions">
+            @if (mi.status === 'DRAFT' && runs()) {
+              <a mat-stroked-button [routerLink]="['/meetings', m.id, 'minutes']">
+                <mat-icon>edit</mat-icon>
+                Edit minutes
+              </a>
+              <button mat-flat-button (click)="submitMinutes()" [disabled]="busy()">
+                <mat-icon>send</mat-icon>
+                Submit for approval
+              </button>
+            }
+            @if (mi.status === 'PENDING' && approvesMinutes()) {
+              @if (!myMinutesDraft()) {
+                <button mat-flat-button (click)="approveMinutes()" [disabled]="busy()">
+                  <mat-icon>verified</mat-icon>
+                  Approve and publish
+                </button>
+              } @else {
+                <span class="quiet small"
+                  >You wrote these minutes, so someone else approves them.</span
+                >
+              }
+              <button mat-stroked-button (click)="sendBackMinutes()">
+                <mat-icon>reply</mat-icon>
+                Send back
+              </button>
+            }
+            @if (mi.status === 'PUBLISHED' && (runs() || approvesMinutes())) {
+              <button mat-stroked-button (click)="addCorrection()">
+                <mat-icon>post_add</mat-icon>
+                Add correction
+              </button>
+            }
+            @if (mi.status === 'PUBLISHED' && m.general && runs() && !mi.announcedNoticeId) {
+              <button mat-stroked-button (click)="announceMinutes()" [disabled]="busy()">
+                <mat-icon>campaign</mat-icon>
+                Post on notice board
+              </button>
+            }
+          </div>
+        } @else if (m.status === 'HELD' && runs()) {
+          <p class="quiet">No minutes yet.</p>
+          <a mat-flat-button [routerLink]="['/meetings', m.id, 'minutes']">
+            <mat-icon>edit_note</mat-icon>
+            Write the minutes
+          </a>
+        } @else {
+          <p class="quiet">
+            {{
+              m.status === 'HELD'
+                ? 'The minutes are being prepared.'
+                : 'Minutes are written after the meeting.'
+            }}
+          </p>
+        }
+      </app-section>
+    </div>
+
+    <div class="side">
+      <app-section title="When and where" padded>
+        <dl>
+          <dt>When</dt>
+          <dd>{{ m.scheduledAt | date: 'EEEE d MMMM y, h:mm a' }}</dd>
+          @if (m.place) {
+            <dt>Place</dt>
+            <dd>{{ m.place }}</dd>
+          }
+          @if (m.onlineLink) {
+            <dt>Online</dt>
+            <dd><a [href]="m.onlineLink" target="_blank" rel="noopener">Join link</a></dd>
+          }
+          @if (m.noticeSentAt) {
+            <dt>Notice</dt>
+            <dd>{{ m.noticeSentAt | date: 'd MMM y' }} by {{ m.noticeSentBy?.name }}</dd>
+          }
+          @if (m.shortNoticeReason) {
+            <dt>Short notice</dt>
+            <dd>{{ m.shortNoticeReason }}</dd>
+          }
+          @if (m.chairperson) {
+            <dt>Chaired by</dt>
+            <dd>{{ m.chairperson.name }}</dd>
+          }
+          @if (m.quorumRequired != null) {
+            <dt>Quorum</dt>
+            <dd>
+              {{ m.quorumPresent }} of {{ m.quorumRequired }} needed ({{
+                m.general ? 'member flats' : 'members'
+              }})
+              @if ((m.quorumPresent ?? 0) >= m.quorumRequired) {
+                <mat-icon class="ok" aria-label="met">check_circle</mat-icon>
+              }
+            </dd>
+          }
+        </dl>
+        @if (m.description) {
+          <p class="description">{{ m.description }}</p>
+        }
+      </app-section>
+
+      @if (m.canRsvp || m.yourRsvp) {
+        <app-section title="Will you attend?" padded>
+          <mat-button-toggle-group
+            [value]="m.yourRsvp"
+            (change)="reply($event.value)"
+            [disabled]="!m.canRsvp || busy()"
+            aria-label="Will you attend?"
+            hideSingleSelectionIndicator
+          >
+            <mat-button-toggle value="YES">Yes</mat-button-toggle>
+            <mat-button-toggle value="MAYBE">Maybe</mat-button-toggle>
+            <mat-button-toggle value="NO">No</mat-button-toggle>
+          </mat-button-toggle-group>
+          <p class="quiet small">
+            A headcount guide for the organisers; attendance is marked on the day.
+          </p>
+        </app-section>
+      }
+
+      @if (m.rsvpCounts; as c) {
+        <app-section title="Replies" padded>
+          <div class="counts">
+            <span
+              ><strong>{{ c.yes }}</strong> yes</span
+            >
+            <span
+              ><strong>{{ c.maybe }}</strong> maybe</span
+            >
+            <span
+              ><strong>{{ c.no }}</strong> no</span
+            >
+          </div>
+        </app-section>
+      }
+    </div>
+  </div>
+}
