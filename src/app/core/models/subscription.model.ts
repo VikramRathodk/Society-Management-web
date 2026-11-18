@@ -27,28 +27,59 @@ export interface Plan {
   code: string;
   name: string;
   description: string | null;
-  pricePerFlatMonthly: number;
-  pricePerFlatYearly: number;
-  minimumMonthly: number;
+  /** The price per society for a period, covering `includedFlats` flats (any number when null). */
+  priceMonthly: number;
+  priceYearly: number;
+  includedFlats: number | null;
+  /** Per flat beyond the included ones, per period. */
+  extraFlatMonthly: number | null;
+  extraFlatYearly: number | null;
+  /** The most flats a society on the plan may have (null: no limit). */
   maxFlats: number | null;
   trialDays: number;
   modules: PlanModule[];
   active: boolean;
   sortOrder: number;
+  /** Shown as "Most popular" (at most one plan). */
+  featured: boolean;
+  /** The recommended plan from this many flats (the highest one not above a society's count). */
+  recommendedFromFlats: number;
 }
 
 export interface PlanRequest {
   code: string;
   name: string;
   description?: string | null;
-  pricePerFlatMonthly: number;
-  pricePerFlatYearly: number;
-  minimumMonthly: number;
+  priceMonthly: number;
+  priceYearly: number;
+  includedFlats?: number | null;
+  extraFlatMonthly?: number | null;
+  extraFlatYearly?: number | null;
   maxFlats?: number | null;
   trialDays: number;
   modules: PlanModule[];
   active: boolean;
   sortOrder: number;
+  featured: boolean;
+  recommendedFromFlats: number;
+}
+
+/** A plan's cost for a flat count (before GST). */
+export interface PlanQuote {
+  plan: Plan;
+  flats: number;
+  extraFlats: number;
+  /** False when the plan allows fewer flats. */
+  fits: boolean;
+  monthly: number;
+  yearly: number;
+  recommended: boolean;
+}
+
+export interface PlanRecommendation {
+  flats: number;
+  recommendedPlanId: number | null;
+  quotes: PlanQuote[];
 }
 
 export interface SubscriptionEvent {
@@ -77,6 +108,8 @@ export interface SocietySubscription {
   discountPercent: number;
   discountPeriodsLeft: number;
   flats: number;
+  /** Flats beyond the ones the next period's plan includes. */
+  extraFlats: number;
   /** One period at today's flat count with the next period's plan (before discount and GST). */
   chargePerPeriod: number;
   cancelledAt: string | null;
@@ -140,8 +173,11 @@ export interface PlatformInvoice {
   societyState: string | null;
   planCode: string;
   flats: number;
-  ratePerFlat: number;
-  minimumCharge: number;
+  /** The plan's price for the period, the flats it covers (null: all), and flats beyond them at a rate. */
+  basePrice: number;
+  includedFlats: number | null;
+  extraFlats: number;
+  extraFlatRate: number | null;
   amount: number;
   discountPercent: number;
   discountAmount: number;

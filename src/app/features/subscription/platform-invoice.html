@@ -89,10 +89,8 @@
             <td>
               {{ inv.summary.planName }} plan, {{ cycleLabel(inv.summary.cycle).toLowerCase() }}
               <span class="note">
-                {{ inv.flats }} flats × {{ inr(inv.ratePerFlat) }}
-                @if (inv.minimumCharge > 0) {
-                  (minimum {{ inr(inv.minimumCharge) }})
-                }
+                {{ inv.flats }} flats{{ inv.includedFlats ? ' (' + inv.includedFlats + ' included)' : '' }}:
+                {{ chargeBreakdown(inv.basePrice, inv.extraFlats, inv.extraFlatRate) }}
               </span>
             </td>
             <td class="num">{{ inr(inv.amount) }}</td>

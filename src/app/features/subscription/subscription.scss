@@ -76,3 +76,19 @@
   margin: 16px 20px 4px;
   font: var(--mat-sys-title-small);
 }
+
+// The recommendation inside the "Plans for your flats" section.
+.padded-notice {
+  flex-wrap: wrap;
+  align-items: center;
+  margin: 4px 20px 16px;
+
+  p {
+    flex: 1 1 240px;
+  }
+}
+
+// A plan too small for the society.
+.rows .row.dim {
+  opacity: 0.6;
+}

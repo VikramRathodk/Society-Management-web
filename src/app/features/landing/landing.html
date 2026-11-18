@@ -8,7 +8,7 @@
       @for (link of navLinks; track link.id) {
         <a [href]="'#' + link.id" (click)="scrollTo(link.id, $event)">{{ link.label }}</a>
       }
-      @if (config.plans.length) {
+      @if (plans().length) {
         <a href="#pricing" (click)="scrollTo('pricing', $event)">Pricing</a>
       }
     </nav>
@@ -211,21 +211,63 @@
     </div>
   </section>
 
-  <!-- Pricing: only once real plans are configured in LANDING.plans -->
-  @if (config.plans.length) {
+  <!-- Pricing: the active plans from the backend (hidden while there are none) -->
+  @if (plans().length) {
     <section id="pricing" class="section tinted">
       <div class="wrap">
         <div class="section-head">
           <p class="eyebrow">Pricing</p>
-          <h2>Simple pricing, by the size of your society.</h2>
+          <h2>One price for your whole society.</h2>
+          <p>No per-resident fees. Pay for the society, with the flats it covers included.</p>
+        </div>
+        <div class="pricing-controls">
+          <label class="flats-box">
+            <span>How many flats in your society?</span>
+            <input
+              type="number"
+              inputmode="numeric"
+              min="1"
+              max="100000"
+              placeholder="e.g. 60"
+              [value]="flats() ?? ''"
+              (input)="setFlats($any($event.target).value)"
+            />
+          </label>
+          <div class="cycle-toggle" role="group" aria-label="Billing cycle">
+            <button type="button" [attr.aria-pressed]="cycle() === 'MONTHLY'" (click)="cycle.set('MONTHLY')">
+              Monthly
+            </button>
+            <button type="button" [attr.aria-pressed]="cycle() === 'YEARLY'" (click)="cycle.set('YEARLY')">
+              Yearly <small>2 months free</small>
+            </button>
+          </div>
         </div>
         <div class="plans">
-          @for (plan of config.plans; track plan.name) {
-            <article class="plan">
+          @for (plan of plans(); track plan.id) {
+            @let q = quotes().get(plan.id);
+            <article
+              class="plan"
+              [class.featured]="plan.featured"
+              [class.recommended]="q?.recommended"
+              [class.too-small]="q && !q.fits"
+            >
+              @if (q?.recommended) {
+                <span class="plan-tag recommended-tag"><mat-icon aria-hidden="true">recommend</mat-icon>Recommended for you</span>
+              } @else if (plan.featured) {
+                <span class="plan-tag"><mat-icon aria-hidden="true">star</mat-icon>Most popular</span>
+              }
               <h3>{{ plan.name }}</h3>
               <p class="price">
                 {{ plan.price }} <small>{{ plan.per }}</small>
               </p>
+              @if (q) {
+                <p class="quote" aria-live="polite">
+                  <strong>{{ q.total }}</strong>
+                  @if (q.breakdown) {
+                    <small>{{ q.breakdown }}</small>
+                  }
+                </p>
+              }
               <p>{{ plan.blurb }}</p>
               <ul class="ticks">
                 @for (point of plan.points; track point) {
@@ -235,12 +277,13 @@
             </article>
           }
         </div>
+        <p class="pricing-note">Prices are per society, before 18% GST. Every paid plan starts with a free trial.</p>
       </div>
     </section>
   }
 
   <!-- FAQ -->
-  <section id="faq" class="section" [class.tinted]="!config.plans.length">
+  <section id="faq" class="section" [class.tinted]="!plans().length">
     <div class="wrap faq-grid">
       <div class="section-head">
         <p class="eyebrow">FAQ</p>

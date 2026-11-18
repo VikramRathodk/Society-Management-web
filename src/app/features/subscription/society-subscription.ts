@@ -9,7 +9,7 @@ import { catchError, forkJoin, map, of } from 'rxjs';
 import { SubscriptionApi } from '../../core/api/subscription.api';
 import { UserApi } from '../../core/api/user.api';
 import { Notifier } from '../../core/notifier';
-import { PlatformInvoiceSummary, SocietySubscription } from '../../core/models';
+import { Plan, PlanRecommendation, PlatformInvoiceSummary, SocietySubscription } from '../../core/models';
 import { SocietyContextStore } from '../../core/society-context/society-context.store';
 import { SubscriptionAccessStore } from '../../core/subscription/subscription-access.store';
 import { EmptyState, PageHeader, Section, Skeleton, StatusPill } from '../../shared/ui';
@@ -19,6 +19,7 @@ import {
   RazorpayCheckout,
   SUBSCRIPTION_STATUS,
   billingContactDialog,
+  chargeBreakdown,
   choosePlanDialog,
   cycleLabel,
   dayLabel,
@@ -55,6 +56,7 @@ export class SocietySubscriptionPage {
   protected readonly cycleLabel = cycleLabel;
   protected readonly modulesLabel = modulesLabel;
   protected readonly eventLabel = eventLabel;
+  protected readonly chargeBreakdown = chargeBreakdown;
   protected readonly invoiceStatus = INVOICE_STATUS;
 
   protected readonly subscription = signal<SocietySubscription | null>(null);
@@ -79,6 +81,34 @@ export class SocietySubscriptionPage {
         .sort((a, b) => a.dueOn.localeCompare(b.dueOn))[0] ?? null,
   );
   protected readonly history = computed(() => [...(this.subscription()?.events ?? [])].reverse());
+
+  /** Every plan's cost at the society's flats today, and the recommended one (hidden if it fails). */
+  protected readonly recommendation = signal<PlanRecommendation | null>(null);
+  /** The plan the next invoice uses. */
+  protected readonly nextPlan = computed(() => {
+    const s = this.subscription();
+    return s ? (s.pendingPlan ?? s.plan) : null;
+  });
+  /** The recommended plan, when it is a step up from the society's (or its plan no longer fits). */
+  protected readonly suggested = computed(() => {
+    const r = this.recommendation();
+    const current = this.nextPlan();
+    if (!r || !current) return null;
+    const rec = r.quotes.find((q) => q.recommended);
+    if (!rec || rec.plan.id === current.id) return null;
+    const mine = r.quotes.find((q) => q.plan.id === current.id);
+    return !mine || !mine.fits || rec.plan.sortOrder > current.sortOrder ? rec : null;
+  });
+
+  protected price(plan: Plan): number {
+    return (this.subscription()?.pendingCycle ?? this.subscription()?.cycle) === 'YEARLY' ? plan.priceYearly : plan.priceMonthly;
+  }
+
+  protected extraRate(plan: Plan): number | null {
+    return (this.subscription()?.pendingCycle ?? this.subscription()?.cycle) === 'YEARLY'
+      ? plan.extraFlatYearly
+      : plan.extraFlatMonthly;
+  }
 
   constructor() {
     effect(() => {
@@ -138,7 +168,8 @@ export class SocietySubscriptionPage {
       );
   }
 
-  protected askForChange(): void {
+  /** Asks the platform for another plan, starting from `planId` (or the current one). */
+  protected askForChange(planId: number | null): void {
     const societyId = this.ctx.selectedSocietyId();
     const s = this.subscription();
     if (societyId == null || !s) return;
@@ -148,7 +179,7 @@ export class SocietySubscriptionPage {
         intro: 'The platform will get in touch. Changes apply from the next billing period.',
         confirmText: 'Send request',
         plans: plans.filter((p) => p.active),
-        planId: s.pendingPlan?.id ?? s.plan.id,
+        planId: planId ?? s.pendingPlan?.id ?? s.plan.id,
         cycle: s.pendingCycle ?? s.cycle,
         withNote: true,
         save: (planId, cycle, note) => this.api.requestChange(societyId, planId, cycle, note),
@@ -161,6 +192,7 @@ export class SocietySubscriptionPage {
 
   private load(societyId: number | null): void {
     this.subscription.set(null);
+    this.recommendation.set(null);
     this.invoices.set([]);
     this.contactName.set(null);
     this.contactEmail.set(null);
@@ -179,6 +211,12 @@ export class SocietySubscriptionPage {
         this.subscription.set(subscription);
         this.invoices.set(invoices);
         this.loading.set(false);
+        this.api.recommendation(societyId).subscribe({
+          next: (r) => {
+            if (this.ctx.selectedSocietyId() === societyId) this.recommendation.set(r);
+          },
+          error: () => this.recommendation.set(null),
+        });
         if (subscription.billingContactId != null) {
           this.userApi.get(subscription.billingContactId).subscribe({
             next: (u) => {

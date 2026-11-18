@@ -1,26 +1,144 @@
 import { DOCUMENT } from '@angular/common';
 import { Component, DestroyRef, afterNextRender, computed, inject, signal } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
+import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { RouterLink } from '@angular/router';
-import { catchError, of } from 'rxjs';
+import { catchError, debounceTime, distinctUntilChanged, of, switchMap } from 'rxjs';
 
 import { OnboardingApi } from '../../core/api/onboarding.api';
+import { SubscriptionApi } from '../../core/api/subscription.api';
+import { Plan, PlanQuote, PlanRecommendation } from '../../core/models';
 import { Avatar, CountUp, Logo, Reveal, StatusPill, motionAllowed } from '../../shared/ui';
 
 /**
  * Sales details. Sections that need them stay hidden until they're filled in, so the page never
- * shows made-up prices or a dead contact link.
+ * shows a dead contact link. Prices come from the plans the platform offers (Billing → Plans).
  */
 export const LANDING = {
   /** e.g. 'hello@yourdomain.in' — shows "Request a demo" in the hero and the closing section. */
   contactEmail: null as string | null,
   /** e.g. '+91 98xxx xxxxx' — shown next to the email. */
   contactPhone: null as string | null,
-  /** Public plans; the pricing section appears once there is at least one. */
-  plans: [] as { name: string; price: string; per: string; blurb: string; points: string[] }[],
 };
+
+/** One pricing card. */
+export interface PricingCard {
+  id: number;
+  name: string;
+  /** "₹699", or "Free". */
+  price: string;
+  /** "/ month", "/ year", or '' for a free plan. */
+  per: string;
+  blurb: string;
+  points: string[];
+  /** "Most popular". */
+  featured: boolean;
+}
+
+export type PricingCycle = 'MONTHLY' | 'YEARLY';
+
+const PAID_MODULE_POINTS: Record<string, string> = {
+  MAINTENANCE: 'Maintenance billing, receipts and dues',
+  FINANCE: 'Accounts, approvals, reports and bank reconciliation',
+  POLICIES: 'Rules and policies with acceptance tracking',
+  GOVERNANCE: 'Meetings, e-voting and minutes',
+};
+
+/** "₹20" for whole rupees, "₹12.50" otherwise. */
+function rupees(amount: number): string {
+  return new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    minimumFractionDigits: Number.isInteger(amount) ? 0 : 2,
+    maximumFractionDigits: 2,
+  }).format(amount);
+}
+
+/**
+ * A plan as the landing page shows it: the society's price a month (or a year), the flats it covers
+ * and what each one beyond costs, what's included, and the fine print.
+ */
+export function pricingCard(plan: Plan, cycle: PricingCycle = 'MONTHLY'): PricingCard {
+  const yearly = cycle === 'YEARLY';
+  const price = yearly ? plan.priceYearly : plan.priceMonthly;
+  const extra = yearly ? plan.extraFlatYearly : plan.extraFlatMonthly;
+  const free = plan.priceMonthly === 0 && plan.priceYearly === 0;
+  const modules = plan.modules.includes('ALL')
+    ? [...Object.values(PAID_MODULE_POINTS), 'Every module we add later']
+    : Object.entries(PAID_MODULE_POINTS)
+        .filter(([m]) => plan.modules.includes(m as Plan['modules'][number]))
+        .map(([, label]) => label);
+
+  const points: string[] = [];
+  const stopsAtIncluded =
+    plan.maxFlats != null && plan.includedFlats != null && plan.maxFlats <= plan.includedFlats;
+  if (plan.maxFlats && (free || stopsAtIncluded)) {
+    points.push(`Up to ${plan.maxFlats} flats`);
+  } else if (plan.includedFlats) {
+    points.push(`Up to ${plan.includedFlats} flats included`);
+    if (extra != null && extra > 0) {
+      points.push(`${rupees(extra)} ${yearly ? 'a year' : 'a month'} for each extra flat`);
+    }
+    if (plan.maxFlats) points.push(`At most ${plan.maxFlats} flats`);
+  } else {
+    points.push('Any number of flats');
+  }
+  points.push('Visitors, notices, complaints and residents', ...modules);
+  if (!free && !yearly && plan.priceMonthly > 0) {
+    const saved = 12 - plan.priceYearly / plan.priceMonthly;
+    points.push(
+      saved >= 1 && Number.isInteger(saved)
+        ? `Yearly: ${rupees(plan.priceYearly)} (${saved} month${saved === 1 ? '' : 's'} free)`
+        : `Yearly: ${rupees(plan.priceYearly)}`,
+    );
+  }
+
+  const fine = [
+    plan.trialDays > 0 ? `${plan.trialDays}-day free trial` : null,
+    free ? 'Free for good' : '+ 18% GST',
+  ].filter((x): x is string => !!x);
+  return {
+    id: plan.id,
+    name: plan.name,
+    price: free ? 'Free' : rupees(price),
+    per: free ? '' : yearly ? '/ year' : '/ month',
+    blurb: [plan.description, fine.join(' · ')].filter((x) => !!x).join(' — '),
+    points,
+    featured: plan.featured,
+  };
+}
+
+/** What a plan costs a society of the size typed in, as its card shows it. */
+export interface CardQuote {
+  /** "₹795 / month for your 58 flats" */
+  total: string;
+  /** "₹699 + 8 extra flats × ₹12" when there are extra flats. */
+  breakdown: string | null;
+  fits: boolean;
+  recommended: boolean;
+}
+
+export function cardQuote(q: PlanQuote, cycle: PricingCycle): CardQuote {
+  const yearly = cycle === 'YEARLY';
+  const total = yearly ? q.yearly : q.monthly;
+  const price = yearly ? q.plan.priceYearly : q.plan.priceMonthly;
+  const extra = yearly ? q.plan.extraFlatYearly : q.plan.extraFlatMonthly;
+  const flats = `${q.flats} flat${q.flats === 1 ? '' : 's'}`;
+  return {
+    total: !q.fits
+      ? `Too small for ${flats}`
+      : total === 0
+        ? `Free for your ${flats}`
+        : `${rupees(total)} ${yearly ? '/ year' : '/ month'} for your ${flats}`,
+    breakdown:
+      q.fits && q.extraFlats > 0 && extra != null
+        ? `${rupees(price)} + ${q.extraFlats} extra flat${q.extraFlats === 1 ? '' : 's'} × ${rupees(extra)}`
+        : null,
+    fits: q.fits,
+    recommended: q.recommended,
+  };
+}
 
 /** The hero's product picture: the dashboard and gate board in miniature, with sample data. */
 @Component({
@@ -2045,6 +2163,46 @@ export class Landing {
       .pipe(catchError(() => of(false))),
     { initialValue: false },
   );
+
+  private readonly subscriptionApi = inject(SubscriptionApi);
+
+  /** The plans on offer; the pricing section and its nav link show once there is one. */
+  private readonly offered = toSignal(
+    this.subscriptionApi.publicPlans().pipe(catchError(() => of([] as Plan[]))),
+    { initialValue: [] as Plan[] },
+  );
+  /** Prices a month or a year. */
+  protected readonly cycle = signal<PricingCycle>('MONTHLY');
+  protected readonly plans = computed(() => this.offered().map((p) => pricingCard(p, this.cycle())));
+
+  /** "How many flats?": what each plan costs for that many, and the one recommended. */
+  protected readonly flats = signal<number | null>(null);
+  private readonly recommendation = toSignal(
+    toObservable(this.flats).pipe(
+      debounceTime(300),
+      distinctUntilChanged(),
+      switchMap((flats) =>
+        flats == null
+          ? of(null)
+          : this.subscriptionApi.quote(flats).pipe(catchError(() => of(null as PlanRecommendation | null))),
+      ),
+    ),
+    { initialValue: null as PlanRecommendation | null },
+  );
+  /** Each card's quote, by plan id (empty until a flat count is typed). */
+  protected readonly quotes = computed(() => {
+    const r = this.recommendation();
+    const byPlan = new Map<number, CardQuote>();
+    if (r && r.flats === this.flats()) {
+      r.quotes.forEach((q) => byPlan.set(q.plan.id, cardQuote(q, this.cycle())));
+    }
+    return byPlan;
+  });
+
+  protected setFlats(value: string): void {
+    const n = Math.floor(Number(value));
+    this.flats.set(value.trim() !== '' && Number.isFinite(n) && n >= 1 && n <= 100_000 ? n : null);
+  }
 
   protected readonly config = LANDING;
   protected readonly year = new Date().getFullYear();

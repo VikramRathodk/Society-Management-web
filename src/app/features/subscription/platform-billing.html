@@ -155,7 +155,10 @@
         }
         <div class="plans">
           @for (p of plans(); track p.id) {
-            <app-section [title]="p.name" [subtitle]="p.code + (p.active ? '' : ' · not offered')">
+            <app-section
+              [title]="p.name"
+              [subtitle]="p.code + (p.featured ? ' · ★ Most popular' : '') + (p.active ? '' : ' · not offered')"
+            >
               <dl class="facts padded">
                 <dt>Monthly</dt>
                 <dd>{{ priceLabel(p) }}</dd>
@@ -166,9 +169,11 @@
                 <dt>Trial</dt>
                 <dd>{{ p.trialDays ? p.trialDays + ' days' : 'None' }}</dd>
                 @if (p.maxFlats) {
-                  <dt>Up to</dt>
+                  <dt>Limit</dt>
                   <dd>{{ p.maxFlats }} flats</dd>
                 }
+                <dt>Recommended</dt>
+                <dd>From {{ p.recommendedFromFlats }} flat{{ p.recommendedFromFlats === 1 ? '' : 's' }}</dd>
               </dl>
               @if (access.platformUpdate()) {
                 <div class="padded">

@@ -3,7 +3,7 @@
     <app-status-pill headerMeta [tone]="s.tone">{{ s.label }}</app-status-pill>
   }
   @if (subscription() && canUpdate() && subscription()!.status !== 'CANCELLED') {
-    <button mat-stroked-button (click)="askForChange()">
+    <button mat-stroked-button (click)="askForChange(null)">
       <mat-icon>swap_vert</mat-icon>
       Ask for another plan
     </button>
@@ -57,9 +57,24 @@
           <dt>Billed</dt>
           <dd>{{ cycleLabel(s.cycle) }}</dd>
           <dt>Flats</dt>
-          <dd>{{ s.flats }}</dd>
+          <dd>
+            {{ s.flats }}
+            @if (nextPlan()?.maxFlats; as max) {
+              <span [class.danger-text]="s.flats >= max" [class.muted]="s.flats < max">
+                of {{ max }} allowed{{ s.flats >= max ? ' — upgrade to add more' : '' }}
+              </span>
+            }
+          </dd>
           <dt>Each period</dt>
-          <dd>{{ inr(s.chargePerPeriod) }} <span class="muted">before discount and GST</span></dd>
+          <dd>
+            {{ inr(s.chargePerPeriod) }}
+            @if (s.extraFlats > 0 && nextPlan(); as p) {
+              <span class="muted">
+                ({{ chargeBreakdown(price(p), s.extraFlats, extraRate(p)) }})
+              </span>
+            }
+            <span class="muted">+ GST, before any discount</span>
+          </dd>
           <dt>This period</dt>
           <dd>{{ periodLabel(s.currentPeriodStart, s.currentPeriodEnd) }}</dd>
           <dt>Next invoice</dt>
@@ -74,6 +89,52 @@
           }
         </dl>
       </app-section>
+
+      @if (recommendation(); as r) {
+        <app-section [title]="'Plans for your ' + r.flats + ' flat' + (r.flats === 1 ? '' : 's')" subtitle="Monthly, before GST">
+          @if (suggested(); as q) {
+            <div class="notice padded-notice" role="status">
+              <mat-icon>recommend</mat-icon>
+              <p>
+                <strong>{{ q.plan.name }}</strong> fits your society best: {{ inr(q.monthly) }} a month
+                @if (q.extraFlats > 0) {
+                  ({{ chargeBreakdown(q.plan.priceMonthly, q.extraFlats, q.plan.extraFlatMonthly) }})
+                }
+                + GST.
+              </p>
+              @if (canUpdate() && s.status !== 'CANCELLED') {
+                <button mat-flat-button (click)="askForChange(q.plan.id)">Ask for {{ q.plan.name }}</button>
+              }
+            </div>
+          }
+          <div class="rows">
+            @for (q of r.quotes; track q.plan.id) {
+              <div class="row" [class.dim]="!q.fits">
+                <span class="main">
+                  <span class="title">
+                    {{ q.plan.name }}
+                    @if (q.plan.featured) {
+                      <app-status-pill tone="primary">★ Most popular</app-status-pill>
+                    }
+                    @if (q.recommended) {
+                      <app-status-pill tone="success">Recommended</app-status-pill>
+                    }
+                    @if (q.plan.id === (s.pendingPlan ?? s.plan).id) {
+                      <app-status-pill tone="neutral">Your plan</app-status-pill>
+                    }
+                  </span>
+                  <span class="meta">
+                    {{ q.fits ? modulesLabel(q.plan.modules) : 'Up to ' + q.plan.maxFlats + ' flats — too small for your society' }}
+                  </span>
+                </span>
+                <span class="side">
+                  <span class="amount">{{ q.fits ? inr(q.monthly) : '—' }}</span>
+                </span>
+              </div>
+            }
+          </div>
+        </app-section>
+      }
 
       <app-section title="Invoices">
         @if (invoices().length === 0) {

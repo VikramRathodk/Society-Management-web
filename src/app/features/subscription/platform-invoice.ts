@@ -16,6 +16,7 @@ import {
   INVOICE_STATUS,
   RazorpayCheckout,
   amountDialog,
+  chargeBreakdown,
   cycleLabel,
   dayLabel,
   inr,
@@ -51,6 +52,7 @@ export class PlatformInvoicePage {
   protected readonly periodLabel = periodLabel;
   protected readonly cycleLabel = cycleLabel;
   protected readonly modeLabel = modeLabel;
+  protected readonly chargeBreakdown = chargeBreakdown;
 
   protected readonly invoice = signal<PlatformInvoice | null>(null);
   protected readonly loading = signal(true);

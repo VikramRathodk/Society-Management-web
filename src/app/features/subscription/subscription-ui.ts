@@ -107,12 +107,23 @@ export function eventLabel(kind: SubscriptionEventKind): string {
   return EVENT_LABELS[kind] ?? kind;
 }
 
-/** "₹20.00 a flat a month, at least ₹1,000.00". */
+/** "₹699.00 a month for up to 50 flats, then ₹12.00 a flat"; "Free, up to 15 flats". */
 export function priceLabel(plan: Plan, cycle: SubscriptionCycle = 'MONTHLY'): string {
-  if (cycle === 'YEARLY') {
-    return `${inr(plan.pricePerFlatYearly)} a flat a year, at least ${inr(plan.minimumMonthly * 12)}`;
-  }
-  return `${inr(plan.pricePerFlatMonthly)} a flat a month, at least ${inr(plan.minimumMonthly)}`;
+  const yearly = cycle === 'YEARLY';
+  const price = yearly ? plan.priceYearly : plan.priceMonthly;
+  const extra = yearly ? plan.extraFlatYearly : plan.extraFlatMonthly;
+  const per = yearly ? 'a year' : 'a month';
+  if (price === 0 && plan.maxFlats) return `Free, up to ${plan.maxFlats} flats`;
+  if (!plan.includedFlats) return `${inr(price)} ${per}, any number of flats`;
+  const base = `${inr(price)} ${per} for up to ${plan.includedFlats} flats`;
+  if (plan.maxFlats != null && plan.maxFlats <= plan.includedFlats) return base;
+  return extra != null ? `${base}, then ${inr(extra)} a flat` : base;
+}
+
+/** "₹699.00 + 8 extra flats × ₹12.00" for a period's charge (empty extras: just the price). */
+export function chargeBreakdown(basePrice: number, extraFlats: number, extraRate: number | null): string {
+  if (!extraFlats || extraRate == null) return inr(basePrice);
+  return `${inr(basePrice)} + ${extraFlats} extra flat${extraFlats === 1 ? '' : 's'} × ${inr(extraRate)}`;
 }
 
 /** Who may do what with platform billing. */
@@ -275,6 +286,12 @@ const DIALOG_STYLES = `
 `;
 
 const MONEY = [Validators.required, Validators.min(0), Validators.pattern(/^\d+(\.\d{1,2})?$/)];
+const OPTIONAL_MONEY = [Validators.min(0), Validators.pattern(/^\d+(\.\d{1,2})?$/)];
+
+/** An empty number field is null (not 0). */
+function optionalNumber(value: number | string | null): number | null {
+  return value === null || value === '' ? null : Number(value);
+}
 
 // ---- Plan (platform) ----
 
@@ -309,22 +326,40 @@ const MONEY = [Validators.required, Validators.min(0), Validators.pattern(/^\d+(
         </mat-form-field>
         <div class="row">
           <mat-form-field appearance="outline">
-            <mat-label>₹ a flat a month</mat-label>
-            <input matInput type="number" min="0" step="0.01" formControlName="pricePerFlatMonthly" />
+            <mat-label>₹ a month (the society)</mat-label>
+            <input matInput type="number" min="0" step="0.01" formControlName="priceMonthly" />
           </mat-form-field>
           <mat-form-field appearance="outline">
-            <mat-label>₹ a flat a year</mat-label>
-            <input matInput type="number" min="0" step="0.01" formControlName="pricePerFlatYearly" />
+            <mat-label>₹ a year (the society)</mat-label>
+            <input matInput type="number" min="0" step="0.01" formControlName="priceYearly" />
           </mat-form-field>
           <mat-form-field appearance="outline">
-            <mat-label>Minimum ₹ a month</mat-label>
-            <input matInput type="number" min="0" step="0.01" formControlName="minimumMonthly" />
+            <mat-label>Flats included (empty: any)</mat-label>
+            <input matInput type="number" min="1" formControlName="includedFlats" />
           </mat-form-field>
         </div>
         <div class="row">
           <mat-form-field appearance="outline">
+            <mat-label>₹ per extra flat a month</mat-label>
+            <input matInput type="number" min="0" step="0.01" formControlName="extraFlatMonthly" />
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>₹ per extra flat a year</mat-label>
+            <input matInput type="number" min="0" step="0.01" formControlName="extraFlatYearly" />
+          </mat-form-field>
+          <mat-form-field appearance="outline">
             <mat-label>Max flats (empty: no limit)</mat-label>
             <input matInput type="number" min="1" formControlName="maxFlats" />
+          </mat-form-field>
+        </div>
+        <p class="hint">
+          A society pays the plan's price for up to the included flats, plus each flat beyond them at the
+          extra-flat rate. A plan that stops at its included flats needs no extra-flat rate (set max flats).
+        </p>
+        <div class="row">
+          <mat-form-field appearance="outline">
+            <mat-label>Recommended from (flats)</mat-label>
+            <input matInput type="number" min="1" formControlName="recommendedFromFlats" />
           </mat-form-field>
           <mat-form-field appearance="outline">
             <mat-label>Trial days</mat-label>
@@ -347,7 +382,10 @@ const MONEY = [Validators.required, Validators.min(0), Validators.pattern(/^\d+(
           Sign-in, structure, residents, visitors, notices and complaints are in every plan. New prices
           apply to invoices issued from now on.
         </p>
-        <mat-checkbox formControlName="active">Offered to societies</mat-checkbox>
+        <div class="modules">
+          <mat-checkbox formControlName="active">Offered to societies</mat-checkbox>
+          <mat-checkbox formControlName="featured">Featured as "Most popular" (takes it off the other plan)</mat-checkbox>
+        </div>
         @if (error(); as message) {
           <p class="dialog-error" role="alert">{{ message }}</p>
         }
@@ -373,13 +411,17 @@ export class PlanDialog {
     code: [this.data?.code ?? '', [Validators.required, Validators.pattern(/^[A-Za-z][A-Za-z0-9_]{1,29}$/)]],
     name: [this.data?.name ?? '', Validators.required],
     description: [this.data?.description ?? ''],
-    pricePerFlatMonthly: [this.data?.pricePerFlatMonthly ?? (null as number | null), MONEY],
-    pricePerFlatYearly: [this.data?.pricePerFlatYearly ?? (null as number | null), MONEY],
-    minimumMonthly: [this.data?.minimumMonthly ?? 0, MONEY],
+    priceMonthly: [this.data?.priceMonthly ?? (null as number | null), MONEY],
+    priceYearly: [this.data?.priceYearly ?? (null as number | null), MONEY],
+    includedFlats: [this.data?.includedFlats ?? (null as number | null), Validators.min(1)],
+    extraFlatMonthly: [this.data?.extraFlatMonthly ?? (null as number | null), OPTIONAL_MONEY],
+    extraFlatYearly: [this.data?.extraFlatYearly ?? (null as number | null), OPTIONAL_MONEY],
     maxFlats: [this.data?.maxFlats ?? (null as number | null), Validators.min(1)],
+    recommendedFromFlats: [this.data?.recommendedFromFlats ?? 1, [Validators.required, Validators.min(1)]],
     trialDays: [this.data?.trialDays ?? 30, [Validators.required, Validators.min(0), Validators.max(365)]],
     sortOrder: [this.data?.sortOrder ?? 0],
     active: [this.data?.active ?? true],
+    featured: [this.data?.featured ?? false],
   });
   protected readonly saving = signal(false);
   protected readonly error = signal<string | null>(null);
@@ -401,14 +443,18 @@ export class PlanDialog {
       code: v.code.trim().toUpperCase(),
       name: v.name.trim(),
       description: v.description.trim() || null,
-      pricePerFlatMonthly: Number(v.pricePerFlatMonthly),
-      pricePerFlatYearly: Number(v.pricePerFlatYearly),
-      minimumMonthly: Number(v.minimumMonthly),
+      priceMonthly: Number(v.priceMonthly),
+      priceYearly: Number(v.priceYearly),
+      includedFlats: v.includedFlats ? Number(v.includedFlats) : null,
+      extraFlatMonthly: optionalNumber(v.extraFlatMonthly),
+      extraFlatYearly: optionalNumber(v.extraFlatYearly),
       maxFlats: v.maxFlats ? Number(v.maxFlats) : null,
+      recommendedFromFlats: Number(v.recommendedFromFlats) || 1,
       trialDays: Number(v.trialDays),
       modules: [...this.selected()],
       active: v.active,
       sortOrder: Number(v.sortOrder) || 0,
+      featured: v.featured,
     };
     this.saving.set(true);
     this.error.set(null);

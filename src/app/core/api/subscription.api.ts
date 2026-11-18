@@ -8,6 +8,7 @@ import {
   BillingRunResult,
   CheckoutOrder,
   Plan,
+  PlanRecommendation,
   PlanRequest,
   PlatformInvoice,
   PlatformInvoiceStatus,
@@ -24,6 +25,26 @@ export class SubscriptionApi {
   private readonly api = `${environment.apiBaseUrl}/api`;
 
   // ---- Plans ----
+
+  /** The plans on offer, without sign-in (the landing page). Errors leave pricing hidden. */
+  publicPlans() {
+    return this.http.get<Plan[]>(`${this.api}/public/plans`, { context: inlineErrors() });
+  }
+
+  /** Every plan's cost for a flat count and the recommended one, without sign-in. Errors are shown inline. */
+  quote(flats: number) {
+    return this.http.get<PlanRecommendation>(`${this.api}/public/plans/quote`, {
+      params: { flats },
+      context: inlineErrors(),
+    });
+  }
+
+  /** The society's recommendation at its flat count today. Errors leave it hidden. */
+  recommendation(societyId: number) {
+    return this.http.get<PlanRecommendation>(`${this.api}/societies/${societyId}/subscription/recommendation`, {
+      context: inlineErrors(),
+    });
+  }
 
   plans() {
     return this.http.get<Plan[]>(`${this.api}/plans`);
