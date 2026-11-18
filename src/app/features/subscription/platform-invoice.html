@@ -1,0 +1,206 @@
+<app-page-header
+  class="no-print"
+  [title]="invoice() ? 'Invoice ' + invoice()!.summary.number : 'Invoice'"
+  [subtitle]="invoice()?.summary?.societyName ?? null"
+  [back]="back()"
+  backLabel="Back"
+>
+  @if (status(); as s) {
+    <app-status-pill headerMeta [tone]="s.tone">{{ s.label }}</app-status-pill>
+  }
+  @if (invoice() && access.platformUpdate() && invoice()!.summary.balance > 0) {
+    <button mat-stroked-button (click)="creditNote()">
+      <mat-icon>remove_circle_outline</mat-icon>
+      Credit note
+    </button>
+    <button mat-stroked-button (click)="recordPayment()">
+      <mat-icon>add_card</mat-icon>
+      Record payment
+    </button>
+  }
+  @if (invoice()) {
+    <button mat-stroked-button (click)="print()">
+      <mat-icon>print</mat-icon>
+      Print
+    </button>
+  }
+  @if (canPay()) {
+    <button mat-flat-button (click)="pay()" [disabled]="paying()">
+      <mat-icon>payments</mat-icon>
+      {{ paying() ? 'Opening…' : 'Pay ' + inr(invoice()!.summary.balance) }}
+    </button>
+  }
+</app-page-header>
+
+@if (loading() && !invoice()) {
+  <app-skeleton variant="form" />
+} @else if (loadError() === 'missing') {
+  <app-empty-state icon="search_off" message="This invoice doesn't exist or isn't yours to see." />
+} @else if (loadError() === 'failed') {
+  <app-empty-state icon="cloud_off" message="Couldn't load the invoice.">
+    <button mat-stroked-button (click)="retry()">Try again</button>
+  </app-empty-state>
+} @else if (invoice(); as inv) {
+  <app-section class="receipt">
+    <div class="receipt-head">
+      <div>
+        <p class="eyebrow">{{ inv.seller.gstin ? 'Tax invoice' : 'Invoice' }}</p>
+        <h2>{{ inv.seller.legalName }}</h2>
+        @if (inv.seller.address) {
+          <p class="muted addr">{{ inv.seller.address }}</p>
+        }
+        @if (inv.seller.gstin) {
+          <p class="muted addr">GSTIN {{ inv.seller.gstin }}{{ inv.seller.state ? ' · ' + inv.seller.state : '' }}</p>
+        }
+      </div>
+      <div class="receipt-no">
+        <span class="muted">Invoice</span>
+        <strong>{{ inv.summary.number }}</strong>
+        <span class="muted">Issued {{ dayLabel(inv.summary.issuedOn) }}</span>
+        <span class="muted">Due {{ dayLabel(inv.summary.dueOn) }}</span>
+      </div>
+    </div>
+
+    <dl class="facts receipt-facts billed">
+      <dt>Billed to</dt>
+      <dd>
+        <strong>{{ inv.summary.societyName }}</strong>
+        @if (inv.societyAddress) {
+          <br />{{ inv.societyAddress }}
+        }
+        @if (inv.societyState) {
+          <br />{{ inv.societyState }}
+        }
+      </dd>
+      <dt>Period</dt>
+      <dd>{{ periodLabel(inv.summary.periodStart, inv.summary.periodEnd) }}</dd>
+    </dl>
+
+    <div class="table-scroll">
+      <table class="grid">
+        <thead>
+          <tr>
+            <th>Description</th>
+            <th class="num">Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>
+              {{ inv.summary.planName }} plan, {{ cycleLabel(inv.summary.cycle).toLowerCase() }}
+              <span class="note">
+                {{ inv.flats }} flats{{ inv.includedFlats ? ' (' + inv.includedFlats + ' included)' : '' }}:
+                {{ chargeBreakdown(inv.basePrice, inv.extraFlats, inv.extraFlatRate) }}
+              </span>
+            </td>
+            <td class="num">{{ inr(inv.amount) }}</td>
+          </tr>
+          @if (inv.discountAmount > 0) {
+            <tr>
+              <td>Discount {{ inv.discountPercent }}%</td>
+              <td class="num">−{{ inr(inv.discountAmount) }}</td>
+            </tr>
+          }
+          <tr>
+            <td>Taxable value</td>
+            <td class="num">{{ inr(inv.taxableValue) }}</td>
+          </tr>
+          @if (inv.cgst > 0) {
+            <tr>
+              <td>CGST {{ inv.gstPercent / 2 }}%</td>
+              <td class="num">{{ inr(inv.cgst) }}</td>
+            </tr>
+            <tr>
+              <td>SGST {{ inv.gstPercent / 2 }}%</td>
+              <td class="num">{{ inr(inv.sgst) }}</td>
+            </tr>
+          }
+          @if (inv.igst > 0) {
+            <tr>
+              <td>IGST {{ inv.gstPercent }}%</td>
+              <td class="num">{{ inr(inv.igst) }}</td>
+            </tr>
+          }
+          @if (!inv.seller.gstin) {
+            <tr>
+              <td class="muted" colspan="2">No GST charged (the platform is not GST-registered).</td>
+            </tr>
+          }
+        </tbody>
+        <tfoot>
+          <tr>
+            <td>Total</td>
+            <td class="num">{{ inr(inv.total) }}</td>
+          </tr>
+          @if (inv.paidAmount > 0) {
+            <tr>
+              <td>Paid</td>
+              <td class="num">−{{ inr(inv.paidAmount) }}</td>
+            </tr>
+          }
+          @if (inv.creditedAmount > 0) {
+            <tr>
+              <td>Credit notes</td>
+              <td class="num">−{{ inr(inv.creditedAmount) }}</td>
+            </tr>
+          }
+          <tr>
+            <td>To pay</td>
+            <td class="num">{{ inr(inv.summary.balance) }}</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+
+    @if (inv.payments.length) {
+      <h3 class="sub">Receipts</h3>
+      <div class="table-scroll">
+        <table class="grid">
+          <thead>
+            <tr>
+              <th>Receipt</th>
+              <th>Paid on</th>
+              <th>Mode</th>
+              <th class="num">Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (p of inv.payments; track p.id) {
+              <tr>
+                <td>
+                  {{ p.receiptNumber }}
+                  @if (p.reference) {
+                    <span class="note">{{ p.reference }}</span>
+                  }
+                </td>
+                <td>{{ dayLabel(p.paidOn) }}</td>
+                <td>{{ modeLabel(p.mode) }}</td>
+                <td class="num">{{ inr(p.amount) }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+
+    @if (inv.creditNotes.length) {
+      <h3 class="sub">Credit notes</h3>
+      <div class="table-scroll">
+        <table class="grid">
+          <tbody>
+            @for (c of inv.creditNotes; track c.id) {
+              <tr>
+                <td>
+                  {{ c.number }}
+                  <span class="note">{{ c.reason }}</span>
+                </td>
+                <td>{{ dayLabel(c.createdAt.substring(0, 10)) }}</td>
+                <td class="num">{{ inr(c.amount) }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </app-section>
+}

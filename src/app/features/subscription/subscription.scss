@@ -1,0 +1,94 @@
+// Subscription and billing pages (with ../maintenance/maintenance.scss for rows, facts, notices and grids).
+
+.padded {
+  padding: 4px 20px 20px;
+}
+
+// Rows inside a section (no outer card border; the section is the card).
+.rows .row {
+  border-top: 1px solid var(--mat-sys-surface-container-high);
+
+  a.main {
+    color: inherit;
+    text-decoration: none;
+
+    &:hover .title,
+    &:focus-visible .title {
+      color: var(--mat-sys-primary);
+    }
+  }
+}
+
+.contact {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+
+  p {
+    margin: 0;
+  }
+}
+
+.history {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+  list-style: none;
+
+  li {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .title {
+    font: var(--mat-sys-title-small);
+  }
+
+  .meta {
+    color: var(--mat-sys-on-surface-variant);
+    font: var(--mat-sys-body-small);
+  }
+}
+
+.plans {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+}
+
+.tab-body {
+  padding-top: 16px;
+}
+
+.addr {
+  margin: 2px 0 0;
+  font: var(--mat-sys-body-small);
+}
+
+.billed {
+  padding-top: 16px;
+}
+
+.sub {
+  margin: 16px 20px 4px;
+  font: var(--mat-sys-title-small);
+}
+
+// The recommendation inside the "Plans for your flats" section.
+.padded-notice {
+  flex-wrap: wrap;
+  align-items: center;
+  margin: 4px 20px 16px;
+
+  p {
+    flex: 1 1 240px;
+  }
+}
+
+// A plan too small for the society.
+.rows .row.dim {
+  opacity: 0.6;
+}

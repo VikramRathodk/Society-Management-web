@@ -252,6 +252,130 @@
   }
 }
 
+.pricing-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.flats-box {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font: var(--mat-sys-title-small);
+
+  input {
+    width: min(100%, 220px);
+    padding: 10px 14px;
+    border: 1px solid var(--mat-sys-outline-variant);
+    border-radius: 12px;
+    background: var(--mat-sys-surface-container-lowest);
+    color: var(--mat-sys-on-surface);
+    font: var(--mat-sys-body-large);
+
+    &:focus-visible {
+      outline: 2px solid var(--mat-sys-primary);
+      outline-offset: 1px;
+    }
+  }
+}
+
+.cycle-toggle {
+  display: inline-flex;
+  padding: 4px;
+  border-radius: 999px;
+  background: var(--mat-sys-surface-container-high);
+
+  button {
+    padding: 8px 16px;
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    color: var(--mat-sys-on-surface-variant);
+    font: var(--mat-sys-label-large);
+    cursor: pointer;
+
+    small {
+      margin-left: 4px;
+      color: var(--app-success);
+      font-weight: 600;
+    }
+
+    &[aria-pressed='true'] {
+      background: var(--mat-sys-surface-container-lowest);
+      color: var(--mat-sys-on-surface);
+      box-shadow: var(--app-card-shadow);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--mat-sys-primary);
+    }
+  }
+}
+
+.plan {
+  position: relative;
+
+  &.featured {
+    border: 2px solid var(--mat-sys-primary);
+  }
+
+  &.recommended {
+    border: 2px solid var(--app-success);
+  }
+
+  &.too-small {
+    opacity: 0.6;
+  }
+}
+
+.plan-tag {
+  display: inline-flex;
+  align-self: flex-start;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--mat-sys-primary-container);
+  color: var(--mat-sys-on-primary-container);
+  font: var(--mat-sys-label-medium);
+
+  mat-icon {
+    width: 16px;
+    height: 16px;
+    font-size: 16px;
+  }
+
+  &.recommended-tag {
+    background: var(--app-success-container, var(--mat-sys-secondary-container));
+    color: var(--app-success);
+  }
+}
+
+.quote {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: var(--mat-sys-surface-container-high);
+
+  small {
+    color: var(--mat-sys-on-surface-variant);
+  }
+}
+
+.pricing-note {
+  margin: 20px 0 0;
+  color: var(--mat-sys-on-surface-variant);
+  font: var(--mat-sys-body-small);
+  text-align: center;
+}
+
 // ---- FAQ ----
 
 .faq-grid {

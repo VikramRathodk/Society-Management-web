@@ -4,13 +4,14 @@ import {
   HttpErrorResponse,
   HttpInterceptorFn,
 } from '@angular/common/http';
-import { inject } from '@angular/core';
+import { Injector, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { catchError, throwError } from 'rxjs';
 
 import { ErrorResponse } from '../models';
 import { Notifier } from '../notifier';
 import { PushService } from '../push';
+import { SubscriptionAccessStore } from '../subscription/subscription-access.store';
 import { AuthStore } from './auth.store';
 
 /** Set on requests whose caller shows every error inline, so no snackbar is raised (401 still logs out). */
@@ -25,10 +26,15 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
   const router = inject(Router);
   const notifier = inject(Notifier);
   const push = inject(PushService);
+  const injector = inject(Injector);
   return next(req).pipe(
     catchError((err: HttpErrorResponse) => {
       // The login form shows its own errors inline.
       if (req.url.includes('/api/auth/')) return throwError(() => err);
+
+      // 402: the plan doesn't include this, or the subscription was just suspended — refresh what
+      // the app shows (hidden modules, the banner). Looked up lazily: the store itself uses HttpClient.
+      if (err.status === 402) injector.get(SubscriptionAccessStore).refresh();
 
       if (err.status === 401) {
         void push.forget();
