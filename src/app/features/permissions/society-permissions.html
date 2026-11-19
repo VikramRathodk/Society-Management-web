@@ -1,0 +1,170 @@
+<app-page-header
+  title="Roles & permissions"
+  subtitle="What each role may do in this society, on top of the platform default"
+/>
+
+@if (societyId() == null) {
+  <app-empty-state icon="apartment" message="Choose a society first." />
+} @else if (loading()) {
+  <app-skeleton variant="form" />
+} @else {
+  <mat-tab-group mat-stretch-tabs="false" animationDuration="0ms">
+    <mat-tab label="Roles">
+      <div class="tab">
+        <mat-button-toggle-group
+          class="role-picker"
+          [value]="selectedCode()"
+          (change)="pickRole($event.value)"
+          aria-label="Role"
+          hideSingleSelectionIndicator
+        >
+          @for (r of roles(); track r.role) {
+            <mat-button-toggle [value]="r.role">
+              {{ r.roleName }}
+              @if (changeCount(r)) {
+                <span class="badge" [matTooltip]="changeCount(r) + ' change(s) in this society'">
+                  {{ changeCount(r) }}
+                </span>
+              }
+            </mat-button-toggle>
+          }
+        </mat-button-toggle-group>
+
+        @if (role(); as r) {
+          <div class="role-header">
+            <div>
+              <h2>{{ r.roleName }}</h2>
+              <p class="muted">
+                {{ r.effective.length }} permissions here
+                @if (r.granted.length) {
+                  · <span class="added">{{ r.granted.length }} added</span>
+                }
+                @if (r.revoked.length) {
+                  · <span class="removed">{{ r.revoked.length }} removed</span>
+                }
+                @if (!r.granted.length && !r.revoked.length) {
+                  · platform default
+                }
+              </p>
+            </div>
+            @if (r.editable && (r.granted.length || r.revoked.length)) {
+              <button mat-stroked-button (click)="reset()">
+                <mat-icon>restart_alt</mat-icon>
+                Reset role
+              </button>
+            }
+          </div>
+
+          @if (!r.editable) {
+            <p class="note">
+              <mat-icon>lock</mat-icon>
+              @if (canEdit()) {
+                You can change only roles below your own.
+              } @else {
+                You can see these permissions but not change them.
+              }
+            </p>
+          } @else {
+            <p class="note muted">
+              Changes apply to this role only — roles above it keep the default. Boxes you can't
+              tick are permissions you don't have yourself.
+            </p>
+          }
+
+          <app-society-permission-matrix
+            [catalog]="catalog()"
+            [base]="base()"
+            [draft]="draft()"
+            [readonly]="!r.editable"
+            baseLabel="platform default"
+            (toggled)="toggle($event)"
+          />
+
+          @if (dirty()) {
+            <div class="save-bar" role="region" aria-label="Unsaved permission changes">
+              <mat-form-field appearance="outline" subscriptSizing="dynamic" class="reason">
+                <mat-label>Reason (optional)</mat-label>
+                <input
+                  matInput
+                  [ngModel]="reason()"
+                  (ngModelChange)="reason.set($event)"
+                  maxlength="500"
+                />
+              </mat-form-field>
+              <button mat-button (click)="discard()">Discard</button>
+              <button mat-flat-button (click)="save()" [disabled]="saving()">
+                Save {{ r.roleName }}
+              </button>
+            </div>
+          }
+        } @else {
+          <app-empty-state icon="admin_panel_settings" message="No society roles to show." />
+        }
+      </div>
+    </mat-tab>
+
+    <mat-tab label="Presets">
+      <div class="tab">
+        <app-section
+          title="Presets"
+          subtitle="Ready-made sets of changes to apply to a person, like “Treasurer”"
+        >
+          @if (canEdit()) {
+            <button sectionActions mat-button (click)="editPreset()">
+              <mat-icon>add</mat-icon>
+              New preset
+            </button>
+          }
+          @for (p of presets(); track p.id) {
+            <div class="preset">
+              <div class="preset-text">
+                <div class="preset-name">{{ p.name }}</div>
+                @if (p.description) {
+                  <div class="muted">{{ p.description }}</div>
+                }
+                <div class="pills">
+                  @for (c of p.grant; track c) {
+                    <app-status-pill tone="success" icon="add">{{ label(c) }}</app-status-pill>
+                  }
+                  @for (c of p.revoke; track c) {
+                    <app-status-pill tone="danger" icon="remove">{{ label(c) }}</app-status-pill>
+                  }
+                </div>
+              </div>
+              @if (canEdit()) {
+                <button
+                  mat-icon-button
+                  (click)="editPreset(p)"
+                  matTooltip="Edit"
+                  [attr.aria-label]="'Edit ' + p.name"
+                >
+                  <mat-icon>edit</mat-icon>
+                </button>
+                <button
+                  mat-icon-button
+                  (click)="deletePreset(p)"
+                  matTooltip="Delete"
+                  [attr.aria-label]="'Delete ' + p.name"
+                >
+                  <mat-icon>delete</mat-icon>
+                </button>
+              }
+            </div>
+          } @empty {
+            <p class="quiet">No presets yet. Apply one from a person's Permissions page.</p>
+          }
+        </app-section>
+      </div>
+    </mat-tab>
+
+    <mat-tab label="History">
+      <div class="tab">
+        <app-permission-history
+          [societyId]="societyId()!"
+          [roles]="roleOptions()"
+          [refresh]="historyVersion()"
+        />
+      </div>
+    </mat-tab>
+  </mat-tab-group>
+}

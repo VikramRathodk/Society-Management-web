@@ -11,6 +11,12 @@
     </app-status-pill>
   }
   @if (user(); as u) {
+    @if (canOpenPermissions()) {
+      <a mat-stroked-button [routerLink]="['/users', u.id, 'permissions']">
+        <mat-icon>tune</mat-icon>
+        Permissions
+      </a>
+    }
     @if (canResetPassword()) {
       <button mat-stroked-button (click)="resetPassword()">
         <mat-icon>key</mat-icon>

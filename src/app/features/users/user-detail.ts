@@ -86,6 +86,15 @@ export class UserDetail {
   protected readonly canAssignRole = computed(() =>
     this.auth.can('USER.ROLE.ASSIGN', this.societyId()),
   );
+  // Their society permissions page: they hold a role in the selected society and we may look.
+  protected readonly canOpenPermissions = computed(() => {
+    const societyId = this.societyId();
+    return (
+      societyId != null &&
+      this.auth.can('SOCIETY.PERMISSION.VIEW', societyId) &&
+      (this.user()?.roles.some((r) => r.societyId === societyId) ?? false)
+    );
+  });
   protected readonly canViewAccess = computed(() =>
     this.auth.can('USER.ROLE.VIEW', this.societyId()),
   );
