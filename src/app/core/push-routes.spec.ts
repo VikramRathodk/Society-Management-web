@@ -49,6 +49,14 @@ describe('pushRoute', () => {
     }
     expect(pushRoute({ type: 'STAFF_ARRIVED', staffId: '5' })).toBe('/my-staff');
     expect(pushRoute({ type: 'STAFF_LEFT', staffId: '5' })).toBe('/my-staff');
+    expect(pushRoute({ type: 'PARKING_REQUEST_RECEIVED', requestId: '1' })).toBe('/parking?tab=waitlist');
+    expect(pushRoute({ type: 'VEHICLE_PENDING', vehicleId: '1' })).toBe('/parking?tab=vehicles');
+    for (const type of ['PARKING_ALLOTTED', 'PARKING_RELEASED', 'VEHICLE_APPROVED', 'PARKING_VIOLATION_DECIDED']) {
+      expect(pushRoute({ type })).toBe('/my-parking');
+    }
+    expect(pushRoute({ type: 'PARKING_VIOLATION_REPORTED', audience: 'COMMITTEE' })).toBe('/parking?tab=reports');
+    expect(pushRoute({ type: 'PARKING_VIOLATION_REPORTED', audience: 'FLAT' })).toBe('/my-parking');
+    expect(pushRoute({ type: 'VISITOR_PARKING_OVERSTAY' })).toBe('/gate/parking');
     expect(pushRoute({ type: 'SOMETHING_NEW' })).toBe('/');
   });
 });

@@ -26,6 +26,7 @@ export class VisitorApi {
     fd.append('visitorName', visitor.visitorName);
     if (visitor.visitorPhone) fd.append('visitorPhone', visitor.visitorPhone);
     if (visitor.purpose) fd.append('purpose', visitor.purpose);
+    if (visitor.vehicleNumber) fd.append('vehicleNumber', visitor.vehicleNumber);
     if (photo) fd.append('photo', photo);
     // No Content-Type header: the browser adds the multipart boundary.
     return this.http.post<Visitor>(this.baseUrl, fd, { context: inlineErrors() });

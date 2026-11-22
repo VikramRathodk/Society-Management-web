@@ -22,6 +22,7 @@ import { inviteDialog } from '../features/invitations/invite-dialog';
 import { canOpenMeetings } from '../features/governance/governance-ui';
 import { canOpenInvitations } from '../features/invitations/invitation-ui';
 import { canOpenMyStaff } from '../features/staff/staff-access';
+import { canOpenMyParking, canOpenParkingGate } from '../features/parking/parking-access';
 import { PendingInvitations } from '../features/invitations/pending-invitations';
 import { SetupBanner } from '../features/onboarding/setup-banner';
 import { SubscriptionBanner } from '../features/subscription/subscription-banner';
@@ -66,6 +67,15 @@ const NAV_ITEMS: NavItem[] = [
   },
   { label: 'Visitors', icon: 'badge', link: '/visitors', permission: 'VISITOR.ENTRY.VIEW' },
   { label: 'Staff', icon: 'cleaning_services', link: '/staff', permission: 'STAFF.DIRECTORY.VIEW' },
+  { label: 'Parking', icon: 'local_parking', link: '/parking', permission: 'PARKING.ADMIN.VIEW', module: 'PARKING' },
+  {
+    label: 'My parking',
+    icon: 'local_parking',
+    link: '/my-parking',
+    visible: (auth, id) => canOpenMyParking(auth, id) && !auth.can('PARKING.ADMIN.VIEW', id),
+    module: 'PARKING',
+  },
+  { label: 'Parking gate', icon: 'garage', link: '/gate/parking', visible: canOpenParkingGate, module: 'PARKING' },
   {
     label: 'My staff',
     icon: 'cleaning_services',

@@ -14,7 +14,9 @@ import { PolicyApi } from '../../core/api/policy.api';
 import { GovernanceApi } from '../../core/api/governance.api';
 import { StructureApi } from '../../core/api/structure.api';
 import { UserApi } from '../../core/api/user.api';
+import { ParkingApi } from '../../core/api/parking.api';
 import { StaffApi } from '../../core/api/staff.api';
+import { SubscriptionAccessStore } from '../../core/subscription/subscription-access.store';
 import { VisitorApi } from '../../core/api/visitor.api';
 import { AuthStore } from '../../core/auth/auth.store';
 import { HasPermission } from '../../core/auth/has-permission.directive';
@@ -60,6 +62,8 @@ interface DashboardData {
   heldMeetings?: Meeting[] | null;
   staffToVerify?: number | null;
   staffInside?: number | null;
+  vehiclesToApprove?: number | null;
+  parkingReports?: number | null;
 }
 
 interface Card {
@@ -97,6 +101,11 @@ interface Card {
 export class Dashboard {
   private readonly visitorApi = inject(VisitorApi);
   private readonly staffApi = inject(StaffApi);
+  private readonly parkingApi = inject(ParkingApi);
+  private readonly plan = inject(SubscriptionAccessStore);
+  /** A parking permission in a society whose plan includes parking. */
+  private readonly parking = (permission: string) =>
+    this.plan.allows('PARKING') && this.ctx.selectedSocietyId() != null && this.can(permission);
   private readonly userApi = inject(UserApi);
   private readonly structureApi = inject(StructureApi);
   private readonly complaintApi = inject(ComplaintApi);
@@ -311,6 +320,26 @@ export class Dashboard {
         tone: 'primary',
       });
     }
+    if (this.parking('PARKING.VEHICLE.APPROVE')) {
+      cards.push({
+        label: 'Vehicles to approve',
+        icon: 'directions_car',
+        value: value(d.vehiclesToApprove),
+        link: '/parking',
+        queryParams: { tab: 'vehicles' },
+        tone: (d.vehiclesToApprove ?? 0) > 0 ? 'warning' : 'neutral',
+      });
+    }
+    if (this.parking('PARKING.VIOLATION.DECIDE')) {
+      cards.push({
+        label: 'Open parking reports',
+        icon: 'report',
+        value: value(d.parkingReports),
+        link: '/parking',
+        queryParams: { tab: 'reports' },
+        tone: (d.parkingReports ?? 0) > 0 ? 'warning' : 'neutral',
+      });
+    }
     if (this.can('USER.ACCOUNT.VIEW')) {
       cards.push({
         label: 'Users',
@@ -445,6 +474,16 @@ export class Dashboard {
     if (this.can('STAFF.ENTRY.VIEW') && societyId != null) {
       requests.staffInside = settle(
         this.staffApi.inside(societyId, { silent: true }).pipe(map((list) => list.length)),
+      );
+    }
+    if (this.parking('PARKING.VEHICLE.APPROVE') && societyId != null) {
+      requests.vehiclesToApprove = settle(
+        this.parkingApi.vehicles(societyId, { status: 'PENDING' }, { silent: true }).pipe(map((list) => list.length)),
+      );
+    }
+    if (this.parking('PARKING.VIOLATION.DECIDE') && societyId != null) {
+      requests.parkingReports = settle(
+        this.parkingApi.violations(societyId, 'OPEN', { silent: true }).pipe(map((list) => list.length)),
       );
     }
     return Object.keys(requests).length ? forkJoin(requests) : of({});

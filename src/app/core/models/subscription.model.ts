@@ -1,7 +1,7 @@
 /** Platform billing: what the platform charges a society (not maintenance, which a society charges residents). */
 
 /** Paid modules a plan may include; core modules are in every plan. ALL covers everything. */
-export type PlanModule = 'MAINTENANCE' | 'FINANCE' | 'POLICIES' | 'GOVERNANCE' | 'ALL';
+export type PlanModule = 'MAINTENANCE' | 'FINANCE' | 'POLICIES' | 'GOVERNANCE' | 'PARKING' | 'ALL';
 
 export type SubscriptionCycle = 'MONTHLY' | 'YEARLY';
 

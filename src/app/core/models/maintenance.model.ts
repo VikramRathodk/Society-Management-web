@@ -3,7 +3,8 @@
 export type BillingFrequency = 'MONTHLY' | 'QUARTERLY' | 'HALF_YEARLY' | 'YEARLY';
 export type LateFeeType = 'NONE' | 'FIXED' | 'SIMPLE_INTEREST';
 export type ChargeCalcType = 'FIXED' | 'PER_SQFT';
-export type BillLineType = 'FIXED' | 'PER_SQFT' | 'LATE_FEE' | 'OPENING_BALANCE';
+/** PARKING: a slot's monthly charge; CHARGE: a one-off flat charge (a fine, visitor overstay, ...). */
+export type BillLineType = 'FIXED' | 'PER_SQFT' | 'LATE_FEE' | 'OPENING_BALANCE' | 'PARKING' | 'CHARGE';
 export type CycleKind = 'REGULAR' | 'OPENING_BALANCE';
 export type CycleStatus = 'ISSUED' | 'CANCELLED';
 export type BillStatus = 'UNPAID' | 'PARTIAL' | 'PAID' | 'WAIVED' | 'CANCELLED';

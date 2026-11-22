@@ -164,6 +164,7 @@ export class BillDetail {
         return `${inr(line.rate)} × ${line.quantity} sq ft`;
       case 'LATE_FEE':
       case 'OPENING_BALANCE':
+      case 'PARKING':
         return line.note;
       default:
         return null;
