@@ -16,6 +16,7 @@ import { Staff, StaffAttendance, StaffLink } from '../../core/models';
 import { SocietyContextStore } from '../../core/society-context/society-context.store';
 import { confirmDialog } from '../../shared/confirm-dialog';
 import { EmptyState, PageHeader, Skeleton } from '../../shared/ui';
+import { openStaffCard } from './staff-card-dialog';
 import { addStaffDialog, editLinkDialog } from './staff-dialogs';
 import {
   OwnFlats,
@@ -24,7 +25,6 @@ import {
   StaffStatePill,
   durationLabel,
   monthOf,
-  printCardFor,
   scheduleLabel,
   typeLabel,
 } from './staff-ui';
@@ -382,7 +382,7 @@ export class MyStaff {
   }
 
   protected print(staff: Staff): void {
-    printCardFor(this.api, staff);
+    openStaffCard(this.dialog, staff);
   }
 
   private replace(updated: Staff): void {
