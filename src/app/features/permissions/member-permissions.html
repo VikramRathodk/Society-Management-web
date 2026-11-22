@@ -1,0 +1,109 @@
+<app-page-header
+  [title]="(user()?.name ?? 'Person') + ' · Permissions'"
+  subtitle="What this person may do in the selected society"
+  [back]="'/users/' + id()"
+  backLabel="Back to the person"
+>
+  @if (member()?.editable) {
+    <button mat-stroked-button [matMenuTriggerFor]="presetMenu" [disabled]="!presets().length">
+      <mat-icon>playlist_add</mat-icon>
+      Apply preset
+    </button>
+    <mat-menu #presetMenu="matMenu">
+      @for (p of presets(); track p.id) {
+        <button mat-menu-item (click)="applyPreset(p)">
+          <span>{{ p.name }}</span>
+        </button>
+      }
+    </mat-menu>
+    <button mat-stroked-button (click)="copyFrom()">
+      <mat-icon>content_copy</mat-icon>
+      Copy from…
+    </button>
+    @if (hasChanges()) {
+      <button mat-stroked-button (click)="reset()">
+        <mat-icon>restart_alt</mat-icon>
+        Reset to their roles
+      </button>
+    }
+  }
+</app-page-header>
+
+@if (societyId() == null) {
+  <app-empty-state icon="apartment" message="Choose a society first." />
+} @else if (loading()) {
+  <app-skeleton variant="form" />
+} @else if (member(); as m) {
+  <div class="role-header">
+    <div>
+      <div class="pills">
+        @for (r of m.roles; track r) {
+          <app-status-pill outline icon="badge">{{ roleName(r) }}</app-status-pill>
+        }
+      </div>
+      <p class="muted">
+        {{ m.effective.length }} permissions here
+        @if (m.added.length) {
+          · <span class="added">{{ m.added.length }} added for this person</span>
+        }
+        @if (m.removed.length) {
+          · <span class="removed">{{ m.removed.length }} removed for this person</span>
+        }
+        @if (!m.added.length && !m.removed.length) {
+          · exactly what their roles give
+        }
+      </p>
+    </div>
+  </div>
+
+  @if (!m.editable) {
+    <p class="note">
+      <mat-icon>lock</mat-icon>
+      @if (isSelf()) {
+        You can't change your own permissions.
+      } @else {
+        You can see these permissions but not change them.
+      }
+    </p>
+  } @else {
+    <p class="note muted">
+      A permission added to a resident works on their own flat only. Boxes you can't tick are
+      permissions you don't have yourself. They're told by a notification when you save.
+    </p>
+  }
+
+  <app-society-permission-matrix
+    [catalog]="catalog()"
+    [base]="base()"
+    [draft]="draft()"
+    [readonly]="!m.editable"
+    baseLabel="permissions from their roles"
+    (toggled)="toggle($event)"
+  />
+
+  @if (dirty()) {
+    <div class="save-bar" role="region" aria-label="Unsaved permission changes">
+      <mat-form-field appearance="outline" subscriptSizing="dynamic" class="reason">
+        <mat-label>Reason (optional)</mat-label>
+        <input matInput [ngModel]="reason()" (ngModelChange)="reason.set($event)" maxlength="500" />
+      </mat-form-field>
+      <button mat-button (click)="discard()">Discard</button>
+      <button mat-flat-button (click)="save()" [disabled]="saving()">Save permissions</button>
+    </div>
+  }
+
+  <app-section title="History" class="history">
+    <div class="history-body">
+      <app-permission-history
+        [societyId]="societyId()!"
+        [userId]="id()"
+        [roles]="roleOptions()"
+        [refresh]="historyVersion()"
+      />
+    </div>
+  </app-section>
+} @else {
+  <app-empty-state icon="person_off" message="This person has no role in the selected society.">
+    <a mat-button [routerLink]="'/users/' + id()">Back to the person</a>
+  </app-empty-state>
+}

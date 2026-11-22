@@ -37,6 +37,8 @@ export function pushRoute(data: PushData): string {
       return data['invoiceId'] ? `/subscription/invoices/${data['invoiceId']}` : '/subscription';
     case 'SUBSCRIPTION_STATUS':
       return '/subscription';
+    case 'PERMISSIONS_CHANGED':
+      return '/dashboard'; // the app reloads the user's access when this push arrives
     case 'INVITATION_RECEIVED':
       return '/dashboard'; // the pending-invitations banner is on every page
     case 'INVITATION_NEEDS_APPROVAL':

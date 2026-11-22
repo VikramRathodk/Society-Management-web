@@ -1,0 +1,83 @@
+.groups {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr));
+  gap: 16px;
+}
+
+.group {
+  padding: 12px;
+  border: 1px solid var(--app-card-border);
+  border-radius: 12px;
+}
+
+h3 {
+  margin: 0 0 4px;
+  font: var(--mat-sys-title-small);
+}
+
+.table-scroll {
+  overflow-x: auto;
+}
+
+table {
+  border-collapse: collapse;
+}
+
+th {
+  padding: 4px 8px;
+  font: var(--mat-sys-label-medium);
+  color: var(--mat-sys-on-surface-variant);
+  text-align: center;
+  white-space: nowrap;
+}
+
+th[scope='row'] {
+  text-align: left;
+  color: var(--mat-sys-on-surface);
+}
+
+td {
+  text-align: center;
+}
+
+.cell {
+  position: relative;
+  display: inline-flex;
+  border-radius: 8px;
+}
+
+// Changes from the base get a tinted background and a small badge, so they read at a glance.
+.cell--added {
+  background: color-mix(in srgb, var(--mat-sys-primary) 14%, transparent);
+}
+
+.cell--removed {
+  background: color-mix(in srgb, var(--mat-sys-error) 12%, transparent);
+}
+
+.mark {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  width: 14px;
+  height: 14px;
+  font-size: 14px;
+  pointer-events: none;
+}
+
+.mark--added {
+  color: var(--mat-sys-primary);
+}
+
+.mark--removed {
+  color: var(--mat-sys-error);
+}
+
+.muted {
+  color: var(--mat-sys-on-surface-variant);
+}
+
+// Modules with many actions get a full row so no column is cut off.
+.group--wide {
+  grid-column: 1 / -1;
+}

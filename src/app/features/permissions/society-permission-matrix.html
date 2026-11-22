@@ -1,0 +1,56 @@
+<div class="groups">
+  @for (group of groups(); track group.module) {
+    <section class="group" [class.group--wide]="group.actions.length > 5">
+      <h3>{{ label(group.module) }}</h3>
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th scope="col"><span class="cdk-visually-hidden">Feature</span></th>
+              @for (act of group.actions; track act) {
+                <th scope="col">{{ label(act) }}</th>
+              }
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of group.rows; track row.feature) {
+              <tr>
+                <th scope="row">{{ label(row.feature) }}</th>
+                @for (cell of row.cells; track $index) {
+                  <td>
+                    @if (cell) {
+                      @let s = state(cell.code);
+                      <span class="cell" [class]="'cell cell--' + s" [matTooltip]="tooltip(cell)">
+                        <mat-checkbox
+                          [checked]="checked(cell.code)"
+                          [indeterminate]="mode() === 'preset' && s === 'removed'"
+                          [disabled]="disabled(cell)"
+                          (change)="toggled.emit(cell.code)"
+                          [aria-label]="
+                            cell.code +
+                            (s === 'added' ? ' (added)' : s === 'removed' ? ' (removed)' : '')
+                          "
+                        />
+                        @if (s === 'added') {
+                          <mat-icon class="mark mark--added" aria-hidden="true"
+                            >add_circle</mat-icon
+                          >
+                        } @else if (s === 'removed') {
+                          <mat-icon class="mark mark--removed" aria-hidden="true"
+                            >remove_circle</mat-icon
+                          >
+                        }
+                      </span>
+                    }
+                  </td>
+                }
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+  } @empty {
+    <p class="muted">No permissions to show.</p>
+  }
+</div>

@@ -1,6 +1,6 @@
 import { BreakpointObserver } from '@angular/cdk/layout';
 import { Component, computed, inject } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -12,7 +12,7 @@ import { MatSidenavModule } from '@angular/material/sidenav';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
-import { firstValueFrom, map } from 'rxjs';
+import { filter, firstValueFrom, map } from 'rxjs';
 
 import { AuthStore } from '../core/auth/auth.store';
 import { PushService } from '../core/push';
@@ -93,6 +93,12 @@ const NAV_ITEMS: NavItem[] = [
     module: 'FINANCE',
   },
   {
+    label: 'Permissions',
+    icon: 'tune',
+    link: '/permissions',
+    permission: 'SOCIETY.PERMISSION.VIEW',
+  },
+  {
     label: 'Subscription',
     icon: 'workspace_premium',
     link: '/subscription',
@@ -161,6 +167,13 @@ export class Shell {
   constructor() {
     // The shell only renders for a signed-in user, so this runs after login and on reload.
     this.push.resume();
+    // Someone changed what this user may do: reload their access so menus and guards follow at once.
+    this.push.messages$
+      .pipe(
+        filter((m) => m.data['type'] === 'PERMISSIONS_CHANGED'),
+        takeUntilDestroyed(),
+      )
+      .subscribe(() => this.auth.restore().subscribe());
   }
 
   protected readonly themes: { mode: ThemeMode; label: string; icon: string }[] = [

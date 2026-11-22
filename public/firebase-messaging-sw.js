@@ -35,6 +35,8 @@ function routeFor(data) {
       return data.invoiceId ? `/subscription/invoices/${data.invoiceId}` : '/subscription';
     case 'SUBSCRIPTION_STATUS':
       return '/subscription';
+    case 'PERMISSIONS_CHANGED':
+      return '/dashboard';
     case 'INVITATION_RECEIVED':
       return '/dashboard';
     case 'INVITATION_NEEDS_APPROVAL':

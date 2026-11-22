@@ -95,6 +95,24 @@ export const routes: Routes = [
         loadComponent: () => import('./features/users/user-create').then((m) => m.UserCreate),
       },
       {
+        path: 'users/:id/permissions',
+        title: 'Permissions',
+        canMatch: [permissionGuard],
+        canDeactivate: [unsavedChangesGuard],
+        data: { permission: 'SOCIETY.PERMISSION.VIEW' },
+        loadComponent: () =>
+          import('./features/permissions/member-permissions').then((m) => m.MemberPermissionsPage),
+      },
+      {
+        path: 'permissions',
+        title: 'Roles & permissions',
+        canMatch: [permissionGuard],
+        canDeactivate: [unsavedChangesGuard],
+        data: { permission: 'SOCIETY.PERMISSION.VIEW' },
+        loadComponent: () =>
+          import('./features/permissions/society-permissions').then((m) => m.SocietyPermissions),
+      },
+      {
         path: 'users/:id',
         title: 'User',
         canMatch: [permissionGuard],
