@@ -47,7 +47,8 @@
                   </span>
                   <span class="meta">
                     {{ s.plan.name }} · {{ cycleLabel(s.cycle) }} · {{ s.flats }} flats ·
-                    {{ inr(s.chargePerPeriod) }} a period @else if (s.status !== 'CANCELLED') {
+                    {{ inr(s.chargePerPeriod) }} a period
+                    @if (s.status !== 'CANCELLED') {
                       · next invoice {{ dayLabel(s.nextInvoiceOn) }}
                     }
                     @if (s.pendingPlan || s.pendingCycle) {
