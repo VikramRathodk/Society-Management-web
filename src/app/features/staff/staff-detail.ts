@@ -18,6 +18,7 @@ import { Staff, StaffEntry, StaffLink } from '../../core/models';
 import { SocietyContextStore } from '../../core/society-context/society-context.store';
 import { confirmDialog } from '../../shared/confirm-dialog';
 import { EmptyState, PageHeader, Section, Skeleton } from '../../shared/ui';
+import { openStaffCard } from './staff-card-dialog';
 import { editLinkDialog, editStaffDialog, reasonDialog } from './staff-dialogs';
 import {
   OwnFlats,
@@ -28,7 +29,6 @@ import {
   hhmm,
   idTypeLabel,
   monthOf,
-  printCardFor,
   scheduleLabel,
   typeLabel,
 } from './staff-ui';
@@ -548,7 +548,7 @@ export class StaffDetail {
   }
 
   protected print(): void {
-    printCardFor(this.api, this.staff()!);
+    openStaffCard(this.dialog, this.staff()!);
   }
 
   private run(request: Observable<Staff>, message: string | null, after?: () => void): void {

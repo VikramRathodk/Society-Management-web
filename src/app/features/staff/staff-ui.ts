@@ -264,24 +264,50 @@ export function blobToDataUrl(blob: Blob): Promise<string> {
   });
 }
 
-/** Fetches the card data and photo, then opens the print window. */
-export function printCardFor(api: StaffApi, staff: Pick<Staff, 'id' | 'photoUrl'>): void {
-  forkJoin({
-    card: api.card(staff.id),
-    photo: staff.photoUrl ? api.photo(staff.id).pipe(catchError(() => of(null))) : of(null),
-  }).subscribe(async ({ card, photo }) => {
-    await printStaffCard(card, photo ? await blobToDataUrl(photo) : null);
-  });
+/** "Night guard" or the staff type. */
+export function cardRole(card: StaffCard): string {
+  return card.designation || typeLabel(card.staffType);
 }
 
-/** Opens a window with the printable ID card: photo, name, type, flats, the code and its QR. */
-export async function printStaffCard(card: StaffCard, photo: string | null): Promise<void> {
-  const qr = await qrDataUrl(card.qrPayload, 360);
-  const win = window.open('', '_blank', 'width=480,height=640');
-  if (!win) return;
-  const role = card.designation || typeLabel(card.staffType);
-  const flats = card.flats.length ? `Works for ${card.flats.join(', ')}` : card.kind === 'SOCIETY' ? 'Society staff' : '';
-  win.document.write(`<!doctype html>
+/** "Works for A-101, A-204", "Society staff", or ''. */
+export function cardFlats(card: StaffCard): string {
+  return card.flats.length ? `Works for ${card.flats.join(', ')}` : card.kind === 'SOCIETY' ? 'Society staff' : '';
+}
+
+/** The card's QR as a PNG data URL. */
+export function cardQr(card: StaffCard): Promise<string> {
+  return qrDataUrl(card.qrPayload, 360);
+}
+
+/**
+ * Prints an HTML document from a hidden frame on the page itself: the browser's print dialog opens,
+ * but no new window or tab.
+ */
+export function printInPage(html: string): void {
+  const frame = document.createElement('iframe');
+  frame.setAttribute('aria-hidden', 'true');
+  frame.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden';
+  document.body.appendChild(frame);
+  const doc = frame.contentDocument!;
+  doc.open();
+  doc.write(html);
+  doc.close();
+  const go = () => {
+    frame.contentWindow!.focus();
+    frame.contentWindow!.print();
+    // Removed once the print dialog has had time to take its copy.
+    setTimeout(() => frame.remove(), 60_000);
+  };
+  // Wait for the photo and QR images inside the frame.
+  const images = [...doc.images];
+  Promise.all(images.map((img) => (img.complete ? Promise.resolve() : new Promise((r) => (img.onload = img.onerror = r))))).then(go);
+}
+
+/** The printable ID card as a standalone document: photo, name, role, flats, the code and its QR. */
+export function staffCardDocument(card: StaffCard, photo: string | null, qr: string): string {
+  const role = cardRole(card);
+  const flats = cardFlats(card);
+  return `<!doctype html>
 <html><head><meta charset="utf-8"><title>ID card · ${escapeHtml(card.name)}</title>
 <style>
   @page { margin: 12mm; }
@@ -305,7 +331,5 @@ export async function printStaffCard(card: StaffCard, photo: string | null): Pro
   <p class="code">${escapeHtml(card.entryCode)}</p>
   <p class="hint">Show at the gate, or say this code</p>
 </div>
-<script>window.onload = () => { window.print(); };</script>
-</body></html>`);
-  win.document.close();
+</body></html>`;
 }
