@@ -43,6 +43,21 @@ function routeFor(data) {
     case 'STAFF_ARRIVED':
     case 'STAFF_LEFT':
       return '/my-staff';
+    case 'PARKING_REQUEST_RECEIVED':
+      return '/parking?tab=waitlist';
+    case 'VEHICLE_PENDING':
+      return '/parking?tab=vehicles';
+    case 'PARKING_ALLOTTED':
+    case 'PARKING_RELEASED':
+    case 'PARKING_REQUEST_REJECTED':
+    case 'VEHICLE_APPROVED':
+    case 'VEHICLE_REJECTED':
+    case 'PARKING_VIOLATION_DECIDED':
+      return '/my-parking';
+    case 'PARKING_VIOLATION_REPORTED':
+      return data.audience === 'COMMITTEE' ? '/parking?tab=reports' : '/my-parking';
+    case 'VISITOR_PARKING_OVERSTAY':
+      return '/gate/parking';
     case 'PERMISSIONS_CHANGED':
       return '/dashboard';
     case 'INVITATION_RECEIVED':

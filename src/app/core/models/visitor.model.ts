@@ -11,6 +11,8 @@ export interface Visitor {
   /** Relative URL that needs the auth header; fetch as a blob instead of using <img src>. */
   photoUrl: string | null;
   status: VisitorStatus;
+  /** Capitals and digits, when they came by vehicle. */
+  vehicleNumber?: string | null;
   loggedById: number;
   loggedByName: string;
   respondedById: number | null;
@@ -28,4 +30,5 @@ export interface LogVisitorRequest {
   visitorName: string;
   visitorPhone?: string;
   purpose?: string;
+  vehicleNumber?: string;
 }

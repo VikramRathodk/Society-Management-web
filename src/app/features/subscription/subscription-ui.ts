@@ -69,6 +69,7 @@ export const PLAN_MODULES: { value: PlanModule; label: string }[] = [
   { value: 'FINANCE', label: 'Finance and accounts' },
   { value: 'POLICIES', label: 'Rules and policies' },
   { value: 'GOVERNANCE', label: 'Meetings and governance' },
+  { value: 'PARKING', label: 'Parking' },
   { value: 'ALL', label: 'Everything (including future modules)' },
 ];
 

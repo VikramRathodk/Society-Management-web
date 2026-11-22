@@ -8,6 +8,7 @@ import { unsavedChangesGuard } from './core/unsaved-changes.guard';
 import { meetingsGuard } from './features/governance/governance-ui';
 import { invitationsGuard } from './features/invitations/invitation-ui';
 import { staffGuard } from './features/staff/staff-access';
+import { myParkingGuard } from './features/parking/parking-access';
 import { planModuleGuard } from './core/subscription/subscription-access.store';
 
 // `title` is shown in the browser tab as "<title> · Sahvasa" (see AppTitleStrategy).
@@ -142,6 +143,26 @@ export const routes: Routes = [
         data: { permission: 'VISITOR.ENTRY.CREATE' },
         loadComponent: () =>
           import('./features/visitors/visitor-create').then((m) => m.VisitorCreate),
+      },
+      {
+        path: 'gate/parking',
+        title: 'Parking at the gate',
+        canMatch: [planModuleGuard('PARKING'), permissionGuard],
+        data: { permission: 'PARKING.GATE.VIEW' },
+        loadComponent: () => import('./features/parking/parking-gate').then((m) => m.ParkingGate),
+      },
+      {
+        path: 'my-parking',
+        title: 'My parking',
+        canMatch: [planModuleGuard('PARKING'), myParkingGuard],
+        loadComponent: () => import('./features/parking/my-parking').then((m) => m.MyParking),
+      },
+      {
+        path: 'parking',
+        title: 'Parking',
+        canMatch: [planModuleGuard('PARKING'), permissionGuard],
+        data: { permission: 'PARKING.ADMIN.VIEW' },
+        loadComponent: () => import('./features/parking/parking-admin').then((m) => m.ParkingAdmin),
       },
       {
         path: 'gate/staff',

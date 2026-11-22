@@ -71,6 +71,27 @@
       </mat-form-field>
     </div>
 
+    <div class="row">
+      <mat-form-field appearance="outline">
+        <mat-label>Vehicle number (optional)</mat-label>
+        <input matInput formControlName="vehicleNumber" maxlength="20" autocomplete="off" />
+      </mat-form-field>
+      @if (canPark()) {
+        <mat-form-field appearance="outline">
+          <mat-label>Visitor slot (optional)</mat-label>
+          <mat-select formControlName="visitorSlotId">
+            <mat-option [value]="null">Not parking</mat-option>
+            @for (s of visitorSlots(); track s.slotId) {
+              <mat-option [value]="s.slotId">{{ s.slotNumber }}{{ s.area ? ' · ' + s.area : '' }}</mat-option>
+            }
+          </mat-select>
+          @if (visitorSlots().length === 0) {
+            <mat-hint>No free visitor slot</mat-hint>
+          }
+        </mat-form-field>
+      }
+    </div>
+
     <div class="photo">
       @if (photoPreview(); as src) {
         <img class="photo-preview" [src]="src" alt="Visitor photo preview" />

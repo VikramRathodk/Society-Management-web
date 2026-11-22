@@ -4,6 +4,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 
 import { AuthStore } from '../../core/auth/auth.store';
+import { SubscriptionAccessStore } from '../../core/subscription/subscription-access.store';
 import { Visitor } from '../../core/models';
 import { Dashboard } from './dashboard';
 
@@ -59,6 +60,8 @@ describe('Dashboard', () => {
             user: () => ({ name: 'Happy Hogan', roles }),
           },
         },
+        // Every paid module on, without fetching the subscription.
+        { provide: SubscriptionAccessStore, useValue: { allows: () => true } },
       ],
     });
     http = TestBed.inject(HttpTestingController);

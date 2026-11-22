@@ -11,11 +11,13 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { Router, RouterLink } from '@angular/router';
 import { catchError, of, switchMap, tap } from 'rxjs';
 
+import { ParkingApi } from '../../core/api/parking.api';
 import { StructureApi } from '../../core/api/structure.api';
+import { SubscriptionAccessStore } from '../../core/subscription/subscription-access.store';
 import { VisitorApi } from '../../core/api/visitor.api';
 import { AuthStore } from '../../core/auth/auth.store';
 import { errorMessage } from '../../core/auth/error.interceptor';
-import { Flat, Wing } from '../../core/models';
+import { Flat, VisitorSlot, Wing } from '../../core/models';
 import { SocietyContextStore } from '../../core/society-context/society-context.store';
 import { sortBy } from '../../shared/sort';
 import { PageHeader, Section } from '../../shared/ui';
@@ -47,6 +49,8 @@ export class VisitorCreate {
   private readonly snack = inject(MatSnackBar);
   private readonly fb = inject(NonNullableFormBuilder);
   private readonly auth = inject(AuthStore);
+  private readonly parkingApi = inject(ParkingApi);
+  private readonly plan = inject(SubscriptionAccessStore);
   protected readonly ctx = inject(SocietyContextStore);
 
   protected readonly photoAccept = PHOTO_TYPES.join(',');
@@ -56,7 +60,14 @@ export class VisitorCreate {
     visitorName: ['', [Validators.required, Validators.pattern(/\S/), Validators.maxLength(255)]],
     visitorPhone: ['', Validators.maxLength(15)],
     purpose: ['', Validators.maxLength(100)],
+    vehicleNumber: ['', Validators.maxLength(20)],
+    visitorSlotId: this.fb.control<number | null>(null),
   });
+  /** Free visitor slots, for parking the visitor right away (parking in the plan and the permission). */
+  protected readonly visitorSlots = signal<VisitorSlot[]>([]);
+  protected readonly canPark = computed(
+    () => this.plan.allows('PARKING') && this.auth.can('PARKING.VISITOR.UPDATE', this.ctx.selectedSocietyId()),
+  );
   protected readonly wings = signal<Wing[]>([]);
   protected readonly flats = signal<Flat[]>([]);
   protected readonly photo = signal<File | null>(null);
@@ -101,6 +112,17 @@ export class VisitorCreate {
       )
       .subscribe((flats) => this.flats.set(sortBy(flats, (f) => f.flatNumber)));
 
+    toObservable(this.ctx.selectedSocietyId)
+      .pipe(
+        switchMap((societyId) =>
+          societyId == null || !this.canPark()
+            ? of([])
+            : this.parkingApi.visitorSlots(societyId, { silent: true }).pipe(catchError(() => of([]))),
+        ),
+        takeUntilDestroyed(),
+      )
+      .subscribe((slots) => this.visitorSlots.set(slots.filter((s) => !s.occupied)));
+
     inject(DestroyRef).onDestroy(() => this.setPhoto(null));
   }
 
@@ -129,7 +151,7 @@ export class VisitorCreate {
       this.form.markAllAsTouched();
       return;
     }
-    const { flatId, visitorName, visitorPhone, purpose } = this.form.getRawValue();
+    const { flatId, visitorName, visitorPhone, purpose, vehicleNumber, visitorSlotId } = this.form.getRawValue();
     this.saving.set(true);
     this.error.set(null);
     this.api
@@ -139,13 +161,25 @@ export class VisitorCreate {
           visitorName: visitorName.trim(),
           visitorPhone: visitorPhone.trim() || undefined,
           purpose: purpose.trim() || undefined,
+          vehicleNumber: vehicleNumber.trim() || undefined,
         },
         this.photo(),
       )
+      .pipe(
+        // Parking is best effort: the visitor is logged either way.
+        switchMap((visitor) =>
+          visitorSlotId == null
+            ? of({ visitor, parked: null as string | null })
+            : this.parkingApi.parkVisitor(visitor.id, visitorSlotId, vehicleNumber).pipe(
+                switchMap((p) => of({ visitor, parked: `parked in ${p.slotNumber}` as string | null })),
+                catchError((err: HttpErrorResponse) => of({ visitor, parked: `not parked: ${errorMessage(err)}` })),
+              ),
+        ),
+      )
       .subscribe({
-        next: (visitor) => {
-          this.snack.open(`${visitor.visitorName} logged — waiting for approval`, undefined, {
-            duration: 3000,
+        next: ({ visitor, parked }) => {
+          this.snack.open(`${visitor.visitorName} logged — waiting for approval${parked ? ' · ' + parked : ''}`, undefined, {
+            duration: 4000,
           });
           this.router.navigate(['/visitors']);
         },

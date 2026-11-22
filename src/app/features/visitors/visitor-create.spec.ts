@@ -4,6 +4,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 
 import { AuthStore } from '../../core/auth/auth.store';
+import { SubscriptionAccessStore } from '../../core/subscription/subscription-access.store';
 import { VisitorCreate } from './visitor-create';
 
 describe('VisitorCreate', () => {
@@ -20,6 +21,8 @@ describe('VisitorCreate', () => {
         provideHttpClient(),
         provideHttpClientTesting(),
         { provide: AuthStore, useValue: { can: (p: string) => permissions.includes(p) } },
+        // Parking off: no visitor slot picker, no slot requests.
+        { provide: SubscriptionAccessStore, useValue: { allows: () => false } },
       ],
     });
     http = TestBed.inject(HttpTestingController);
