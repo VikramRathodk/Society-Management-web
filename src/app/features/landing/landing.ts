@@ -94,10 +94,7 @@ export function pricingCard(plan: Plan, cycle: PricingCycle = 'MONTHLY'): Pricin
     );
   }
 
-  const fine = [
-    plan.trialDays > 0 ? `${plan.trialDays}-day free trial` : null,
-    free ? 'Free for good' : '+ 18% GST',
-  ].filter((x): x is string => !!x);
+  const fine = [free ? 'Free for good' : '+ 18% GST'];
   return {
     id: plan.id,
     name: plan.name,

@@ -23,6 +23,7 @@ import {
   cycleLabel,
   dayLabel,
   inr,
+  isFreePlan,
   modulesLabel,
   periodLabel,
   planDialog,
@@ -82,8 +83,8 @@ export class PlatformBilling {
     const subs = this.subscriptions();
     const invoices = this.invoices();
     return {
-      paying: subs.filter((s) => s.status === 'ACTIVE' || s.status === 'PAST_DUE').length,
-      trials: subs.filter((s) => s.status === 'TRIAL').length,
+      paying: subs.filter((s) => (s.status === 'ACTIVE' || s.status === 'PAST_DUE') && !isFreePlan(s.plan)).length,
+      free: subs.filter((s) => s.status === 'ACTIVE' && isFreePlan(s.plan)).length,
       suspended: subs.filter((s) => s.status === 'SUSPENDED').length,
       outstanding: invoices.reduce((sum, i) => sum + i.balance, 0),
       overdue: invoices.filter((i) => i.overdue).reduce((sum, i) => sum + i.balance, 0),
@@ -145,14 +146,15 @@ export class PlatformBilling {
   protected async startAll(): Promise<void> {
     const ok = await firstValueFrom(
       confirmDialog(this.dialog, {
-        title: 'Start trials',
-        message: 'Every live society without a subscription starts its free trial on the default plan today.',
-        confirmText: 'Start trials',
+        title: 'Start subscriptions',
+        message:
+          'Every live society without a subscription starts today: on Free when it fits, otherwise on the plan for its number of flats (invoiced at once).',
+        confirmText: 'Start subscriptions',
       }),
     );
     if (!ok) return;
     this.api.startAll().subscribe((r) => {
-      this.notifier.show(`${r.started} trial(s) started`, 'Close');
+      this.notifier.show(`${r.started} subscription(s) started`, 'Close');
       this.load();
     });
   }
@@ -163,8 +165,8 @@ export class PlatformBilling {
     choosePlanDialog(this.dialog, {
       title: `Plan for ${s.societyName}`,
       intro:
-        s.status === 'TRIAL'
-          ? 'During the trial the change applies at once.'
+        isFreePlan(s.plan)
+          ? 'Leaving the free plan applies at once; the first period is invoiced today.'
           : 'Applies from the next billing period; the next invoice uses it.',
       confirmText: 'Change plan',
       plans: this.plans().filter((p) => p.active),

@@ -41,7 +41,6 @@ export { dayLabel, inr, periodLabel } from '../maintenance/maintenance-ui';
 // ---- Labels ----
 
 export const SUBSCRIPTION_STATUS: Record<SubscriptionStatus, { label: string; tone: Tone }> = {
-  TRIAL: { label: 'Free trial', tone: 'primary' },
   ACTIVE: { label: 'Active', tone: 'success' },
   PAST_DUE: { label: 'Payment overdue', tone: 'warning' },
   SUSPENDED: { label: 'Suspended', tone: 'danger' },
@@ -106,6 +105,11 @@ const EVENT_LABELS: Record<SubscriptionEventKind, string> = {
 
 export function eventLabel(kind: SubscriptionEventKind): string {
   return EVENT_LABELS[kind] ?? kind;
+}
+
+/** A plan that costs nothing either way (Free). */
+export function isFreePlan(plan: Plan): boolean {
+  return plan.priceMonthly === 0 && plan.priceYearly === 0;
 }
 
 /** "₹699.00 a month for up to 50 flats, then ₹12.00 a flat"; "Free, up to 15 flats". */
@@ -363,10 +367,6 @@ function optionalNumber(value: number | string | null): number | null {
             <input matInput type="number" min="1" formControlName="recommendedFromFlats" />
           </mat-form-field>
           <mat-form-field appearance="outline">
-            <mat-label>Trial days</mat-label>
-            <input matInput type="number" min="0" max="365" formControlName="trialDays" />
-          </mat-form-field>
-          <mat-form-field appearance="outline">
             <mat-label>Order</mat-label>
             <input matInput type="number" formControlName="sortOrder" />
           </mat-form-field>
@@ -419,7 +419,6 @@ export class PlanDialog {
     extraFlatYearly: [this.data?.extraFlatYearly ?? (null as number | null), OPTIONAL_MONEY],
     maxFlats: [this.data?.maxFlats ?? (null as number | null), Validators.min(1)],
     recommendedFromFlats: [this.data?.recommendedFromFlats ?? 1, [Validators.required, Validators.min(1)]],
-    trialDays: [this.data?.trialDays ?? 30, [Validators.required, Validators.min(0), Validators.max(365)]],
     sortOrder: [this.data?.sortOrder ?? 0],
     active: [this.data?.active ?? true],
     featured: [this.data?.featured ?? false],
@@ -451,7 +450,6 @@ export class PlanDialog {
       extraFlatYearly: optionalNumber(v.extraFlatYearly),
       maxFlats: v.maxFlats ? Number(v.maxFlats) : null,
       recommendedFromFlats: Number(v.recommendedFromFlats) || 1,
-      trialDays: Number(v.trialDays),
       modules: [...this.selected()],
       active: v.active,
       sortOrder: Number(v.sortOrder) || 0,
@@ -491,7 +489,7 @@ export interface ChoosePlanData<T> {
   save: (planId: number | null, cycle: SubscriptionCycle, note: string | null) => Observable<T>;
 }
 
-/** Pick a plan and billing cycle: start a trial, change a plan, or ask the platform for one. */
+/** Pick a plan and billing cycle: start a subscription, change a plan, or ask the platform for one. */
 @Component({
   selector: 'app-choose-plan-dialog',
   imports: [

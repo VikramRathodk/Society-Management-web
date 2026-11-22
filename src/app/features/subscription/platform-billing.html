@@ -2,7 +2,7 @@
   @if (access.platformUpdate()) {
     <button mat-stroked-button (click)="startAll()">
       <mat-icon>rocket_launch</mat-icon>
-      Start trials
+      Start subscriptions
     </button>
     <button mat-flat-button (click)="runBilling()" [disabled]="busy()">
       <mat-icon>autorenew</mat-icon>
@@ -20,7 +20,7 @@
 } @else {
   <div class="stats">
     <app-stat-card icon="verified" label="Paying societies" [value]="'' + stats().paying" tone="success" />
-    <app-stat-card icon="celebration" label="On trial" [value]="'' + stats().trials" tone="primary" />
+    <app-stat-card icon="celebration" label="On Free" [value]="'' + stats().free" tone="primary" />
     <app-stat-card icon="block" label="Suspended" [value]="'' + stats().suspended" tone="danger" />
     <app-stat-card icon="schedule" label="Overdue" [value]="inr(stats().overdue)" tone="warning" />
     <app-stat-card icon="account_balance_wallet" label="Collected" [value]="inr(stats().collected)" />
@@ -32,7 +32,7 @@
         @if (subscriptions().length === 0) {
           <app-empty-state
             icon="workspace_premium"
-            message="No subscriptions yet. Billing starts when it is switched on and societies go live (or with Start trials)."
+            message="No subscriptions yet. Billing starts when it is switched on and societies go live (or with Start subscriptions)."
           />
         } @else {
           <div class="list">
@@ -47,10 +47,7 @@
                   </span>
                   <span class="meta">
                     {{ s.plan.name }} · {{ cycleLabel(s.cycle) }} · {{ s.flats }} flats ·
-                    {{ inr(s.chargePerPeriod) }} a period
-                    @if (s.status === 'TRIAL' && s.trialEndsOn) {
-                      · trial until {{ dayLabel(s.trialEndsOn) }}
-                    } @else if (s.status !== 'CANCELLED') {
+                    {{ inr(s.chargePerPeriod) }} a period @else if (s.status !== 'CANCELLED') {
                       · next invoice {{ dayLabel(s.nextInvoiceOn) }}
                     }
                     @if (s.pendingPlan || s.pendingCycle) {
@@ -166,8 +163,6 @@
                 <dd>{{ priceLabel(p, 'YEARLY') }}</dd>
                 <dt>Modules</dt>
                 <dd>{{ modulesLabel(p.modules) }}</dd>
-                <dt>Trial</dt>
-                <dd>{{ p.trialDays ? p.trialDays + ' days' : 'None' }}</dd>
                 @if (p.maxFlats) {
                   <dt>Limit</dt>
                   <dd>{{ p.maxFlats }} flats</dd>

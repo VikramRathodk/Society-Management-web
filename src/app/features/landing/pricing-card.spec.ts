@@ -12,7 +12,6 @@ const STANDARD: Plan = {
   extraFlatMonthly: 12,
   extraFlatYearly: 120,
   maxFlats: null,
-  trialDays: 30,
   modules: ['MAINTENANCE', 'FINANCE', 'POLICIES'],
   active: true,
   sortOrder: 2,
@@ -31,7 +30,6 @@ const FREE: Plan = {
   extraFlatMonthly: null,
   extraFlatYearly: null,
   maxFlats: 15,
-  trialDays: 0,
   modules: [],
   featured: false,
   recommendedFromFlats: 1,
@@ -44,7 +42,7 @@ describe('pricingCard', () => {
     expect(card.price).toBe('₹699');
     expect(card.per).toBe('/ month');
     expect(card.featured).toBe(true);
-    expect(card.blurb).toBe('30-day free trial · + 18% GST');
+    expect(card.blurb).toBe('+ 18% GST');
     expect(card.points[0]).toBe('Up to 50 flats included');
     expect(card.points).toContain('₹12 a month for each extra flat');
     expect(card.points).toContain('Accounts, approvals, reports and bank reconciliation');
