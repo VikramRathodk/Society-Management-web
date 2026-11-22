@@ -37,6 +37,14 @@ export function pushRoute(data: PushData): string {
       return data['invoiceId'] ? `/subscription/invoices/${data['invoiceId']}` : '/subscription';
     case 'SUBSCRIPTION_STATUS':
       return '/subscription';
+    case 'STAFF_VERIFICATION_PENDING':
+    case 'STAFF_VERIFIED':
+    case 'STAFF_REJECTED':
+    case 'STAFF_BLOCKED':
+      return data['staffId'] ? `/staff/${data['staffId']}` : '/my-staff';
+    case 'STAFF_ARRIVED':
+    case 'STAFF_LEFT':
+      return '/my-staff';
     case 'PERMISSIONS_CHANGED':
       return '/dashboard'; // the app reloads the user's access when this push arrives
     case 'INVITATION_RECEIVED':

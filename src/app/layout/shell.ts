@@ -21,6 +21,7 @@ import { ThemeMode, ThemeStore } from '../core/theme';
 import { inviteDialog } from '../features/invitations/invite-dialog';
 import { canOpenMeetings } from '../features/governance/governance-ui';
 import { canOpenInvitations } from '../features/invitations/invitation-ui';
+import { canOpenMyStaff } from '../features/staff/staff-access';
 import { PendingInvitations } from '../features/invitations/pending-invitations';
 import { SetupBanner } from '../features/onboarding/setup-banner';
 import { SubscriptionBanner } from '../features/subscription/subscription-banner';
@@ -56,7 +57,21 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Users', icon: 'group', link: '/users', permission: 'USER.ACCOUNT.VIEW' },
   { label: 'Invitations', icon: 'mail', link: '/invitations', visible: canOpenInvitations },
   { label: 'Gate', icon: 'door_front', link: '/gate', permission: 'VISITOR.ENTRY.UPDATE' },
+  {
+    // The visitor gate links to the staff gate; this is for those who only check staff.
+    label: 'Staff gate',
+    icon: 'how_to_reg',
+    link: '/gate/staff',
+    visible: (auth, id) => auth.can('STAFF.ENTRY.VIEW', id) && !auth.can('VISITOR.ENTRY.UPDATE', id),
+  },
   { label: 'Visitors', icon: 'badge', link: '/visitors', permission: 'VISITOR.ENTRY.VIEW' },
+  { label: 'Staff', icon: 'cleaning_services', link: '/staff', permission: 'STAFF.DIRECTORY.VIEW' },
+  {
+    label: 'My staff',
+    icon: 'cleaning_services',
+    link: '/my-staff',
+    visible: (auth, id) => canOpenMyStaff(auth, id) && !auth.can('STAFF.DIRECTORY.VIEW', id),
+  },
   { label: 'Notices', icon: 'campaign', link: '/notices', permission: 'NOTICE.POST.VIEW' },
   {
     label: 'Rules',
@@ -218,6 +233,24 @@ export class Shell {
         icon: 'person_add',
         keywords: 'new visitor gate entry',
         run: go('/visitors/new'),
+      });
+    if (can('STAFF.ENTRY.VIEW'))
+      list.push({
+        id: 'act:staff-gate',
+        group: 'Actions',
+        label: 'Check staff in or out',
+        icon: 'how_to_reg',
+        keywords: 'staff maid cook driver gate code check in out attendance',
+        run: go('/gate/staff'),
+      });
+    if (canOpenMyStaff(this.auth, societyId))
+      list.push({
+        id: 'act:my-staff',
+        group: 'Actions',
+        label: 'Add my maid, cook or driver',
+        icon: 'person_add',
+        keywords: 'staff domestic help maid cook driver nanny add register',
+        run: go('/my-staff'),
       });
     if (can('COMPLAINT.TICKET.CREATE'))
       list.push({

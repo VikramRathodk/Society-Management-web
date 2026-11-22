@@ -26,6 +26,7 @@ import {
   tap,
 } from 'rxjs';
 
+import { StaffApi } from '../../core/api/staff.api';
 import { VisitorApi } from '../../core/api/visitor.api';
 import { AuthStore } from '../../core/auth/auth.store';
 import { Visitor, VisitorStatus } from '../../core/models';
@@ -99,6 +100,12 @@ const LANES: Lane[] = [
         <a mat-flat-button class="big log" routerLink="/visitors/new">
           <mat-icon>person_add</mat-icon>
           Log visitor
+        </a>
+      }
+      @if (canStaff()) {
+        <a mat-stroked-button class="big" routerLink="/gate/staff">
+          <mat-icon>how_to_reg</mat-icon>
+          Staff{{ staffInside() != null ? ' · ' + staffInside() + ' inside' : '' }}
         </a>
       }
       <mat-form-field appearance="outline" class="search" subscriptSizing="dynamic">
@@ -335,6 +342,7 @@ const LANES: Lane[] = [
 })
 export class GateBoard {
   private readonly api = inject(VisitorApi);
+  private readonly staffApi = inject(StaffApi);
   private readonly auth = inject(AuthStore);
   private readonly ctx = inject(SocietyContextStore);
   protected readonly actions = inject(VisitorActions);
@@ -347,6 +355,11 @@ export class GateBoard {
   protected readonly canLog = computed(() =>
     this.auth.can('VISITOR.ENTRY.CREATE', this.ctx.selectedSocietyId()),
   );
+  protected readonly canStaff = computed(() =>
+    this.auth.can('STAFF.ENTRY.VIEW', this.ctx.selectedSocietyId()),
+  );
+  /** How many staff are inside, for the link to the staff gate; null until known. */
+  protected readonly staffInside = signal<number | null>(null);
 
   protected readonly loading = signal(true);
   protected readonly loadError = signal(false);
@@ -446,7 +459,19 @@ export class GateBoard {
     });
   }
 
+  private refreshStaff(): void {
+    const societyId = this.ctx.selectedSocietyId();
+    if (!this.canStaff() || societyId == null) return;
+    this.staffApi
+      .inside(societyId, { silent: true })
+      .pipe(catchError(() => of(null)))
+      .subscribe((list) => {
+        if (list) this.staffInside.set(list.length);
+      });
+  }
+
   private apply(list: Visitor[]): void {
+    this.refreshStaff();
     this.visitors.set(list);
     this.updatedAt.set(Date.now());
     this.now.set(Date.now());

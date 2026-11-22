@@ -7,6 +7,7 @@ import { permissionGuard, societyPermissionGuard } from './core/auth/permission.
 import { unsavedChangesGuard } from './core/unsaved-changes.guard';
 import { meetingsGuard } from './features/governance/governance-ui';
 import { invitationsGuard } from './features/invitations/invitation-ui';
+import { staffGuard } from './features/staff/staff-access';
 import { planModuleGuard } from './core/subscription/subscription-access.store';
 
 // `title` is shown in the browser tab as "<title> · Sahvasa" (see AppTitleStrategy).
@@ -141,6 +142,35 @@ export const routes: Routes = [
         data: { permission: 'VISITOR.ENTRY.CREATE' },
         loadComponent: () =>
           import('./features/visitors/visitor-create').then((m) => m.VisitorCreate),
+      },
+      {
+        path: 'gate/staff',
+        title: 'Staff at the gate',
+        canMatch: [permissionGuard],
+        data: { permission: 'STAFF.ENTRY.VIEW' },
+        loadComponent: () => import('./features/staff/staff-gate').then((m) => m.StaffGate),
+      },
+      {
+        path: 'my-staff',
+        title: 'My staff',
+        canMatch: [permissionGuard],
+        data: { permission: 'STAFF.MEMBER.VIEW' },
+        loadComponent: () => import('./features/staff/my-staff').then((m) => m.MyStaff),
+      },
+      {
+        path: 'staff/:id',
+        title: 'Staff',
+        // Residents (their help), the committee, the secretary and guards; the page shows what each may see.
+        canMatch: [staffGuard],
+        loadComponent: () => import('./features/staff/staff-detail').then((m) => m.StaffDetail),
+      },
+      {
+        path: 'staff',
+        title: 'Staff',
+        canMatch: [permissionGuard],
+        data: { permission: 'STAFF.DIRECTORY.VIEW' },
+        loadComponent: () =>
+          import('./features/staff/staff-directory').then((m) => m.StaffDirectory),
       },
       {
         path: 'gate',
