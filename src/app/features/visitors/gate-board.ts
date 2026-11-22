@@ -26,7 +26,12 @@ import {
   tap,
 } from 'rxjs';
 
+import { MatDialog } from '@angular/material/dialog';
+import { MatSnackBar } from '@angular/material/snack-bar';
+import { ParkingApi } from '../../core/api/parking.api';
 import { StaffApi } from '../../core/api/staff.api';
+import { SubscriptionAccessStore } from '../../core/subscription/subscription-access.store';
+import { parkVisitorDialog } from '../parking/parking-ui';
 import { VisitorApi } from '../../core/api/visitor.api';
 import { AuthStore } from '../../core/auth/auth.store';
 import { Visitor, VisitorStatus } from '../../core/models';
@@ -142,6 +147,16 @@ const LANES: Lane[] = [
             </header>
             @for (v of shown(lane.status); track v.id) {
               <app-visitor-row [visitor]="v" compact>
+                @if (canParkVisitors()) {
+                  @if (parkedIn().get(v.id); as slot) {
+                    <span class="parked" title="Parked"><mat-icon aria-hidden="true">local_parking</mat-icon>{{ slot }}</span>
+                  } @else {
+                    <button mat-stroked-button class="big" (click)="park(v)" [disabled]="busy().has(v.id)">
+                      <mat-icon>local_parking</mat-icon>
+                      Park
+                    </button>
+                  }
+                }
                 @switch (v.status) {
                   @case ('APPROVED') {
                     @if (actions.can('VISITOR.ENTRY.UPDATE', v)) {
@@ -316,6 +331,22 @@ const LANES: Lane[] = [
     app-visitor-row {
       border-top: 1px solid var(--mat-sys-surface-container-high);
     }
+    .parked {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 10px;
+      border-radius: 12px;
+      background: var(--mat-sys-primary-container);
+      color: var(--mat-sys-on-primary-container);
+      font: var(--mat-sys-label-large);
+      white-space: nowrap;
+    }
+    .parked mat-icon {
+      width: 18px;
+      height: 18px;
+      font-size: 18px;
+    }
     .waited {
       color: var(--app-warning);
       font: var(--mat-sys-label-large);
@@ -343,6 +374,10 @@ const LANES: Lane[] = [
 export class GateBoard {
   private readonly api = inject(VisitorApi);
   private readonly staffApi = inject(StaffApi);
+  private readonly parkingApi = inject(ParkingApi);
+  private readonly plan = inject(SubscriptionAccessStore);
+  private readonly dialog = inject(MatDialog);
+  private readonly snack = inject(MatSnackBar);
   private readonly auth = inject(AuthStore);
   private readonly ctx = inject(SocietyContextStore);
   protected readonly actions = inject(VisitorActions);
@@ -360,6 +395,12 @@ export class GateBoard {
   );
   /** How many staff are inside, for the link to the staff gate; null until known. */
   protected readonly staffInside = signal<number | null>(null);
+  /** Parking in the plan and the permission to put visitors in visitor slots. */
+  protected readonly canParkVisitors = computed(
+    () => this.plan.allows('PARKING') && this.auth.can('PARKING.VISITOR.UPDATE', this.ctx.selectedSocietyId()),
+  );
+  /** Visitor id → the visitor slot they are parked in. */
+  protected readonly parkedIn = signal<ReadonlyMap<number, string>>(new Map());
 
   protected readonly loading = signal(true);
   protected readonly loadError = signal(false);
@@ -470,8 +511,37 @@ export class GateBoard {
       });
   }
 
+  private refreshParking(): void {
+    const societyId = this.ctx.selectedSocietyId();
+    if (!this.canParkVisitors() || societyId == null) return;
+    this.parkingApi
+      .visitorSlots(societyId, { silent: true })
+      .pipe(catchError(() => of(null)))
+      .subscribe((slots) => {
+        if (!slots) return;
+        this.parkedIn.set(new Map(slots.filter((s) => s.parking).map((s) => [s.parking!.visitorId, s.slotNumber])));
+      });
+  }
+
+  /** Puts the visitor in a free visitor slot (picked in a dialog). */
+  protected park(v: Visitor): void {
+    const societyId = this.ctx.selectedSocietyId();
+    if (societyId == null) return;
+    parkVisitorDialog(this.dialog, {
+      societyId,
+      visitorId: v.id,
+      visitorName: v.visitorName,
+      flatNumber: v.flatNumber,
+      vehicleNumber: v.vehicleNumber ?? null,
+    }).subscribe((p) => {
+      this.parkedIn.update((m) => new Map(m).set(v.id, p.slotNumber));
+      this.snack.open(`${v.visitorName} parked in ${p.slotNumber}`, undefined, { duration: 2500 });
+    });
+  }
+
   private apply(list: Visitor[]): void {
     this.refreshStaff();
+    this.refreshParking();
     this.visitors.set(list);
     this.updatedAt.set(Date.now());
     this.now.set(Date.now());

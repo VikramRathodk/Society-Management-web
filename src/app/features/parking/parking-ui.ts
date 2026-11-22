@@ -27,6 +27,8 @@ import {
   ViolationKind,
   ViolationOutcome,
   ViolationStatus,
+  VisitorParking,
+  VisitorSlot,
   Wing,
 } from '../../core/models';
 import { Tone } from '../../shared/ui';
@@ -950,6 +952,119 @@ export function decideDialog(dialog: MatDialog, violation: Violation, suggestedF
     })
     .afterClosed()
     .pipe(filter((v): v is Violation => !!v));
+}
+
+// ---- Parking a visitor ----
+
+export interface ParkVisitorData {
+  societyId: number;
+  visitorId: number;
+  visitorName: string;
+  flatNumber: string;
+  vehicleNumber: string | null;
+}
+
+/** Picks a free visitor slot for a visitor already logged; the slot frees itself when they leave. */
+@Component({
+  selector: 'app-park-visitor-dialog',
+  imports: [ReactiveFormsModule, MatButtonModule, MatDialogModule, MatFormFieldModule, MatInputModule, MatSelectModule],
+  template: `
+    <h2 mat-dialog-title>Park {{ data.visitorName }}</h2>
+    <mat-dialog-content>
+      <p class="hint">Visiting {{ data.flatNumber }}. The slot is freed when they are marked out.</p>
+      @if (slots() === null) {
+        <p class="hint">Loading the visitor slots…</p>
+      } @else if (slots()!.length === 0) {
+        <p class="dialog-error" role="alert">No visitor slot is free.</p>
+      } @else {
+        <form [formGroup]="form" class="grid">
+          <mat-form-field appearance="outline">
+            <mat-label>Visitor slot</mat-label>
+            <mat-select formControlName="slotId" cdkFocusInitial>
+              @for (s of slots(); track s.slotId) {
+                <mat-option [value]="s.slotId">{{ s.slotNumber }}{{ s.area ? ' · ' + s.area : '' }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Vehicle number</mat-label>
+            <input matInput formControlName="vehicleNumber" autocomplete="off" />
+          </mat-form-field>
+        </form>
+      }
+      @if (error(); as message) {
+        <p class="dialog-error" role="alert">{{ message }}</p>
+      }
+    </mat-dialog-content>
+    <mat-dialog-actions align="end">
+      <button mat-button mat-dialog-close>Cancel</button>
+      <button mat-flat-button (click)="save()" [disabled]="saving() || !slots()?.length">Park</button>
+    </mat-dialog-actions>
+  `,
+  styles: `
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0 12px;
+    }
+    mat-form-field {
+      width: 100%;
+    }
+    .hint {
+      margin: 0 0 12px;
+      color: var(--mat-sys-on-surface-variant);
+    }
+    .dialog-error {
+      margin: 0;
+      color: var(--mat-sys-error);
+    }
+  `,
+})
+export class ParkVisitorDialog {
+  private readonly api = inject(ParkingApi);
+  private readonly ref = inject<MatDialogRef<ParkVisitorDialog, VisitorParking>>(MatDialogRef);
+  protected readonly data = inject<ParkVisitorData>(MAT_DIALOG_DATA);
+  /** Free visitor slots; null while loading. */
+  protected readonly slots = signal<VisitorSlot[] | null>(null);
+  protected readonly saving = signal(false);
+  protected readonly error = signal<string | null>(null);
+  private readonly fb = inject(NonNullableFormBuilder);
+  protected readonly form = this.fb.group({
+    slotId: this.fb.control<number | null>(null, Validators.required),
+    vehicleNumber: [this.data.vehicleNumber ?? ''],
+  });
+
+  constructor() {
+    this.api.visitorSlots(this.data.societyId).pipe(catchError(() => of([] as VisitorSlot[]))).subscribe((list) => {
+      const free = list.filter((s) => !s.occupied);
+      this.slots.set(free);
+      if (free.length) this.form.controls.slotId.setValue(free[0].slotId);
+    });
+  }
+
+  protected save(): void {
+    const v = this.form.getRawValue();
+    if (v.slotId == null) {
+      this.error.set('Choose a slot');
+      return;
+    }
+    this.saving.set(true);
+    this.error.set(null);
+    this.api.parkVisitor(this.data.visitorId, v.slotId, v.vehicleNumber.trim() || null).subscribe({
+      next: (p) => this.ref.close(p),
+      error: (err: HttpErrorResponse) => {
+        this.saving.set(false);
+        this.error.set(errorMessage(err));
+      },
+    });
+  }
+}
+
+export function parkVisitorDialog(dialog: MatDialog, data: ParkVisitorData): Observable<VisitorParking> {
+  return dialog
+    .open<ParkVisitorDialog, ParkVisitorData, VisitorParking>(ParkVisitorDialog, { data, width: '480px', maxWidth: '95vw' })
+    .afterClosed()
+    .pipe(filter((p): p is VisitorParking => !!p));
 }
 
 // ---- A line of text (reasons, replies) ----
