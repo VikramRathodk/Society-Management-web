@@ -21,6 +21,7 @@ import { Observable, filter, firstValueFrom } from 'rxjs';
 
 import { SubscriptionApi } from '../../core/api/subscription.api';
 import { AuthStore } from '../../core/auth/auth.store';
+import { RazorpayConstructor, RazorpayResponse, loadRazorpay } from '../../core/razorpay';
 import { errorMessage } from '../../core/auth/error.interceptor';
 import {
   Plan,
@@ -69,6 +70,7 @@ export const PLAN_MODULES: { value: PlanModule; label: string }[] = [
   { value: 'POLICIES', label: 'Rules and policies' },
   { value: 'GOVERNANCE', label: 'Meetings and governance' },
   { value: 'PARKING', label: 'Parking' },
+  { value: 'ONLINE_PAYMENTS', label: 'Online maintenance payments' },
   { value: 'ALL', label: 'Everything (including future modules)' },
 ];
 
@@ -148,20 +150,6 @@ export class BillingAccess {
 
 // ---- Paying online ----
 
-interface RazorpayResponse {
-  razorpay_payment_id: string;
-  razorpay_order_id: string;
-  razorpay_signature: string;
-}
-
-interface RazorpayInstance {
-  open(): void;
-  on(event: string, handler: (response: { error?: { description?: string } }) => void): void;
-}
-
-type RazorpayConstructor = new (options: Record<string, unknown>) => RazorpayInstance;
-
-const CHECKOUT_SCRIPT = 'https://checkout.razorpay.com/v1/checkout.js';
 
 /** Outcome of "Pay now": paid (and verified), closed without paying, or an error message. */
 export type PayOutcome =
@@ -178,7 +166,6 @@ export type PayOutcome =
 export class RazorpayCheckout {
   private readonly api = inject(SubscriptionApi);
   private readonly auth = inject(AuthStore);
-  private script: Promise<RazorpayConstructor> | null = null;
 
   async pay(invoiceId: number): Promise<PayOutcome> {
     let order;
@@ -189,7 +176,7 @@ export class RazorpayCheckout {
     }
     let Razorpay: RazorpayConstructor;
     try {
-      Razorpay = await this.load();
+      Razorpay = await loadRazorpay();
     } catch {
       return { kind: 'failed', message: "Couldn't load Razorpay. Check the connection and try again." };
     }
@@ -225,28 +212,6 @@ export class RazorpayCheckout {
       );
       checkout.open();
     });
-  }
-
-  private load(): Promise<RazorpayConstructor> {
-    const existing = (window as unknown as { Razorpay?: RazorpayConstructor }).Razorpay;
-    if (existing) return Promise.resolve(existing);
-    this.script ??= new Promise<RazorpayConstructor>((resolve, reject) => {
-      const tag = document.createElement('script');
-      tag.src = CHECKOUT_SCRIPT;
-      tag.async = true;
-      tag.onload = () => {
-        const loaded = (window as unknown as { Razorpay?: RazorpayConstructor }).Razorpay;
-        if (loaded) resolve(loaded);
-        else reject(new Error('Razorpay missing'));
-      };
-      tag.onerror = () => {
-        this.script = null;
-        tag.remove();
-        reject(new Error('Razorpay failed to load'));
-      };
-      document.head.appendChild(tag);
-    });
-    return this.script;
   }
 }
 
@@ -367,6 +332,10 @@ function optionalNumber(value: number | string | null): number | null {
             <input matInput type="number" min="1" formControlName="recommendedFromFlats" />
           </mat-form-field>
           <mat-form-field appearance="outline">
+            <mat-label>Commission on online payments (%)</mat-label>
+            <input matInput type="number" min="0" max="100" step="0.01" formControlName="onlinePaymentCommissionPercent" />
+          </mat-form-field>
+          <mat-form-field appearance="outline">
             <mat-label>Order</mat-label>
             <input matInput type="number" formControlName="sortOrder" />
           </mat-form-field>
@@ -420,6 +389,10 @@ export class PlanDialog {
     maxFlats: [this.data?.maxFlats ?? (null as number | null), Validators.min(1)],
     recommendedFromFlats: [this.data?.recommendedFromFlats ?? 1, [Validators.required, Validators.min(1)]],
     sortOrder: [this.data?.sortOrder ?? 0],
+    onlinePaymentCommissionPercent: [
+      this.data?.onlinePaymentCommissionPercent ?? 0,
+      [Validators.required, Validators.min(0), Validators.max(100)],
+    ],
     active: [this.data?.active ?? true],
     featured: [this.data?.featured ?? false],
   });
@@ -454,6 +427,7 @@ export class PlanDialog {
       active: v.active,
       sortOrder: Number(v.sortOrder) || 0,
       featured: v.featured,
+      onlinePaymentCommissionPercent: Number(v.onlinePaymentCommissionPercent) || 0,
     };
     this.saving.set(true);
     this.error.set(null);

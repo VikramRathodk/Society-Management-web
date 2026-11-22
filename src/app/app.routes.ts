@@ -9,6 +9,7 @@ import { meetingsGuard } from './features/governance/governance-ui';
 import { invitationsGuard } from './features/invitations/invitation-ui';
 import { staffGuard } from './features/staff/staff-access';
 import { myParkingGuard } from './features/parking/parking-access';
+import { onlinePaymentsGuard, paymentSetupGuard } from './features/payments/payments-access';
 import { planModuleGuard } from './core/subscription/subscription-access.store';
 
 // `title` is shown in the browser tab as "<title> · Sahvasa" (see AppTitleStrategy).
@@ -163,6 +164,19 @@ export const routes: Routes = [
         canMatch: [planModuleGuard('PARKING'), permissionGuard],
         data: { permission: 'PARKING.ADMIN.VIEW' },
         loadComponent: () => import('./features/parking/parking-admin').then((m) => m.ParkingAdmin),
+      },
+      {
+        path: 'online-payments/setup',
+        title: 'Online payments setup',
+        canMatch: [planModuleGuard('ONLINE_PAYMENTS'), paymentSetupGuard],
+        loadComponent: () =>
+          import('./features/payments/online-payment-setup').then((m) => m.OnlinePaymentSetup),
+      },
+      {
+        path: 'online-payments',
+        title: 'Online payments',
+        canMatch: [planModuleGuard('ONLINE_PAYMENTS'), onlinePaymentsGuard],
+        loadComponent: () => import('./features/payments/online-payments').then((m) => m.OnlinePayments),
       },
       {
         path: 'gate/staff',
@@ -529,6 +543,14 @@ export const routes: Routes = [
         data: { permission: 'PLATFORM.BILLING.VIEW', platform: true },
         loadComponent: () =>
           import('./features/subscription/platform-billing').then((m) => m.PlatformBilling),
+      },
+      {
+        path: 'platform-payments',
+        title: 'Online payments',
+        canMatch: [permissionGuard],
+        data: { permission: 'PLATFORM.BILLING.VIEW', platform: true },
+        loadComponent: () =>
+          import('./features/payments/platform-payments').then((m) => m.PlatformPayments),
       },
       {
         path: 'registrations',

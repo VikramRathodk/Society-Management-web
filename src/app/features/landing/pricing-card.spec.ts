@@ -17,6 +17,7 @@ const STANDARD: Plan = {
   sortOrder: 2,
   featured: true,
   recommendedFromFlats: 31,
+  onlinePaymentCommissionPercent: 0,
 };
 
 const FREE: Plan = {

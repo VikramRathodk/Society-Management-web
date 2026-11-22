@@ -8,7 +8,8 @@ export type BillLineType = 'FIXED' | 'PER_SQFT' | 'LATE_FEE' | 'OPENING_BALANCE'
 export type CycleKind = 'REGULAR' | 'OPENING_BALANCE';
 export type CycleStatus = 'ISSUED' | 'CANCELLED';
 export type BillStatus = 'UNPAID' | 'PARTIAL' | 'PAID' | 'WAIVED' | 'CANCELLED';
-export type PaymentMethod = 'CASH' | 'CHEQUE' | 'UPI' | 'BANK_TRANSFER';
+/** ONLINE: paid by the resident through the gateway (never recorded by hand). */
+export type PaymentMethod = 'CASH' | 'CHEQUE' | 'UPI' | 'BANK_TRANSFER' | 'ONLINE';
 export type PaymentStatus = 'RECORDED' | 'VOID';
 
 export interface MaintenanceSettings {

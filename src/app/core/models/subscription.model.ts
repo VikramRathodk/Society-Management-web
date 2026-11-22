@@ -1,7 +1,14 @@
 /** Platform billing: what the platform charges a society (not maintenance, which a society charges residents). */
 
 /** Paid modules a plan may include; core modules are in every plan. ALL covers everything. */
-export type PlanModule = 'MAINTENANCE' | 'FINANCE' | 'POLICIES' | 'GOVERNANCE' | 'PARKING' | 'ALL';
+export type PlanModule =
+  | 'MAINTENANCE'
+  | 'FINANCE'
+  | 'POLICIES'
+  | 'GOVERNANCE'
+  | 'PARKING'
+  | 'ONLINE_PAYMENTS'
+  | 'ALL';
 
 export type SubscriptionCycle = 'MONTHLY' | 'YEARLY';
 
@@ -43,6 +50,8 @@ export interface Plan {
   featured: boolean;
   /** The recommended plan from this many flats (the highest one not above a society's count). */
   recommendedFromFlats: number;
+  /** The platform's cut of each online maintenance payment, in percent. */
+  onlinePaymentCommissionPercent: number;
 }
 
 export interface PlanRequest {
@@ -60,6 +69,7 @@ export interface PlanRequest {
   sortOrder: number;
   featured: boolean;
   recommendedFromFlats: number;
+  onlinePaymentCommissionPercent: number;
 }
 
 /** A plan's cost for a flat count (before GST). */

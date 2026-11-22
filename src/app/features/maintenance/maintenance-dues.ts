@@ -7,10 +7,12 @@ import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { RouterLink } from '@angular/router';
-import { catchError, firstValueFrom, of, switchMap, tap } from 'rxjs';
+import { catchError, firstValueFrom, forkJoin, map, of, switchMap, tap } from 'rxjs';
 
 import { MaintenanceApi } from '../../core/api/maintenance.api';
-import { FlatDues } from '../../core/models';
+import { PaymentApi } from '../../core/api/payment.api';
+import { FlatDues, OnlineQuote } from '../../core/models';
+import { payOnlineDialog } from '../payments/payments-ui';
 import { SocietyContextStore } from '../../core/society-context/society-context.store';
 import { confirmDialog } from '../../shared/confirm-dialog';
 import { saveResponse } from '../../shared/export-dialog';
@@ -49,6 +51,7 @@ import {
 })
 export class MaintenanceDues {
   private readonly api = inject(MaintenanceApi);
+  private readonly payments = inject(PaymentApi);
   private readonly dialog = inject(MatDialog);
   private readonly snack = inject(MatSnackBar);
   protected readonly ctx = inject(SocietyContextStore);
@@ -63,6 +66,9 @@ export class MaintenanceDues {
   protected readonly loading = signal(true);
   protected readonly loadError = signal(false);
   protected readonly busy = signal(false);
+  /** Flats the signed-in resident can pay online now, with the default quote. */
+  protected readonly online = signal<Record<number, OnlineQuote>>({});
+  protected readonly hasOnline = computed(() => Object.keys(this.online()).length > 0);
   private readonly attempt = signal(0);
 
   protected readonly subtitle = computed(() => this.ctx.selectedSociety()?.name ?? null);
@@ -87,7 +93,42 @@ export class MaintenanceDues {
         this.loadError.set(list === null);
         this.dues.set(list ?? []);
         this.loading.set(false);
+        this.loadOnline(list ?? []);
       });
+  }
+
+  // A resident's own flats: whether the society takes online payments for them (402/403: no button).
+  private loadOnline(list: FlatDues[]): void {
+    this.online.set({});
+    const own = this.access.committee() ? [] : list.filter((d) => d.outstanding > 0);
+    if (own.length === 0) return;
+    forkJoin(
+      own.map((d) =>
+        this.payments.options(d.flatId).pipe(
+          map((o) => [d.flatId, o.accepting ? o.quote : null] as const),
+          catchError(() => of([d.flatId, null] as const)),
+        ),
+      ),
+    ).subscribe((pairs) => {
+      const next: Record<number, OnlineQuote> = {};
+      for (const [flatId, quote] of pairs) if (quote) next[flatId] = quote;
+      this.online.set(next);
+    });
+  }
+
+  protected payOnline(d: FlatDues): void {
+    const quote = this.online()[d.flatId];
+    if (!quote) return;
+    payOnlineDialog(this.dialog, { flatId: d.flatId, flatLabel: flatLabel(d.wingName, d.flatNumber), quote }).subscribe(
+      (capture) => {
+        this.snack.open(
+          capture.receiptNumber ? `Paid · receipt ${capture.receiptNumber}` : 'Payment received',
+          undefined,
+          { duration: 5000 },
+        );
+        this.retry();
+      },
+    );
   }
 
   protected retry(): void {
