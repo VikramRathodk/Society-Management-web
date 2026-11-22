@@ -14,3 +14,4 @@ export * from './policy.model';
 export * from './governance.model';
 export * from './subscription.model';
 export * from './society-permission.model';
+export * from './staff.model';

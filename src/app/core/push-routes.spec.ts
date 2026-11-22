@@ -44,6 +44,11 @@ describe('pushRoute', () => {
     }
     expect(pushRoute({ type: 'PLATFORM_INVOICE' })).toBe('/subscription');
     expect(pushRoute({ type: 'SUBSCRIPTION_STATUS', status: 'SUSPENDED' })).toBe('/subscription');
+    for (const type of ['STAFF_VERIFICATION_PENDING', 'STAFF_VERIFIED', 'STAFF_REJECTED', 'STAFF_BLOCKED']) {
+      expect(pushRoute({ type, staffId: '5' })).toBe('/staff/5');
+    }
+    expect(pushRoute({ type: 'STAFF_ARRIVED', staffId: '5' })).toBe('/my-staff');
+    expect(pushRoute({ type: 'STAFF_LEFT', staffId: '5' })).toBe('/my-staff');
     expect(pushRoute({ type: 'SOMETHING_NEW' })).toBe('/');
   });
 });

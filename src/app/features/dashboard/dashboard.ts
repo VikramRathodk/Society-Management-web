@@ -14,6 +14,7 @@ import { PolicyApi } from '../../core/api/policy.api';
 import { GovernanceApi } from '../../core/api/governance.api';
 import { StructureApi } from '../../core/api/structure.api';
 import { UserApi } from '../../core/api/user.api';
+import { StaffApi } from '../../core/api/staff.api';
 import { VisitorApi } from '../../core/api/visitor.api';
 import { AuthStore } from '../../core/auth/auth.store';
 import { HasPermission } from '../../core/auth/has-permission.directive';
@@ -57,6 +58,8 @@ interface DashboardData {
   policiesToApprove?: PolicySummary[] | null;
   meetings?: Meeting[] | null;
   heldMeetings?: Meeting[] | null;
+  staffToVerify?: number | null;
+  staffInside?: number | null;
 }
 
 interface Card {
@@ -93,6 +96,7 @@ interface Card {
 })
 export class Dashboard {
   private readonly visitorApi = inject(VisitorApi);
+  private readonly staffApi = inject(StaffApi);
   private readonly userApi = inject(UserApi);
   private readonly structureApi = inject(StructureApi);
   private readonly complaintApi = inject(ComplaintApi);
@@ -287,6 +291,26 @@ export class Dashboard {
         tone: waiting > 0 ? 'warning' : 'neutral',
       });
     }
+    if (this.can('STAFF.DIRECTORY.VIEW') && this.ctx.selectedSocietyId() != null) {
+      const waiting = d.staffToVerify ?? 0;
+      cards.push({
+        label: 'Staff to verify',
+        icon: 'badge',
+        value: value(d.staffToVerify),
+        link: '/staff',
+        queryParams: { view: 'pending' },
+        tone: waiting > 0 ? 'warning' : 'neutral',
+      });
+    }
+    if (this.can('STAFF.ENTRY.VIEW') && this.ctx.selectedSocietyId() != null) {
+      cards.push({
+        label: 'Staff inside',
+        icon: 'how_to_reg',
+        value: value(d.staffInside),
+        link: '/gate/staff',
+        tone: 'primary',
+      });
+    }
     if (this.can('USER.ACCOUNT.VIEW')) {
       cards.push({
         label: 'Users',
@@ -411,6 +435,16 @@ export class Dashboard {
     if (this.can('POLICY.RULE.APPROVE') && societyId != null) {
       requests.policiesToApprove = settle(
         this.policyApi.list(societyId, { filter: 'awaiting-approval' }, { silent: true }),
+      );
+    }
+    if (this.can('STAFF.DIRECTORY.VIEW') && societyId != null) {
+      requests.staffToVerify = settle(
+        this.staffApi.directory(societyId, { status: 'PENDING' }, { silent: true }).pipe(map((list) => list.length)),
+      );
+    }
+    if (this.can('STAFF.ENTRY.VIEW') && societyId != null) {
+      requests.staffInside = settle(
+        this.staffApi.inside(societyId, { silent: true }).pipe(map((list) => list.length)),
       );
     }
     return Object.keys(requests).length ? forkJoin(requests) : of({});
