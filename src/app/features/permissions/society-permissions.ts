@@ -37,8 +37,8 @@ const ROLE_ORDER = ['ADMIN', 'SECRETARY', 'CHAIRMAN', 'COMMITTEE', 'GUARD', 'RES
 
 /**
  * Roles & permissions of the selected society: what each role may do here (on top of the platform
- * default), the society's presets and the history of changes. Committee and above look; secretary and
- * above change roles below their own.
+ * default), the society's presets and the history of changes. Committee and above look and change roles
+ * ranked below their own.
  */
 @Component({
   selector: 'app-society-permissions',

@@ -39,7 +39,7 @@ import { SocietyPermissionMatrix } from './society-permission-matrix';
 
 /**
  * One person's permissions in the selected society: what their roles give, plus their own added and
- * removed permissions. Editors (secretary and above, for people ranked below them) can change them,
+ * removed permissions. Editors (committee and above, for people ranked below them) can change them,
  * copy them from someone else, apply a preset or reset them to their roles.
  */
 @Component({
