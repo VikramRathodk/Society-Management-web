@@ -9,15 +9,16 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { RouterLink } from '@angular/router';
-import { catchError, filter, interval, of, switchMap } from 'rxjs';
+import { catchError, filter, forkJoin, interval, of, switchMap } from 'rxjs';
 
 import { ParkingApi } from '../../core/api/parking.api';
+import { VisitorApi } from '../../core/api/visitor.api';
 import { AuthStore } from '../../core/auth/auth.store';
 import { errorMessage } from '../../core/auth/error.interceptor';
-import { Vehicle, VisitorSlot } from '../../core/models';
+import { Vehicle, Visitor, VisitorSlot, VisitorStatus } from '../../core/models';
 import { SocietyContextStore } from '../../core/society-context/society-context.store';
 import { EmptyState, PageHeader, StatusPill } from '../../shared/ui';
-import { reportDialog, vehicleState, vehicleTypeIcon } from './parking-ui';
+import { parkVisitorDialog, reportDialog, vehicleState, vehicleTypeIcon } from './parking-ui';
 
 const REFRESH_MS = 30_000;
 
@@ -74,6 +75,29 @@ const REFRESH_MS = 30_000;
           </article>
         }
       </div>
+    }
+
+    @if (canPark()) {
+      <section class="lane park" aria-label="Park a visitor">
+        <header>
+          <h2>Park a visitor</h2>
+          <span class="meta">At the gate or inside, not parked yet</span>
+        </header>
+        @for (v of unparked(); track v.id) {
+          <div class="row">
+            <div class="main">
+              <span>{{ v.visitorName }} for {{ v.flatNumber }}{{ v.vehicleNumber ? ' · ' + v.vehicleNumber : '' }}</span>
+              <span class="meta">{{ v.status === 'ENTERED' ? 'Inside' : v.status === 'APPROVED' ? 'Approved, at the gate' : 'Waiting for the flat' }}</span>
+            </div>
+            <button mat-flat-button (click)="park(v)" [disabled]="freeSlots() === 0">
+              <mat-icon>local_parking</mat-icon>
+              Park
+            </button>
+          </div>
+        } @empty {
+          <p class="hint">No visitor is waiting to be parked.</p>
+        }
+      </section>
     }
 
     <section class="lane" aria-label="Visitor slots">
@@ -179,6 +203,9 @@ const REFRESH_MS = 30_000;
       padding: 12px 20px;
       border-top: 1px solid var(--mat-sys-surface-container-high);
     }
+    .lane.park {
+      margin-bottom: 16px;
+    }
     .row.overstay {
       background: var(--app-warning-container);
     }
@@ -194,6 +221,7 @@ const REFRESH_MS = 30_000;
 })
 export class ParkingGate {
   private readonly api = inject(ParkingApi);
+  private readonly visitorApi = inject(VisitorApi);
   private readonly auth = inject(AuthStore);
   private readonly dialog = inject(MatDialog);
   private readonly snack = inject(MatSnackBar);
@@ -208,6 +236,13 @@ export class ParkingGate {
   protected readonly searchError = signal<string | null>(null);
   protected readonly slots = signal<VisitorSlot[]>([]);
   protected readonly freeSlots = computed(() => this.slots().filter((s) => !s.occupied).length);
+  /** Visitors at the gate or inside. */
+  private readonly visitors = signal<Visitor[]>([]);
+  /** Those not in a visitor slot yet, longest at the gate first. */
+  protected readonly unparked = computed(() => {
+    const parked = new Set(this.slots().flatMap((s) => (s.parking ? [s.parking.visitorId] : [])));
+    return this.visitors().filter((v) => !parked.has(v.id));
+  });
 
   private readonly can = (p: string) => this.auth.can(p, this.ctx.selectedSocietyId());
   protected readonly canPark = computed(() => this.can('PARKING.VISITOR.UPDATE'));
@@ -230,7 +265,42 @@ export class ParkingGate {
         }),
         takeUntilDestroyed(inject(DestroyRef)),
       )
-      .subscribe((list) => list && this.slots.set(list));
+      .subscribe((list) => {
+        if (list) this.slots.set(list);
+        this.loadVisitors();
+      });
+    toObservable(this.ctx.selectedSocietyId)
+      .pipe(takeUntilDestroyed())
+      .subscribe(() => this.loadVisitors());
+  }
+
+  /** Pending, approved and inside visitors, for the Park list (only for those who may park them). */
+  private loadVisitors(): void {
+    const societyId = this.ctx.selectedSocietyId();
+    if (societyId == null || !this.canPark() || !this.auth.can('VISITOR.ENTRY.VIEW', societyId)) {
+      this.visitors.set([]);
+      return;
+    }
+    const lane = (status: VisitorStatus) =>
+      this.visitorApi.list({ societyId, status, page: 0, size: 100 }, { silent: true }).pipe(catchError(() => of([] as Visitor[])));
+    forkJoin([lane('ENTERED'), lane('APPROVED'), lane('PENDING')]).subscribe((lists) =>
+      this.visitors.set(lists.flat().sort((a, b) => (a.loggedAt ?? '').localeCompare(b.loggedAt ?? ''))),
+    );
+  }
+
+  protected park(v: Visitor): void {
+    const societyId = this.ctx.selectedSocietyId();
+    if (societyId == null) return;
+    parkVisitorDialog(this.dialog, {
+      societyId,
+      visitorId: v.id,
+      visitorName: v.visitorName,
+      flatNumber: v.flatNumber,
+      vehicleNumber: v.vehicleNumber ?? null,
+    }).subscribe((p) => {
+      this.snack.open(`${v.visitorName} parked in ${p.slotNumber}`, undefined, { duration: 2500 });
+      this.api.visitorSlots(societyId, { silent: true }).pipe(catchError(() => of(null))).subscribe((list) => list && this.slots.set(list));
+    });
   }
 
   protected looks(v: Vehicle): string {
