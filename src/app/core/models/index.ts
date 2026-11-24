@@ -17,3 +17,4 @@ export * from './society-permission.model';
 export * from './staff.model';
 export * from './parking.model';
 export * from './payment.model';
+export * from './reporting.model';

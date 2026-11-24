@@ -1,0 +1,218 @@
+<app-page-header title="Stats" subtitle="How the society is doing: money coming in and going out, and what happens day to day.">
+  <mat-button-toggle-group
+    aria-label="Months shown in money and complaint charts"
+    [value]="months()"
+    (change)="months.set($event.value)"
+    hideSingleSelectionIndicator
+  >
+    <mat-button-toggle [value]="6">6 months</mat-button-toggle>
+    <mat-button-toggle [value]="12">12 months</mat-button-toggle>
+    <mat-button-toggle [value]="24">24 months</mat-button-toggle>
+  </mat-button-toggle-group>
+</app-page-header>
+
+@if (nothing()) {
+  <app-empty-state icon="insights" message="There are no stats you can see in this society." />
+}
+
+<!-- One chart in a card: skeleton while loading, retry on failure, a note when there is nothing yet. -->
+<ng-template
+  #chartCard
+  let-title="title"
+  let-subtitle="subtitle"
+  let-load="load"
+  let-chart="chart"
+  let-type="type"
+  let-money="money"
+  let-stacked="stacked"
+  let-empty="empty"
+>
+  @if (load.state !== 'hidden') {
+    <app-section [title]="title" [subtitle]="subtitle" padded>
+      @switch (load.state) {
+        @case ('loading') {
+          <app-skeleton variant="rows" [count]="4" />
+        }
+        @case ('failed') {
+          <app-empty-state icon="cloud_off" message="Couldn't load this chart.">
+            <button mat-button (click)="retry()">Try again</button>
+          </app-empty-state>
+        }
+        @case ('ready') {
+          @if (!chart || chart.empty) {
+            <app-empty-state icon="insights" [message]="empty" />
+          } @else {
+            <app-chart
+              [type]="type"
+              [labels]="chart.labels"
+              [series]="chart.series"
+              [money]="money"
+              [stacked]="stacked"
+              [ariaLabel]="title"
+            />
+          }
+        }
+      }
+    </app-section>
+  }
+</ng-template>
+
+@if (access.money()) {
+  <h2 class="group">Money</h2>
+  <div class="grid">
+    <ng-container
+      *ngTemplateOutlet="
+        chartCard;
+        context: {
+          title: 'Maintenance billed vs collected',
+          subtitle: 'Bills by billing period, payments by the date they were paid',
+          load: maintenance(),
+          chart: billedCollected(),
+          type: 'bar',
+          money: true,
+          empty: 'No maintenance billed or collected in this period.'
+        }
+      "
+    />
+    <ng-container
+      *ngTemplateOutlet="
+        chartCard;
+        context: {
+          title: 'Collections by payment method',
+          load: maintenance(),
+          chart: byMethod(),
+          type: 'bar',
+          money: true,
+          stacked: true,
+          empty: 'No payments in this period.'
+        }
+      "
+    />
+    <ng-container
+      *ngTemplateOutlet="
+        chartCard;
+        context: {
+          title: 'Unpaid dues by age',
+          subtitle: 'Open bills today, by how long they are past their due date',
+          load: maintenance(),
+          chart: ageing(),
+          type: 'bar',
+          money: true,
+          empty: 'Nothing is unpaid.'
+        }
+      "
+    />
+    <ng-container
+      *ngTemplateOutlet="
+        chartCard;
+        context: {
+          title: 'Income vs expenditure',
+          subtitle: 'From the books',
+          load: finance(),
+          chart: incomeExpenditure(),
+          type: 'bar',
+          money: true,
+          empty: 'Nothing booked in this period.'
+        }
+      "
+    />
+    <ng-container
+      *ngTemplateOutlet="
+        chartCard;
+        context: {
+          title: 'Where the money went',
+          subtitle: 'Expenses by account over the period',
+          load: finance(),
+          chart: expenses(),
+          type: 'doughnut',
+          money: true,
+          empty: 'No expenses in this period.'
+        }
+      "
+    />
+  </div>
+}
+
+@if (access.operations()) {
+  <div class="group-row">
+    <h2 class="group">Operations</h2>
+    <mat-button-toggle-group
+      aria-label="Days shown in visitor and staff charts"
+      [value]="days()"
+      (change)="days.set($event.value)"
+      hideSingleSelectionIndicator
+    >
+      <mat-button-toggle [value]="7">7 days</mat-button-toggle>
+      <mat-button-toggle [value]="30">30 days</mat-button-toggle>
+      <mat-button-toggle [value]="90">90 days</mat-button-toggle>
+    </mat-button-toggle-group>
+  </div>
+  <div class="grid">
+    <ng-container
+      *ngTemplateOutlet="
+        chartCard;
+        context: {
+          title: 'Complaints raised vs resolved',
+          load: complaints(),
+          chart: complaintMonths(),
+          type: 'bar',
+          empty: 'No complaints in this period.'
+        }
+      "
+    />
+    <ng-container
+      *ngTemplateOutlet="
+        chartCard;
+        context: {
+          title: 'Open complaints by category',
+          subtitle: 'Open and in progress today',
+          load: complaints(),
+          chart: complaintCategories(),
+          type: 'doughnut',
+          empty: 'No open complaints.'
+        }
+      "
+    />
+    <ng-container
+      *ngTemplateOutlet="
+        chartCard;
+        context: {
+          title: 'Visitors per day',
+          load: visitors(),
+          chart: visitorDays(),
+          type: 'line',
+          empty: 'No visitors in this period.'
+        }
+      "
+    />
+    <ng-container
+      *ngTemplateOutlet="
+        chartCard;
+        context: {
+          title: 'Staff present per day',
+          subtitle: 'People who checked in at the gate',
+          load: staff(),
+          chart: staffDays(),
+          type: 'line',
+          empty: 'No staff check-ins in this period.'
+        }
+      "
+    />
+    <ng-container
+      *ngTemplateOutlet="
+        chartCard;
+        context: {
+          title: 'Parking slots',
+          subtitle: parkingData()
+            ? 'Resident slots today · visitor slots in use: ' + parkingData()!.visitorSlotsInUse + ' of ' + parkingData()!.visitorSlots
+            : 'Resident slots today',
+          load: parking(),
+          chart: parkingSlots(),
+          type: 'bar',
+          stacked: true,
+          empty: 'No parking slots set up.'
+        }
+      "
+    />
+  </div>
+}

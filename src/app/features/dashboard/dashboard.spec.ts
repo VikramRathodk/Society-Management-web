@@ -5,7 +5,7 @@ import { provideRouter } from '@angular/router';
 
 import { AuthStore } from '../../core/auth/auth.store';
 import { SubscriptionAccessStore } from '../../core/subscription/subscription-access.store';
-import { Visitor } from '../../core/models';
+import { DashboardCounts, Visitor } from '../../core/models';
 import { Dashboard } from './dashboard';
 
 function visitor(
@@ -33,6 +33,23 @@ function visitor(
     respondedAt: null,
     enteredAt: null,
     exitedAt: null,
+  };
+}
+
+/** The dashboard endpoint's answer: every part hidden unless given. */
+function counts(parts: Partial<DashboardCounts> = {}): DashboardCounts {
+  return {
+    visitors: null,
+    complaints: null,
+    dues: null,
+    users: null,
+    wings: null,
+    policiesToApprove: null,
+    staffToVerify: null,
+    staffInside: null,
+    vehiclesToApprove: null,
+    openParkingReports: null,
+    ...parts,
   };
 }
 
@@ -78,6 +95,9 @@ describe('Dashboard', () => {
       e.textContent?.trim(),
     );
 
+  const flushCounts = (parts: Partial<DashboardCounts> = {}) =>
+    http.expectOne('/api/societies/1/dashboard').flush(counts(parts));
+
   afterEach(() => http.verify());
 
   it('shows only visitor cards to a guard, with counts', async () => {
@@ -87,10 +107,10 @@ describe('Dashboard', () => {
     const now = new Date().toISOString();
     // Newest first, as the API returns them.
     const pending = [visitor(2, 'Newer Guest', now), visitor(1, 'Older Guest', now)];
+    flushCounts({ visitors: { waiting: 2, inside: 0, loggedToday: 2 } });
     http.expectOne('/api/visitors?societyId=1&status=PENDING&page=0&size=100').flush(pending);
-    http.expectOne('/api/visitors?societyId=1&status=ENTERED&page=0&size=100').flush([]);
     http
-      .expectOne('/api/visitors?societyId=1&page=0&size=100')
+      .expectOne('/api/visitors?societyId=1&page=0&size=6')
       .flush([...pending, visitor(3, 'Old Guest', '2020-01-01T00:00:00Z', 'EXITED')]);
     await fixture.whenStable();
     expect(values()).toEqual(['2', '0', '2']);
@@ -103,7 +123,7 @@ describe('Dashboard', () => {
     expect(names).toEqual(['Older Guest', 'Newer Guest']);
   });
 
-  it('adds user and wing cards for a secretary; a failed count shows a dash', async () => {
+  it('adds user and wing cards for a secretary with exact counts; a hidden part shows a dash', async () => {
     await setup(['VISITOR.ENTRY.VIEW', 'USER.ACCOUNT.VIEW', 'FLAT.DIRECTORY.VIEW']);
     expect(labels()).toEqual([
       'Waiting for approval',
@@ -112,11 +132,11 @@ describe('Dashboard', () => {
       'Users',
       'Wings',
     ]);
+    flushCounts({ visitors: { waiting: 0, inside: 0, loggedToday: 0 }, users: 1200 });
     http.match((r) => r.url === '/api/visitors').forEach((r) => r.flush([]));
-    http.expectOne('/api/users?societyId=1').flush(new Array(120).fill({}));
-    http.expectOne('/api/societies/1/wings').flush(null, { status: 500, statusText: 'Error' });
     await fixture.whenStable();
-    expect(values()).toEqual(['0', '0', '0', '100+', '—']);
+    // No more "100+": the endpoint counts exactly.
+    expect(values()).toEqual(['0', '0', '0', '1,200', '—']);
   });
 
   const dues = (flatId: number, outstanding: number, overdue: number) => ({
@@ -138,9 +158,11 @@ describe('Dashboard', () => {
       [{ societyId: 1, flatId: null }],
     );
     expect(labels()).toEqual(['Outstanding dues']);
+    flushCounts({ dues: { outstanding: 3500.3, overdue: 1000.2, flatsWithDues: 2 } });
+    // The trend charts ask for six months; nothing billed yet, so they stay hidden.
     http
-      .expectOne('/api/societies/1/maintenance/dues?overdueOnly=false')
-      .flush([dues(1, 2500.1, 0), dues(2, 1000.2, 1000.2)]);
+      .expectOne('/api/societies/1/stats/maintenance?months=6')
+      .flush({ from: '2026-06', to: '2026-11', months: [], ageing: [] });
     // The money strip asks for the latest bill cycle.
     http.expectOne('/api/societies/1/maintenance/cycles').flush([]);
     await fixture.whenStable();
@@ -154,7 +176,11 @@ describe('Dashboard', () => {
       ['MAINTENANCE.BILL.VIEW', 'MAINTENANCE.BILL.CREATE', 'FINANCE.REPORT.VIEW'],
       [{ societyId: 1, flatId: null }],
     );
-    http.expectOne('/api/societies/1/maintenance/dues?overdueOnly=false').flush([]);
+    flushCounts({ dues: { outstanding: 0, overdue: 0, flatsWithDues: 0 } });
+    // The trend charts ask for six months; nothing billed yet, so they stay hidden.
+    http
+      .expectOne('/api/societies/1/stats/maintenance?months=6')
+      .flush({ from: '2026-06', to: '2026-11', months: [], ageing: [] });
     http
       .expectOne((r) => r.url === '/api/societies/1/finance/summary')
       .flush({
@@ -209,6 +235,7 @@ describe('Dashboard', () => {
   it('shows a resident their own dues in the spotlight, not as a card', async () => {
     await setup(['MAINTENANCE.BILL.VIEW'], [{ societyId: 1, flatId: 9 }]);
     expect(labels()).toEqual([]);
+    flushCounts({ dues: { outstanding: 6000, overdue: 6000, flatsWithDues: 1 } });
     http
       .expectOne('/api/societies/1/maintenance/dues?overdueOnly=false')
       .flush([dues(9, 6000, 6000)]);
@@ -221,6 +248,7 @@ describe('Dashboard', () => {
 
   it('tells a resident with nothing due that they are paid up', async () => {
     await setup(['MAINTENANCE.BILL.VIEW'], [{ societyId: 1, flatId: 9 }]);
+    flushCounts({ dues: { outstanding: 0, overdue: 0, flatsWithDues: 0 } });
     http.expectOne('/api/societies/1/maintenance/dues?overdueOnly=false').flush([]);
     await fixture.whenStable();
     fixture.detectChanges();
@@ -229,6 +257,7 @@ describe('Dashboard', () => {
 
   it('says the visitors failed to load instead of "nobody is waiting"', async () => {
     await setup(['VISITOR.ENTRY.VIEW']);
+    flushCounts({ visitors: { waiting: 0, inside: 0, loggedToday: 0 } });
     http
       .match((r) => r.url === '/api/visitors')
       .forEach((r) => r.flush(null, { status: 500, statusText: 'Error' }));
