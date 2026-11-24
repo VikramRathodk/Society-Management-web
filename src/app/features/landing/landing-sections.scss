@@ -269,6 +269,7 @@
 
   input {
     width: min(100%, 220px);
+    min-height: 44px;
     padding: 10px 14px;
     border: 1px solid var(--mat-sys-outline-variant);
     border-radius: 12px;
@@ -290,6 +291,7 @@
   background: var(--mat-sys-surface-container-high);
 
   button {
+    min-height: 44px;
     padding: 8px 16px;
     border: 0;
     border-radius: 999px;
@@ -330,6 +332,12 @@
   &.too-small {
     opacity: 0.6;
   }
+}
+
+// Pinned to the bottom of the card so the buttons line up across plans.
+.plan-cta {
+  margin-top: auto;
+  align-self: stretch;
 }
 
 .plan-tag {
@@ -635,5 +643,211 @@ details {
   p {
     margin-bottom: 8px;
     color: rgb(255 255 255 / 0.85);
+  }
+}
+
+// ---- Rebuild (2026-11-25): before/after, proof, included, phone bar ----
+
+// Read by screen readers, invisible on screen.
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+// The pain it removes: three short pairs, the old way struck through, the new way bold.
+.ba-section {
+  padding-bottom: 24px;
+}
+
+.ba-title {
+  max-width: 22ch;
+  margin: 0 auto 32px;
+  color: var(--app-heading);
+  font-family: var(--app-font-display);
+  font-size: clamp(1.6rem, 1.2rem + 1.6vw, 2.4rem);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  text-align: center;
+  text-wrap: balance;
+}
+
+.ba {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  li {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 24px;
+    border: 1px solid var(--app-card-border);
+    border-radius: 20px;
+    background: var(--mat-sys-surface-container-lowest);
+    box-shadow: var(--app-card-shadow);
+  }
+}
+
+.ba-icon {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: var(--mat-sys-primary-container);
+  color: var(--mat-sys-on-primary-container);
+}
+
+.ba-before {
+  margin: 0;
+  color: var(--mat-sys-on-surface-variant);
+  font: var(--mat-sys-body-large);
+  text-decoration: line-through;
+  text-decoration-color: color-mix(in srgb, var(--app-warning) 70%, transparent);
+  text-decoration-thickness: 2px;
+}
+
+.ba-arrow {
+  color: var(--app-accent);
+}
+
+.ba-after {
+  margin: 0;
+  color: var(--app-heading);
+  font: var(--mat-sys-title-medium);
+  line-height: 1.4;
+}
+
+// Real quotes and figures, once filled in.
+.proof-inner {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
+  align-items: center;
+  gap: 40px;
+}
+
+.figures {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 24px;
+  margin: 0;
+
+  div {
+    display: flex;
+    flex-direction: column-reverse;
+  }
+
+  dt {
+    color: var(--mat-sys-on-surface-variant);
+    font: var(--mat-sys-body-medium);
+  }
+
+  dd {
+    margin: 0;
+    color: var(--app-heading);
+    font-family: var(--app-font-display);
+    font-size: 2.4rem;
+    font-weight: 600;
+    line-height: 1.1;
+  }
+}
+
+.quote-card {
+  margin: 0;
+  padding: 32px;
+  border-radius: 24px;
+  background: var(--mat-sys-surface-container);
+
+  blockquote {
+    margin: 0 0 16px;
+    color: var(--app-heading);
+    font-family: var(--app-font-display);
+    font-size: 1.3rem;
+    line-height: 1.45;
+  }
+
+  figcaption {
+    display: flex;
+    flex-direction: column;
+
+    span {
+      color: var(--mat-sys-on-surface-variant);
+      font: var(--mat-sys-body-medium);
+    }
+  }
+}
+
+// Everything included: icon and name only, the detail lives in the app.
+.included {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr));
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  li {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 56px;
+    padding: 12px 16px;
+    border: 1px solid var(--app-card-border);
+    border-radius: 14px;
+    background: var(--mat-sys-surface-container-lowest);
+    font: var(--mat-sys-title-small);
+
+    mat-icon {
+      flex: none;
+      color: var(--mat-sys-primary);
+    }
+  }
+}
+
+// The phone bar: hidden on wider screens, where the nav keeps the button in view.
+.mobile-cta {
+  display: none;
+}
+
+@media (max-width: 959.98px) {
+  .ba {
+    grid-template-columns: 1fr;
+  }
+
+  .proof-inner {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 599.98px) {
+  .mobile-cta {
+    position: fixed;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 15;
+    display: block;
+    padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
+    border-top: 1px solid var(--app-card-border);
+    background: var(--app-page);
+    box-shadow: 0 -8px 24px -12px rgb(8 30 28 / 0.3);
+
+    .mobile-cta-btn {
+      width: 100%;
+      --mat-button-filled-container-height: 48px;
+    }
+  }
+
+  // Room for the bar so it never covers the last lines of the footer.
+  .footer {
+    padding-bottom: 88px;
   }
 }
