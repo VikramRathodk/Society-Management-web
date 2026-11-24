@@ -82,18 +82,23 @@
     [opened]="!isHandset()"
   >
     <mat-nav-list>
-      @for (item of navItems(); track item.link) {
-        <a
-          mat-list-item
-          [routerLink]="item.link"
-          routerLinkActive
-          #rla="routerLinkActive"
-          [activated]="rla.isActive"
-          (click)="isHandset() && sidenav.close()"
-        >
-          <mat-icon matListItemIcon>{{ item.icon }}</mat-icon>
-          <span matListItemTitle>{{ item.label }}</span>
-        </a>
+      @for (section of navSections(); track section.label) {
+        @if (section.label) {
+          <div matSubheader class="nav-heading">{{ section.label }}</div>
+        }
+        @for (item of section.items; track item.link) {
+          <a
+            mat-list-item
+            [routerLink]="item.link"
+            routerLinkActive
+            #rla="routerLinkActive"
+            [activated]="rla.isActive"
+            (click)="isHandset() && sidenav.close()"
+          >
+            <mat-icon matListItemIcon>{{ item.icon }}</mat-icon>
+            <span matListItemTitle>{{ item.label }}</span>
+          </a>
+        }
       }
     </mat-nav-list>
   </mat-sidenav>
