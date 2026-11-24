@@ -43,6 +43,25 @@ interface NavItem {
   visible?: (auth: AuthStore, societyId: number | null) => boolean;
   /** A paid module: hidden when the society's plan doesn't include it. */
   module?: PlanModule;
+  /** The sidebar heading it sits under; none (the dashboard) sits above every heading. */
+  group?: NavGroupId;
+}
+
+type NavGroupId = 'community' | 'gate' | 'residents' | 'money' | 'admin';
+
+/** Sidebar headings, in display order. A heading with no visible item is left out. */
+const NAV_GROUPS: { id: NavGroupId; label: string }[] = [
+  { id: 'community', label: 'Community' },
+  { id: 'gate', label: 'Gate & security' },
+  { id: 'residents', label: 'Residents & property' },
+  { id: 'money', label: 'Money' },
+  { id: 'admin', label: 'Administration' },
+];
+
+interface NavSection {
+  /** Null for the items above every heading. */
+  label: string | null;
+  items: NavItem[];
 }
 
 /** Add an entry here as each feature route lands. */
@@ -51,116 +70,116 @@ const NAV_ITEMS: NavItem[] = [
   {
     label: 'Societies',
     icon: 'apartment',
-    link: '/societies',
+    link: '/societies', group: 'admin',
     permission: 'SOCIETY.SETTINGS.VIEW',
   },
-  { label: 'Structure', icon: 'domain', link: '/structure', permission: 'FLAT.DIRECTORY.VIEW' },
-  { label: 'Users', icon: 'group', link: '/users', permission: 'USER.ACCOUNT.VIEW' },
-  { label: 'Invitations', icon: 'mail', link: '/invitations', visible: canOpenInvitations },
-  { label: 'Gate', icon: 'door_front', link: '/gate', permission: 'VISITOR.ENTRY.UPDATE' },
+  { label: 'Structure', icon: 'domain', link: '/structure', group: 'residents', permission: 'FLAT.DIRECTORY.VIEW' },
+  { label: 'Users', icon: 'group', link: '/users', group: 'residents', permission: 'USER.ACCOUNT.VIEW' },
+  { label: 'Invitations', icon: 'mail', link: '/invitations', group: 'residents', visible: canOpenInvitations },
+  { label: 'Gate', icon: 'door_front', link: '/gate', group: 'gate', permission: 'VISITOR.ENTRY.UPDATE' },
   {
     // The visitor gate links to the staff gate; this is for those who only check staff.
     label: 'Staff gate',
     icon: 'how_to_reg',
-    link: '/gate/staff',
+    link: '/gate/staff', group: 'gate',
     visible: (auth, id) => auth.can('STAFF.ENTRY.VIEW', id) && !auth.can('VISITOR.ENTRY.UPDATE', id),
   },
-  { label: 'Visitors', icon: 'badge', link: '/visitors', permission: 'VISITOR.ENTRY.VIEW' },
-  { label: 'Staff', icon: 'cleaning_services', link: '/staff', permission: 'STAFF.DIRECTORY.VIEW' },
-  { label: 'Parking', icon: 'local_parking', link: '/parking', permission: 'PARKING.ADMIN.VIEW', module: 'PARKING' },
+  { label: 'Visitors', icon: 'badge', link: '/visitors', group: 'gate', permission: 'VISITOR.ENTRY.VIEW' },
+  { label: 'Staff', icon: 'cleaning_services', link: '/staff', group: 'residents', permission: 'STAFF.DIRECTORY.VIEW' },
+  { label: 'Parking', icon: 'local_parking', link: '/parking', group: 'residents', permission: 'PARKING.ADMIN.VIEW', module: 'PARKING' },
   {
     label: 'My parking',
     icon: 'local_parking',
-    link: '/my-parking',
+    link: '/my-parking', group: 'residents',
     visible: (auth, id) => canOpenMyParking(auth, id) && !auth.can('PARKING.ADMIN.VIEW', id),
     module: 'PARKING',
   },
-  { label: 'Parking gate', icon: 'garage', link: '/gate/parking', visible: canOpenParkingGate, module: 'PARKING' },
+  { label: 'Parking gate', icon: 'garage', link: '/gate/parking', group: 'gate', visible: canOpenParkingGate, module: 'PARKING' },
   {
     label: 'My staff',
     icon: 'cleaning_services',
-    link: '/my-staff',
+    link: '/my-staff', group: 'residents',
     visible: (auth, id) => canOpenMyStaff(auth, id) && !auth.can('STAFF.DIRECTORY.VIEW', id),
   },
-  { label: 'Notices', icon: 'campaign', link: '/notices', permission: 'NOTICE.POST.VIEW' },
+  { label: 'Notices', icon: 'campaign', link: '/notices', group: 'community', permission: 'NOTICE.POST.VIEW' },
   {
     label: 'Rules',
     icon: 'gavel',
-    link: '/policies',
+    link: '/policies', group: 'community',
     permission: 'POLICY.RULE.VIEW',
     module: 'POLICIES',
   },
   {
     label: 'Meetings',
     icon: 'groups',
-    link: '/meetings',
+    link: '/meetings', group: 'community',
     visible: canOpenMeetings,
     module: 'GOVERNANCE',
   },
   {
     label: 'Complaints',
     icon: 'report_problem',
-    link: '/complaints',
+    link: '/complaints', group: 'community',
     permission: 'COMPLAINT.TICKET.VIEW',
   },
   {
     label: 'Maintenance',
     icon: 'receipt_long',
-    link: '/maintenance',
+    link: '/maintenance', group: 'money',
     permission: 'MAINTENANCE.BILL.VIEW',
     module: 'MAINTENANCE',
   },
   {
     label: 'Finance',
     icon: 'account_balance',
-    link: '/finance',
+    link: '/finance', group: 'money',
     permission: 'FINANCE.ACCOUNT.VIEW',
     module: 'FINANCE',
   },
   {
     label: 'Online payments',
     icon: 'bolt',
-    link: '/online-payments',
+    link: '/online-payments', group: 'money',
     permission: 'PAYMENT.ONLINE.VIEW',
     module: 'ONLINE_PAYMENTS',
   },
   {
     label: 'Permissions',
     icon: 'tune',
-    link: '/permissions',
+    link: '/permissions', group: 'admin',
     permission: 'SOCIETY.PERMISSION.VIEW',
   },
   {
     label: 'Subscription',
     icon: 'workspace_premium',
-    link: '/subscription',
+    link: '/subscription', group: 'admin',
     permission: 'SOCIETY.SUBSCRIPTION.VIEW',
   },
   {
     label: 'Billing',
     icon: 'request_quote',
-    link: '/billing',
+    link: '/billing', group: 'admin',
     permission: 'PLATFORM.BILLING.VIEW',
     platform: true,
   },
   {
     label: 'Online payments',
     icon: 'bolt',
-    link: '/platform-payments',
+    link: '/platform-payments', group: 'admin',
     permission: 'PLATFORM.BILLING.VIEW',
     platform: true,
   },
   {
     label: 'Registrations',
     icon: 'how_to_reg',
-    link: '/registrations',
+    link: '/registrations', group: 'admin',
     permission: 'SOCIETY.APPLICATION.VIEW',
     platform: true,
   },
   {
     label: 'Roles',
     icon: 'admin_panel_settings',
-    link: '/roles',
+    link: '/roles', group: 'admin',
     permission: 'SYSTEM.ROLE.VIEW',
     platform: true,
   },
@@ -241,6 +260,17 @@ export class Shell {
         ? this.auth.canOnPlatform(item.permission)
         : this.auth.can(item.permission, societyId);
     });
+  });
+
+  /** The visible items under their headings; headings with nothing to show are dropped. */
+  protected readonly navSections = computed<NavSection[]>(() => {
+    const items = this.navItems();
+    const top: NavSection = { label: null, items: items.filter((item) => !item.group) };
+    const grouped = NAV_GROUPS.map((g) => ({
+      label: g.label,
+      items: items.filter((item) => item.group === g.id),
+    }));
+    return [top, ...grouped].filter((section) => section.items.length > 0);
   });
 
   /** Quick actions, shown when the user may perform them. */
