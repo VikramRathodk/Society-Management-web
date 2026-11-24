@@ -66,6 +66,38 @@ mat-icon {
   font-size: 1rem;
 }
 
+// ---- Skip link and in-page targets ----
+
+// Hidden until focused with the keyboard; then it sits above the sticky header.
+.skip-link {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 20;
+  padding: 10px 16px;
+  border-radius: 10px;
+  background: var(--mat-sys-primary);
+  color: var(--mat-sys-on-primary);
+  font: var(--mat-sys-label-large);
+  text-decoration: none;
+  translate: 0 -200%;
+
+  &:focus-visible {
+    translate: 0 0;
+    outline: 2px solid var(--mat-sys-on-primary);
+    outline-offset: 2px;
+  }
+}
+
+main:focus {
+  outline: none;
+}
+
+// Jumps to a section land below the sticky header (68px) instead of under it.
+section[id] {
+  scroll-margin-top: 80px;
+}
+
 // ---- Nav ----
 
 .nav {
@@ -118,6 +150,11 @@ mat-icon {
   font-weight: 600;
   color: var(--app-heading);
   letter-spacing: -0.015em;
+}
+
+// The section menu replaces the links on smaller screens.
+.nav-menu {
+  display: none;
 }
 
 .nav-links {
@@ -296,61 +333,154 @@ mat-icon {
 
 // ---- Footer ----
 
+// Deep teal like the hero, in both themes: the page closes on the brand.
 .footer {
-  padding: 64px 0 32px;
-  border-top: 1px solid var(--app-card-border);
-  color: var(--mat-sys-on-surface-variant);
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  padding: 56px 0 28px;
+  background: #0b4f4a;
+  color: rgb(255 255 255 / 0.8);
   font: var(--mat-sys-body-medium);
 
   a {
+    border-radius: 6px;
     color: inherit;
     text-decoration: none;
 
-    &:hover,
-    &:focus-visible {
-      color: var(--mat-sys-primary);
+    &:hover {
+      color: #fff;
     }
+
+    &:focus-visible {
+      color: #fff;
+      outline: 2px solid var(--app-accent);
+      outline-offset: 3px;
+    }
+  }
+
+  .brand-name {
+    color: #fff;
+  }
+
+  .brand-mark {
+    background: rgb(255 255 255 / 0.12);
+    color: #fff;
+  }
+}
+
+// The name in Devanagari, large and faint behind the columns.
+.footer-mark {
+  position: absolute;
+  right: -0.08em;
+  bottom: -0.32em;
+  z-index: -1;
+  color: rgb(255 255 255 / 0.05);
+  font-size: clamp(7rem, 4rem + 14vw, 16rem);
+  font-weight: 700;
+  line-height: 1;
+  pointer-events: none;
+  user-select: none;
+}
+
+.footer-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 28px;
+  margin: 0 0 40px;
+  padding: 0 0 28px;
+  border-bottom: 1px solid rgb(255 255 255 / 0.12);
+  list-style: none;
+
+  li {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: #fff;
+    font: var(--mat-sys-label-large);
+  }
+
+  mat-icon {
+    width: 20px;
+    height: 20px;
+    color: var(--app-accent);
+    font-size: 20px;
   }
 }
 
 .footer-grid {
   display: grid;
-  grid-template-columns: minmax(0, 2fr) repeat(2, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 2fr) repeat(3, minmax(0, 1fr));
   gap: 40px;
 
   nav {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    align-items: flex-start;
+    gap: 2px;
+
+    a {
+      display: inline-flex;
+      align-items: center;
+      min-height: 36px;
+    }
   }
 
   h3 {
-    margin-bottom: 4px;
-    color: var(--mat-sys-on-surface);
+    margin: 0 0 6px;
+    color: #fff;
     font: var(--mat-sys-title-small);
+    letter-spacing: 0.02em;
   }
 }
 
 .footer-brand {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
 }
 
-.devanagari {
-  color: var(--mat-sys-primary);
-  font-size: 1.15rem;
+.footer-pitch {
+  max-width: 34ch;
+  margin: 0;
+  font: var(--mat-sys-body-large);
+  line-height: 1.55;
+}
+
+.footer-contact {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+
+  a {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 36px;
+    color: #fff;
+  }
+
+  mat-icon {
+    width: 18px;
+    height: 18px;
+    color: var(--app-accent);
+    font-size: 18px;
+  }
 }
 
 .footer-base {
   display: flex;
   flex-wrap: wrap;
-  justify-content: space-between;
+  align-items: center;
   gap: 8px 24px;
   margin-top: 48px;
-  padding-top: 24px;
-  border-top: 1px solid var(--app-card-border);
+  padding-top: 20px;
+  border-top: 1px solid rgb(255 255 255 / 0.12);
   font: var(--mat-sys-body-small);
+
+  .credit {
+    margin-right: auto;
+  }
 }
 
 .credit a {
@@ -358,11 +488,24 @@ mat-icon {
   text-underline-offset: 2px;
 }
 
+.to-top {
+  --mat-button-text-label-text-color: #fff;
+  --mat-button-text-state-layer-color: #fff;
+
+  mat-icon {
+    margin-right: 4px;
+  }
+}
+
 // ---- Smaller screens ----
 
 @media (max-width: 959.98px) {
   .nav-links {
     display: none;
+  }
+
+  .nav-menu {
+    display: inline-flex;
   }
 
   .nav-actions {
@@ -395,10 +538,15 @@ mat-icon {
 
   .footer-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 32px 24px;
   }
 
   .footer-brand {
     grid-column: 1 / -1;
+  }
+
+  .footer-base .credit {
+    margin-right: 0;
   }
 }
 
@@ -415,8 +563,12 @@ mat-icon {
     flex: 1 1 100%;
   }
 
-  .nav-login {
+  .nav-cta {
     display: none;
+  }
+
+  .nav-inner {
+    gap: 8px;
   }
 
   .brand-name {
@@ -427,5 +579,9 @@ mat-icon {
 @media (prefers-reduced-motion: reduce) {
   .hero-bg img {
     animation: none;
+  }
+
+  .skip-link {
+    transition: none;
   }
 }

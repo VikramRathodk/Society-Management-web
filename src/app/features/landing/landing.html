@@ -1,3 +1,14 @@
+<a class="skip-link" href="#main" (click)="skipToContent($event)">Skip to content</a>
+
+<!-- The one main action, used in the nav, hero, closing and the phone bar. -->
+<ng-template #ctaButton let-extra="extra">
+  @if (cta().link; as link) {
+    <a mat-flat-button [class]="extra" [routerLink]="link">{{ cta().label }}</a>
+  } @else {
+    <a mat-flat-button [class]="extra" [href]="cta().href">{{ cta().label }}</a>
+  }
+</ng-template>
+
 <header class="nav">
   <div class="wrap nav-inner">
     <a class="brand" routerLink="/" aria-label="Sahvasa home">
@@ -14,17 +25,31 @@
     </nav>
     <div class="nav-actions">
       <a mat-button routerLink="/login" class="nav-login">Log in</a>
-      @if (registerOpen()) {
-        <a mat-flat-button routerLink="/register-society">Get started</a>
-      } @else if (demoLink) {
-        <a mat-flat-button [href]="demoLink">Request a demo</a>
+      @if (cta().label !== 'Log in') {
+        <span class="nav-cta"><ng-container *ngTemplateOutlet="ctaButton" /></span>
       }
+      <button
+        mat-icon-button
+        class="nav-menu"
+        [matMenuTriggerFor]="sectionsMenu"
+        aria-label="Sections of this page"
+      >
+        <mat-icon>menu</mat-icon>
+      </button>
+      <mat-menu #sectionsMenu="matMenu" xPosition="before">
+        @for (link of navLinks; track link.id) {
+          <a mat-menu-item [href]="'#' + link.id" (click)="scrollTo(link.id, $event)">{{ link.label }}</a>
+        }
+        @if (plans().length) {
+          <a mat-menu-item href="#pricing" (click)="scrollTo('pricing', $event)">Pricing</a>
+        }
+      </mat-menu>
     </div>
   </div>
 </header>
 
-<main>
-  <!-- Hero -->
+<main id="main" tabindex="-1">
+  <!-- 1. Hero: the outcome and one action -->
   <section class="hero">
     <!-- Stand-in photo (Unsplash, credited in the footer), faded into the page; not a customer's society. -->
     <div class="hero-bg" aria-hidden="true">
@@ -40,185 +65,121 @@
     </div>
     <div class="wrap hero-grid">
       <div class="hero-text">
-        <p class="eyebrow" appReveal>Society management platform for India</p>
-        <h1 [appReveal]="70">Living together, <span class="accent">managed well.</span></h1>
+        <p class="eyebrow" appReveal>For housing societies in India</p>
+        <h1 [appReveal]="70">
+          Run your society without the <span class="accent">WhatsApp chaos.</span>
+        </h1>
         <p class="lead" [appReveal]="140">
-          Sahvasa brings visitor management, maintenance billing and double-entry accounts into one
-          secure platform — so committees run the society transparently, security staff work faster,
-          and every resident knows exactly where they stand.
+          Gate, maintenance dues, accounts and AGMs in one place — for the committee, the guards and
+          every flat.
         </p>
         <div class="hero-ctas" [appReveal]="210">
-          @if (registerOpen()) {
-            <a mat-flat-button class="big amber" routerLink="/register-society"
-              >Register your society</a
-            >
-          } @else if (demoLink) {
-            <a mat-flat-button class="big amber" [href]="demoLink">Request a demo</a>
+          <ng-container *ngTemplateOutlet="ctaButton; context: { extra: 'big amber' }" />
+          @if (plans().length) {
+            <a mat-stroked-button class="big glass-btn" href="#pricing" (click)="scrollTo('pricing', $event)">
+              See pricing
+            </a>
           } @else {
-            <a mat-flat-button class="big amber" routerLink="/login">Log in</a>
+            <a mat-stroked-button class="big glass-btn" href="#why" (click)="scrollTo('why', $event)">
+              See how it works
+            </a>
           }
-          <a
-            mat-stroked-button
-            class="big glass-btn"
-            href="#modules"
-            (click)="scrollTo('modules', $event)"
-          >
-            Explore the modules
-          </a>
         </div>
         <ul class="assurances" [appReveal]="280">
-          <li><mat-icon aria-hidden="true">verified_user</mat-icon>Role-based access</li>
-          <li><mat-icon aria-hidden="true">fact_check</mat-icon>Maker–checker approvals</li>
-          <li><mat-icon aria-hidden="true">history</mat-icon>Complete audit trail</li>
+          @if (hasFreePlan()) {
+            <li><mat-icon aria-hidden="true">savings</mat-icon>Free plan, no card</li>
+          }
+          <li><mat-icon aria-hidden="true">apartment</mat-icon>One price per society</li>
+          <li><mat-icon aria-hidden="true">language</mat-icon>No app to install</li>
         </ul>
       </div>
       <app-landing-hero-cards class="hero-cards" />
     </div>
   </section>
 
-  <!-- What it covers, on a slow endless strip -->
-  <app-landing-marquee />
-
-  <!-- The product, large -->
-  <section class="section">
-    <div class="wrap product-grid">
-      <div>
-        <p class="eyebrow">The command centre</p>
-        <h2>The whole society on one screen.</h2>
-        <p class="lead">
-          Income against spending, collections for the current billing cycle and who is waiting at
-          the gate — the first thing your committee sees every morning.
-        </p>
-        <ul class="ticks">
-          <li>
-            <mat-icon aria-hidden="true">check_circle</mat-icon>Dashboards tailored to committee,
-            gate staff and residents
-          </li>
-          <li>
-            <mat-icon aria-hidden="true">check_circle</mat-icon>Live updates as visitors arrive and
-            payments come in
-          </li>
-          <li>
-            <mat-icon aria-hidden="true">check_circle</mat-icon>Search anything in the society with
-            Ctrl K
-          </li>
-        </ul>
-      </div>
-      <app-landing-device />
-    </div>
-  </section>
-
-  <!-- Modules -->
-  <section id="modules" class="section tinted">
+  <!-- 2. The pain it removes -->
+  <section class="section ba-section" aria-labelledby="ba-title">
     <div class="wrap">
-      <div class="section-head">
-        <p class="eyebrow">Modules</p>
-        <h2>Eight modules. One platform for the entire society.</h2>
-        <p class="lead">
-          Everything a managing committee handles in a year, built to work together — so a payment
-          recorded by the treasurer shows up in the dues, the books and the bank reconciliation.
-        </p>
-      </div>
-      <app-landing-modules>
-        <div moduleCta class="module-cta">
-          <h3>See Sahvasa on your own society.</h3>
-          <p>Set up wings, flats and residents in one sitting with the guided setup.</p>
-          @if (registerOpen()) {
-            <a mat-flat-button class="amber" routerLink="/register-society"
-              >Register your society</a
-            >
-          } @else if (demoLink) {
-            <a mat-flat-button class="amber" [href]="demoLink">Request a demo</a>
-          } @else {
-            <a mat-flat-button class="amber" routerLink="/login">Log in</a>
-          }
-        </div>
-      </app-landing-modules>
-    </div>
-  </section>
-
-  <!-- Roles -->
-  <section id="roles" class="section">
-    <div class="wrap">
-      <div class="section-head">
-        <p class="eyebrow">Who it's for</p>
-        <h2>A workspace for every role in the society.</h2>
-        <p class="lead">
-          Everyone signs in with their phone number and sees only what their role allows.
-        </p>
-      </div>
-      <app-landing-roles />
-    </div>
-  </section>
-
-  <!-- Governance -->
-  <section id="governance" class="section dark">
-    <div class="wrap trust">
-      <div>
-        <p class="eyebrow">Governance & transparency</p>
-        <h2>Every rupee accounted for. Every change on record.</h2>
-        <p class="lead">
-          Sahvasa follows the controls a well-run society expects: the person who records an entry
-          is never the one who approves it, every change is logged, and closed periods stay closed.
-        </p>
-        <ul class="ticks">
-          @for (g of governance; track g) {
-            <li><mat-icon aria-hidden="true">check_circle</mat-icon>{{ g }}</li>
-          }
-        </ul>
-      </div>
-      <ol class="log" aria-label="Example audit trail">
-        <li>
-          <mat-icon aria-hidden="true">add_circle</mat-icon>
-          <span><strong>Treasurer</strong> recorded an expense: Lift maintenance ₹12,000</span>
-          <small>18 Nov · 09:12</small>
-        </li>
-        <li>
-          <mat-icon aria-hidden="true">task_alt</mat-icon>
-          <span><strong>Secretary</strong> approved the entry</span>
-          <small>18 Nov · 11:40</small>
-        </li>
-        <li>
-          <mat-icon aria-hidden="true">sync_alt</mat-icon>
-          <span><strong>Treasurer</strong> matched it to the bank statement</span>
-          <small>2 Dec · 16:20</small>
-        </li>
-        <li>
-          <mat-icon aria-hidden="true">lock</mat-icon>
-          <span><strong>Secretary</strong> locked the books up to 30 Nov</span>
-          <small>3 Dec · 18:05</small>
-        </li>
-      </ol>
-    </div>
-  </section>
-
-  <!-- How it works -->
-  <section id="how" class="section">
-    <div class="wrap">
-      <div class="section-head">
-        <p class="eyebrow">Getting started</p>
-        <h2>From sign-up to your first billing cycle.</h2>
-      </div>
-      <ol class="steps">
-        @for (s of steps; track s.title; let i = $index) {
-          <li>
-            <span class="step-no">{{ i + 1 }}</span>
-            <h3>{{ s.title }}</h3>
-            <p>{{ s.text }}</p>
+      <h2 id="ba-title" class="ba-title">The society, without the running around.</h2>
+      <ul class="ba">
+        @for (item of beforeAfter; track item.before; let i = $index) {
+          <li [appReveal]="i * 80">
+            <span class="ba-icon"><mat-icon aria-hidden="true">{{ item.icon }}</mat-icon></span>
+            <p class="ba-before"><span class="sr-only">Before: </span>{{ item.before }}</p>
+            <mat-icon class="ba-arrow" aria-hidden="true">arrow_downward</mat-icon>
+            <p class="ba-after"><span class="sr-only">With Sahvasa: </span>{{ item.after }}</p>
           </li>
         }
-      </ol>
+      </ul>
     </div>
   </section>
 
-  <!-- Pricing: the active plans from the backend (hidden while there are none) -->
+  <!-- 3. What sets it apart -->
+  <section id="why" class="section tinted">
+    <div class="wrap">
+      <div class="section-head">
+        <p class="eyebrow">Why Sahvasa</p>
+        <h2>Built for how a society really runs.</h2>
+      </div>
+      <app-landing-why />
+    </div>
+  </section>
+
+  <!-- Proof: shown only once real quotes or figures are filled in (LANDING.proof) -->
+  @if (showProof) {
+    <section class="section proof" aria-label="What societies say">
+      <div class="wrap proof-inner">
+        @if (proof.figures.length) {
+          <dl class="figures">
+            @for (f of proof.figures; track f.label) {
+              <div>
+                <dt>{{ f.label }}</dt>
+                <dd>{{ f.value }}</dd>
+              </div>
+            }
+          </dl>
+        }
+        @if (proof.quote) {
+          <figure class="quote-card">
+            <blockquote>“{{ proof.quote }}”</blockquote>
+            @if (proof.name) {
+              <figcaption>
+                <strong>{{ proof.name }}</strong>
+                @if (proof.role) {
+                  <span>{{ proof.role }}</span>
+                }
+              </figcaption>
+            }
+          </figure>
+        }
+      </div>
+    </section>
+  }
+
+  <!-- 4. Everything included, at a glance -->
+  <section id="included" class="section">
+    <div class="wrap">
+      <div class="section-head">
+        <p class="eyebrow">What’s included</p>
+        <h2>Everything the committee runs, in one place.</h2>
+        <p class="lead">Each part works with the others: a payment shows up in the dues, the books and the bank match.</p>
+      </div>
+      <ul class="included">
+        @for (m of included; track m.name) {
+          <li><mat-icon aria-hidden="true">{{ m.icon }}</mat-icon>{{ m.name }}</li>
+        }
+      </ul>
+    </div>
+  </section>
+
+  <!-- 5. Pricing: the active plans from the backend (hidden while there are none) -->
   @if (plans().length) {
     <section id="pricing" class="section tinted">
       <div class="wrap">
         <div class="section-head">
           <p class="eyebrow">Pricing</p>
           <h2>One price for your whole society.</h2>
-          <p>No per-resident fees. Pay for the society, with the flats it covers included.</p>
+          <p class="lead">No per-flat fees for residents. Start free and upgrade when the committee is ready.</p>
         </div>
         <div class="pricing-controls">
           <label class="flats-box">
@@ -245,6 +206,7 @@
         <div class="plans">
           @for (plan of plans(); track plan.id) {
             @let q = quotes().get(plan.id);
+            @let highlighted = q?.recommended || (plan.featured && !anyRecommended());
             <article
               class="plan"
               [class.featured]="plan.featured"
@@ -274,15 +236,24 @@
                   <li><mat-icon aria-hidden="true">check_circle</mat-icon>{{ point }}</li>
                 }
               </ul>
+              @if (registerOpen()) {
+                @if (highlighted) {
+                  <a class="plan-cta" mat-flat-button routerLink="/register-society">Start with {{ plan.name }}</a>
+                } @else {
+                  <a class="plan-cta" mat-stroked-button routerLink="/register-society">Start with {{ plan.name }}</a>
+                }
+              } @else if (demoLink) {
+                <a class="plan-cta" mat-stroked-button [href]="demoLink">Ask about {{ plan.name }}</a>
+              }
             </article>
           }
         </div>
-        <p class="pricing-note">Prices are per society, before 18% GST. Start on the Free plan and upgrade whenever you need more.</p>
+        <p class="pricing-note">Prices are per society, before 18% GST.</p>
       </div>
     </section>
   }
 
-  <!-- FAQ -->
+  <!-- 6. Objections, then the action again -->
   <section id="faq" class="section" [class.tinted]="!plans().length">
     <div class="wrap faq-grid">
       <div class="section-head">
@@ -300,24 +271,15 @@
     </div>
   </section>
 
-  <!-- Closing call to action -->
   <section class="section">
     <div class="wrap">
       <div class="closing">
         <p class="closing-tagline">Living together, managed well.</p>
-        <h2>Bring your society onto Sahvasa.</h2>
-        @if (demoLink) {
-          <p>Tell us about your society and we'll walk your committee through it.</p>
-        } @else {
-          <p>Already invited by your society? Sign in with your phone number.</p>
-        }
+        <h2>Set up your society this week.</h2>
+        <p>Wings and flats from a pattern, residents from a spreadsheet, invitations by link or QR.</p>
         <div class="hero-ctas">
-          @if (registerOpen()) {
-            <a mat-flat-button class="big on-dark" routerLink="/register-society">
-              Register your society
-            </a>
-          } @else if (demoLink) {
-            <a mat-flat-button class="big on-dark" [href]="demoLink">Request a demo</a>
+          @if (cta().label !== 'Log in') {
+            <ng-container *ngTemplateOutlet="ctaButton; context: { extra: 'big on-dark' }" />
           }
           <a mat-stroked-button class="big outline-on-dark" routerLink="/login">Log in</a>
           @if (config.contactPhone) {
@@ -331,36 +293,79 @@
   </section>
 </main>
 
+<!-- Phones: the main action stays in reach while scrolling. -->
+@if (cta().label !== 'Log in') {
+  <div class="mobile-cta">
+    <ng-container *ngTemplateOutlet="ctaButton; context: { extra: 'mobile-cta-btn' }" />
+  </div>
+}
+
 <footer class="footer">
+  <span class="footer-mark" aria-hidden="true" lang="hi">सहवास</span>
   <div class="wrap">
+    <ul class="footer-facts" aria-label="Built in">
+      @for (f of footerFacts; track f.label) {
+        <li><mat-icon aria-hidden="true">{{ f.icon }}</mat-icon>{{ f.label }}</li>
+      }
+    </ul>
+
     <div class="footer-grid">
       <div class="footer-brand">
         <span class="brand">
           <span class="brand-mark"><app-logo /></span>
           <span class="brand-name">Sahvasa</span>
         </span>
-        <p>Living together, managed well.</p>
-        <p class="devanagari" lang="hi">सहवास</p>
+        <p class="footer-pitch">The gate, dues, accounts and AGMs of a housing society, in one place.</p>
+        @if (config.contactEmail || phoneLink) {
+          <div class="footer-contact">
+            @if (config.contactEmail) {
+              <a [href]="'mailto:' + config.contactEmail"
+                ><mat-icon aria-hidden="true">mail</mat-icon>{{ config.contactEmail }}</a
+              >
+            }
+            @if (phoneLink) {
+              <a [href]="phoneLink"><mat-icon aria-hidden="true">call</mat-icon>{{ config.contactPhone }}</a>
+            }
+          </div>
+        }
       </div>
+
       <nav aria-label="Product">
         <h3>Product</h3>
         @for (link of navLinks; track link.id) {
           <a [href]="'#' + link.id" (click)="scrollTo(link.id, $event)">{{ link.label }}</a>
         }
+        @if (plans().length) {
+          <a href="#pricing" (click)="scrollTo('pricing', $event)">Pricing</a>
+        }
       </nav>
-      <nav aria-label="Account">
-        <h3>Account</h3>
-        <a routerLink="/login">Log in</a>
+
+      <nav aria-label="Get started">
+        <h3>Get started</h3>
         @if (registerOpen()) {
           <a routerLink="/register-society">Register your society</a>
         }
-        @if (config.contactEmail) {
-          <a [href]="'mailto:' + config.contactEmail">{{ config.contactEmail }}</a>
+        <a routerLink="/login">Log in</a>
+        @if (demoLink) {
+          <a [href]="demoLink">Request a demo</a>
         }
       </nav>
+
+      @if (config.privacyUrl || config.termsUrl) {
+        <nav aria-label="Legal">
+          <h3>Legal</h3>
+          @if (config.privacyUrl) {
+            <a [href]="config.privacyUrl">Privacy policy</a>
+          }
+          @if (config.termsUrl) {
+            <a [href]="config.termsUrl">Terms of service</a>
+          }
+        </nav>
+      }
     </div>
+
     <div class="footer-base">
-      <span>© {{ year }} Sahvasa. All rights reserved.</span>
+      <span>© {{ year }} Sahvasa · Made for housing societies in India</span>
       <span class="credit">
         Photo:
         <a
@@ -370,6 +375,9 @@
           >Zoshua Colah on Unsplash</a
         >
       </span>
+      <button mat-button class="to-top" type="button" (click)="toTop()">
+        <mat-icon aria-hidden="true">arrow_upward</mat-icon>Back to top
+      </button>
     </div>
   </div>
 </footer>
