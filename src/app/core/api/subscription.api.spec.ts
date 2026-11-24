@@ -86,7 +86,7 @@ describe('SubscriptionApi', () => {
     });
   });
 
-  it('runs billing, starts trials and issues the due invoice', () => {
+  it('runs billing, starts subscriptions and issues the due invoice', () => {
     api.run().subscribe();
     expect(http.expectOne('/api/platform/billing/run').request.method).toBe('POST');
     api.startAll().subscribe();

@@ -74,6 +74,7 @@ export const PAYMENT_METHODS: { value: PaymentMethod; label: string; icon: strin
 ];
 
 export function methodLabel(method: PaymentMethod): string {
+  if (method === 'ONLINE') return 'Online';
   return PAYMENT_METHODS.find((m) => m.value === method)?.label ?? method;
 }
 

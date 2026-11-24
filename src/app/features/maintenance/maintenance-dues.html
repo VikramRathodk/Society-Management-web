@@ -97,6 +97,12 @@
             <span class="meta danger-text">{{ inr(d.overdue) }} overdue</span>
           }
           <span class="actions">
+            @if (online()[d.flatId]) {
+              <button mat-flat-button (click)="payOnline(d)" [attr.aria-label]="'Pay online for flat ' + flatLabel(d.wingName, d.flatNumber)">
+                <mat-icon>bolt</mat-icon>
+                Pay online
+              </button>
+            }
             @if (access.canRefund() && d.credit > 0) {
               <button
                 mat-icon-button
@@ -135,7 +141,11 @@
   </div>
   @if (!access.committee()) {
     <p class="muted">
-      Pay at the society office; the committee records your payment and you get a receipt here.
+      @if (hasOnline()) {
+        Pay online with UPI, a card or netbanking, or at the society office; either way your receipt comes here.
+      } @else {
+        Pay at the society office; the committee records your payment and you get a receipt here.
+      }
     </p>
   }
 }

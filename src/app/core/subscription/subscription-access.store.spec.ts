@@ -14,7 +14,6 @@ const BASIC: SubscriptionAccess = {
   planName: 'Basic',
   modules: ['MAINTENANCE'],
   readOnly: false,
-  trialEndsOn: null,
   overdueInvoiceId: null,
   overdueInvoiceNumber: null,
   overdueBalance: null,

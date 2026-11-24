@@ -118,6 +118,13 @@ const NAV_ITEMS: NavItem[] = [
     module: 'FINANCE',
   },
   {
+    label: 'Online payments',
+    icon: 'bolt',
+    link: '/online-payments',
+    permission: 'PAYMENT.ONLINE.VIEW',
+    module: 'ONLINE_PAYMENTS',
+  },
+  {
     label: 'Permissions',
     icon: 'tune',
     link: '/permissions',
@@ -133,6 +140,13 @@ const NAV_ITEMS: NavItem[] = [
     label: 'Billing',
     icon: 'request_quote',
     link: '/billing',
+    permission: 'PLATFORM.BILLING.VIEW',
+    platform: true,
+  },
+  {
+    label: 'Online payments',
+    icon: 'bolt',
+    link: '/platform-payments',
     permission: 'PLATFORM.BILLING.VIEW',
     platform: true,
   },

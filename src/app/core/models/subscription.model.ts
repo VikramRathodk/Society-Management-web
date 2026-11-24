@@ -1,11 +1,18 @@
 /** Platform billing: what the platform charges a society (not maintenance, which a society charges residents). */
 
 /** Paid modules a plan may include; core modules are in every plan. ALL covers everything. */
-export type PlanModule = 'MAINTENANCE' | 'FINANCE' | 'POLICIES' | 'GOVERNANCE' | 'PARKING' | 'ALL';
+export type PlanModule =
+  | 'MAINTENANCE'
+  | 'FINANCE'
+  | 'POLICIES'
+  | 'GOVERNANCE'
+  | 'PARKING'
+  | 'ONLINE_PAYMENTS'
+  | 'ALL';
 
 export type SubscriptionCycle = 'MONTHLY' | 'YEARLY';
 
-export type SubscriptionStatus = 'TRIAL' | 'ACTIVE' | 'PAST_DUE' | 'SUSPENDED' | 'CANCELLED';
+export type SubscriptionStatus = 'ACTIVE' | 'PAST_DUE' | 'SUSPENDED' | 'CANCELLED';
 
 export type PlatformInvoiceStatus = 'ISSUED' | 'PARTLY_PAID' | 'PAID' | 'CANCELLED';
 
@@ -36,7 +43,6 @@ export interface Plan {
   extraFlatYearly: number | null;
   /** The most flats a society on the plan may have (null: no limit). */
   maxFlats: number | null;
-  trialDays: number;
   modules: PlanModule[];
   active: boolean;
   sortOrder: number;
@@ -44,6 +50,8 @@ export interface Plan {
   featured: boolean;
   /** The recommended plan from this many flats (the highest one not above a society's count). */
   recommendedFromFlats: number;
+  /** The platform's cut of each online maintenance payment, in percent. */
+  onlinePaymentCommissionPercent: number;
 }
 
 export interface PlanRequest {
@@ -56,12 +64,12 @@ export interface PlanRequest {
   extraFlatMonthly?: number | null;
   extraFlatYearly?: number | null;
   maxFlats?: number | null;
-  trialDays: number;
   modules: PlanModule[];
   active: boolean;
   sortOrder: number;
   featured: boolean;
   recommendedFromFlats: number;
+  onlinePaymentCommissionPercent: number;
 }
 
 /** A plan's cost for a flat count (before GST). */
@@ -97,7 +105,6 @@ export interface SocietySubscription {
   plan: Plan;
   cycle: SubscriptionCycle;
   status: SubscriptionStatus;
-  trialEndsOn: string | null;
   currentPeriodStart: string;
   currentPeriodEnd: string;
   nextInvoiceOn: string;
@@ -123,7 +130,6 @@ export interface SubscriptionAccess {
   planName: string | null;
   modules: PlanModule[];
   readOnly: boolean;
-  trialEndsOn: string | null;
   overdueInvoiceId: number | null;
   overdueInvoiceNumber: string | null;
   overdueBalance: number | null;

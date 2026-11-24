@@ -60,6 +60,13 @@ export function pushRoute(data: PushData): string {
       return data['audience'] === 'COMMITTEE' ? '/parking?tab=reports' : '/my-parking';
     case 'VISITOR_PARKING_OVERSTAY':
       return '/gate/parking';
+    case 'MAINTENANCE_ONLINE_PAID':
+    case 'PAYMENT_REFUND_PROCESSED':
+      return '/maintenance';
+    case 'PAYMENT_ACCOUNT_STATUS':
+      return '/online-payments/setup';
+    case 'PAYMENT_REFUND_APPROVAL':
+      return '/online-payments';
     case 'PERMISSIONS_CHANGED':
       return '/dashboard'; // the app reloads the user's access when this push arrives
     case 'INVITATION_RECEIVED':

@@ -38,14 +38,6 @@
         paid features.
       </p>
     </div>
-  } @else if (s.status === 'TRIAL' && s.trialEndsOn) {
-    <div class="notice" role="status">
-      <mat-icon>celebration</mat-icon>
-      <p>
-        Free trial until <strong>{{ dayLabel(s.trialEndsOn) }}</strong>. The first invoice comes on
-        {{ dayLabel(s.nextInvoiceOn) }}.
-      </p>
-    </div>
   }
 
   <div class="layout">

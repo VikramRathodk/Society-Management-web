@@ -21,6 +21,7 @@ import { Observable, filter, firstValueFrom } from 'rxjs';
 
 import { SubscriptionApi } from '../../core/api/subscription.api';
 import { AuthStore } from '../../core/auth/auth.store';
+import { RazorpayConstructor, RazorpayResponse, loadRazorpay } from '../../core/razorpay';
 import { errorMessage } from '../../core/auth/error.interceptor';
 import {
   Plan,
@@ -41,7 +42,6 @@ export { dayLabel, inr, periodLabel } from '../maintenance/maintenance-ui';
 // ---- Labels ----
 
 export const SUBSCRIPTION_STATUS: Record<SubscriptionStatus, { label: string; tone: Tone }> = {
-  TRIAL: { label: 'Free trial', tone: 'primary' },
   ACTIVE: { label: 'Active', tone: 'success' },
   PAST_DUE: { label: 'Payment overdue', tone: 'warning' },
   SUSPENDED: { label: 'Suspended', tone: 'danger' },
@@ -70,6 +70,7 @@ export const PLAN_MODULES: { value: PlanModule; label: string }[] = [
   { value: 'POLICIES', label: 'Rules and policies' },
   { value: 'GOVERNANCE', label: 'Meetings and governance' },
   { value: 'PARKING', label: 'Parking' },
+  { value: 'ONLINE_PAYMENTS', label: 'Online maintenance payments' },
   { value: 'ALL', label: 'Everything (including future modules)' },
 ];
 
@@ -108,6 +109,11 @@ export function eventLabel(kind: SubscriptionEventKind): string {
   return EVENT_LABELS[kind] ?? kind;
 }
 
+/** A plan that costs nothing either way (Free). */
+export function isFreePlan(plan: Plan): boolean {
+  return plan.priceMonthly === 0 && plan.priceYearly === 0;
+}
+
 /** "₹699.00 a month for up to 50 flats, then ₹12.00 a flat"; "Free, up to 15 flats". */
 export function priceLabel(plan: Plan, cycle: SubscriptionCycle = 'MONTHLY'): string {
   const yearly = cycle === 'YEARLY';
@@ -144,20 +150,6 @@ export class BillingAccess {
 
 // ---- Paying online ----
 
-interface RazorpayResponse {
-  razorpay_payment_id: string;
-  razorpay_order_id: string;
-  razorpay_signature: string;
-}
-
-interface RazorpayInstance {
-  open(): void;
-  on(event: string, handler: (response: { error?: { description?: string } }) => void): void;
-}
-
-type RazorpayConstructor = new (options: Record<string, unknown>) => RazorpayInstance;
-
-const CHECKOUT_SCRIPT = 'https://checkout.razorpay.com/v1/checkout.js';
 
 /** Outcome of "Pay now": paid (and verified), closed without paying, or an error message. */
 export type PayOutcome =
@@ -174,7 +166,6 @@ export type PayOutcome =
 export class RazorpayCheckout {
   private readonly api = inject(SubscriptionApi);
   private readonly auth = inject(AuthStore);
-  private script: Promise<RazorpayConstructor> | null = null;
 
   async pay(invoiceId: number): Promise<PayOutcome> {
     let order;
@@ -185,7 +176,7 @@ export class RazorpayCheckout {
     }
     let Razorpay: RazorpayConstructor;
     try {
-      Razorpay = await this.load();
+      Razorpay = await loadRazorpay();
     } catch {
       return { kind: 'failed', message: "Couldn't load Razorpay. Check the connection and try again." };
     }
@@ -221,28 +212,6 @@ export class RazorpayCheckout {
       );
       checkout.open();
     });
-  }
-
-  private load(): Promise<RazorpayConstructor> {
-    const existing = (window as unknown as { Razorpay?: RazorpayConstructor }).Razorpay;
-    if (existing) return Promise.resolve(existing);
-    this.script ??= new Promise<RazorpayConstructor>((resolve, reject) => {
-      const tag = document.createElement('script');
-      tag.src = CHECKOUT_SCRIPT;
-      tag.async = true;
-      tag.onload = () => {
-        const loaded = (window as unknown as { Razorpay?: RazorpayConstructor }).Razorpay;
-        if (loaded) resolve(loaded);
-        else reject(new Error('Razorpay missing'));
-      };
-      tag.onerror = () => {
-        this.script = null;
-        tag.remove();
-        reject(new Error('Razorpay failed to load'));
-      };
-      document.head.appendChild(tag);
-    });
-    return this.script;
   }
 }
 
@@ -363,8 +332,8 @@ function optionalNumber(value: number | string | null): number | null {
             <input matInput type="number" min="1" formControlName="recommendedFromFlats" />
           </mat-form-field>
           <mat-form-field appearance="outline">
-            <mat-label>Trial days</mat-label>
-            <input matInput type="number" min="0" max="365" formControlName="trialDays" />
+            <mat-label>Commission on online payments (%)</mat-label>
+            <input matInput type="number" min="0" max="100" step="0.01" formControlName="onlinePaymentCommissionPercent" />
           </mat-form-field>
           <mat-form-field appearance="outline">
             <mat-label>Order</mat-label>
@@ -419,8 +388,11 @@ export class PlanDialog {
     extraFlatYearly: [this.data?.extraFlatYearly ?? (null as number | null), OPTIONAL_MONEY],
     maxFlats: [this.data?.maxFlats ?? (null as number | null), Validators.min(1)],
     recommendedFromFlats: [this.data?.recommendedFromFlats ?? 1, [Validators.required, Validators.min(1)]],
-    trialDays: [this.data?.trialDays ?? 30, [Validators.required, Validators.min(0), Validators.max(365)]],
     sortOrder: [this.data?.sortOrder ?? 0],
+    onlinePaymentCommissionPercent: [
+      this.data?.onlinePaymentCommissionPercent ?? 0,
+      [Validators.required, Validators.min(0), Validators.max(100)],
+    ],
     active: [this.data?.active ?? true],
     featured: [this.data?.featured ?? false],
   });
@@ -451,11 +423,11 @@ export class PlanDialog {
       extraFlatYearly: optionalNumber(v.extraFlatYearly),
       maxFlats: v.maxFlats ? Number(v.maxFlats) : null,
       recommendedFromFlats: Number(v.recommendedFromFlats) || 1,
-      trialDays: Number(v.trialDays),
       modules: [...this.selected()],
       active: v.active,
       sortOrder: Number(v.sortOrder) || 0,
       featured: v.featured,
+      onlinePaymentCommissionPercent: Number(v.onlinePaymentCommissionPercent) || 0,
     };
     this.saving.set(true);
     this.error.set(null);
@@ -491,7 +463,7 @@ export interface ChoosePlanData<T> {
   save: (planId: number | null, cycle: SubscriptionCycle, note: string | null) => Observable<T>;
 }
 
-/** Pick a plan and billing cycle: start a trial, change a plan, or ask the platform for one. */
+/** Pick a plan and billing cycle: start a subscription, change a plan, or ask the platform for one. */
 @Component({
   selector: 'app-choose-plan-dialog',
   imports: [

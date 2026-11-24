@@ -86,7 +86,8 @@ export class SubscriptionApi {
     );
   }
 
-  startTrial(societyId: number, planId: number | null, cycle: SubscriptionCycle) {
+  /** Platform: starts a live society's subscription (its plan, or Free / the plan for its size). */
+  startSubscription(societyId: number, planId: number | null, cycle: SubscriptionCycle) {
     return this.http.post<SocietySubscription>(
       `${this.api}/societies/${societyId}/subscription`,
       { planId, cycle },
@@ -94,7 +95,7 @@ export class SubscriptionApi {
     );
   }
 
-  /** Platform: during a trial at once, otherwise from the next period. Errors in the dialog. */
+  /** Platform: off a free plan at once (first period invoiced today), otherwise from the next period. Errors in the dialog. */
   changePlan(societyId: number, planId: number | null, cycle: SubscriptionCycle | null) {
     return this.http.patch<SocietySubscription>(
       `${this.api}/societies/${societyId}/subscription/plan`,
