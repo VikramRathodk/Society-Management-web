@@ -7,21 +7,19 @@ import { RouterLink } from '@angular/router';
 import { Observable, catchError, combineLatest, forkJoin, map, of, switchMap, tap } from 'rxjs';
 
 import { ComplaintApi } from '../../core/api/complaint.api';
+import { ReportingApi } from '../../core/api/reporting.api';
 import { MaintenanceApi } from '../../core/api/maintenance.api';
 import { FinanceSummaryCard } from '../finance/finance-summary-card';
 import { NoticeApi } from '../../core/api/notice.api';
 import { PolicyApi } from '../../core/api/policy.api';
 import { GovernanceApi } from '../../core/api/governance.api';
-import { StructureApi } from '../../core/api/structure.api';
-import { UserApi } from '../../core/api/user.api';
-import { ParkingApi } from '../../core/api/parking.api';
-import { StaffApi } from '../../core/api/staff.api';
 import { SubscriptionAccessStore } from '../../core/subscription/subscription-access.store';
 import { VisitorApi } from '../../core/api/visitor.api';
 import { AuthStore } from '../../core/auth/auth.store';
 import { HasPermission } from '../../core/auth/has-permission.directive';
 import {
   Complaint,
+  DashboardCounts,
   FlatDues,
   Notice,
   Meeting,
@@ -36,34 +34,32 @@ import { MaintenanceAccess } from '../maintenance/maintenance-ui';
 import { GateBoard } from '../visitors/gate-board';
 import { VisitorActions, VisitorPhotos, VisitorRow, timeAgo } from '../visitors/visitor-ui';
 import { DuesSpotlight, MoneyGlance, rupees } from './dashboard-ui';
+import { DashboardTrends } from './dashboard-trends';
 import { canOpenMeetings } from '../governance/governance-ui';
 
 /** Which home screen fits what the user can do (roles are configurable, so this goes by permissions). */
 export type Persona = 'committee' | 'gate' | 'resident';
 
-/** The API caps a page at 100 and returns no totals, so larger counts show as "100+". */
+/** Lists are paged at 100; the cards' numbers come from the dashboard endpoint, which counts exactly. */
 const MAX = 100;
+/** Latest visitors shown on the recent panel. */
+const RECENT = 6;
 /** Latest notices shown on the board panel. */
 const NOTICES = 3;
 
 /** Per item: undefined = not loaded yet (or not permitted), null = failed. */
 interface DashboardData {
+  /** Exact counts for the cards (GET /societies/{id}/dashboard); a null part is one the user may not see. */
+  counts?: DashboardCounts | null;
   pending?: Visitor[] | null;
-  inside?: Visitor[] | null;
   recent?: Visitor[] | null;
-  users?: number | null;
-  wings?: number | null;
   openComplaints?: Complaint[] | null;
   notices?: Notice[] | null;
+  /** Only for residents (the dues spotlight); the committee's dues card uses counts. */
   dues?: FlatDues[] | null;
   policiesToAccept?: PolicySummary[] | null;
-  policiesToApprove?: PolicySummary[] | null;
   meetings?: Meeting[] | null;
   heldMeetings?: Meeting[] | null;
-  staffToVerify?: number | null;
-  staffInside?: number | null;
-  vehiclesToApprove?: number | null;
-  parkingReports?: number | null;
 }
 
 interface Card {
@@ -93,6 +89,7 @@ interface Card {
     GateBoard,
     MoneyGlance,
     DuesSpotlight,
+    DashboardTrends,
   ],
   providers: [VisitorPhotos],
   templateUrl: './dashboard.html',
@@ -100,14 +97,11 @@ interface Card {
 })
 export class Dashboard {
   private readonly visitorApi = inject(VisitorApi);
-  private readonly staffApi = inject(StaffApi);
-  private readonly parkingApi = inject(ParkingApi);
+  private readonly reportingApi = inject(ReportingApi);
   private readonly plan = inject(SubscriptionAccessStore);
   /** A parking permission in a society whose plan includes parking. */
   private readonly parking = (permission: string) =>
     this.plan.allows('PARKING') && this.ctx.selectedSocietyId() != null && this.can(permission);
-  private readonly userApi = inject(UserApi);
-  private readonly structureApi = inject(StructureApi);
   private readonly complaintApi = inject(ComplaintApi);
   private readonly noticeApi = inject(NoticeApi);
   private readonly policyApi = inject(PolicyApi);
@@ -193,16 +187,17 @@ export class Dashboard {
 
   protected readonly cards = computed<Card[]>(() => {
     const d = this.data();
+    const c = d.counts;
     const loading = this.loading();
     const value = (n: number | null | undefined) => (loading ? null : display(n));
     const cards: Card[] = [];
     if (this.canViewVisitors()) {
-      const waiting = d.pending?.length ?? 0;
+      const waiting = c?.visitors?.waiting ?? 0;
       cards.push(
         {
           label: 'Waiting for approval',
           icon: 'hourglass_top',
-          value: value(d.pending === null ? null : d.pending?.length),
+          value: value(c?.visitors?.waiting),
           link: '/visitors',
           queryParams: { status: 'PENDING' },
           tone: waiting > 0 ? 'warning' : 'neutral',
@@ -210,7 +205,7 @@ export class Dashboard {
         {
           label: 'Inside now',
           icon: 'login',
-          value: value(d.inside === null ? null : d.inside?.length),
+          value: value(c?.visitors?.inside),
           link: '/visitors',
           queryParams: { status: 'ENTERED' },
           tone: 'primary',
@@ -218,20 +213,18 @@ export class Dashboard {
         {
           label: 'Logged today',
           icon: 'today',
-          value: value(
-            d.recent === null ? null : d.recent?.filter((v) => isToday(v.loggedAt)).length,
-          ),
+          value: value(c?.visitors?.loggedToday),
           link: '/visitors',
           tone: 'neutral',
         },
       );
     }
     if (this.canViewComplaints()) {
-      const open = d.openComplaints?.length ?? 0;
+      const open = c?.complaints?.open ?? 0;
       cards.push({
         label: 'Open complaints',
         icon: 'report_problem',
-        value: value(d.openComplaints === null ? null : d.openComplaints?.length),
+        value: value(c?.complaints?.open),
         link: '/complaints',
         queryParams: { status: 'OPEN' },
         tone: open > 0 ? 'warning' : 'neutral',
@@ -240,12 +233,12 @@ export class Dashboard {
     // Residents get the dues spotlight instead of a card.
     if (this.canViewDues() && this.persona() !== 'resident') {
       // The backend scopes dues to the viewer: every flat for the committee, a resident's own flat.
-      const dues = d.dues;
-      const overdue = sum(dues, (f) => f.overdue);
+      const dues = c?.dues;
+      const overdue = dues?.overdue ?? 0;
       cards.push({
         label: this.maintenance.committee() ? 'Outstanding dues' : 'Your dues',
         icon: 'account_balance_wallet',
-        value: loading ? null : dues == null ? '—' : rupees(sum(dues, (f) => f.outstanding)),
+        value: loading ? null : dues == null ? '—' : rupees(dues.outstanding),
         link: '/maintenance',
         tone: overdue > 0 ? 'warning' : 'neutral',
       });
@@ -290,22 +283,22 @@ export class Dashboard {
       });
     }
     if (this.can('POLICY.RULE.APPROVE') && this.ctx.selectedSocietyId() != null) {
-      const waiting = d.policiesToApprove?.length ?? 0;
+      const waiting = c?.policiesToApprove ?? 0;
       cards.push({
         label: 'Policies to approve',
         icon: 'gavel',
-        value: value(d.policiesToApprove === null ? null : waiting),
+        value: value(c?.policiesToApprove),
         link: '/policies',
         queryParams: { view: 'awaiting-approval' },
         tone: waiting > 0 ? 'warning' : 'neutral',
       });
     }
     if (this.can('STAFF.DIRECTORY.VIEW') && this.ctx.selectedSocietyId() != null) {
-      const waiting = d.staffToVerify ?? 0;
+      const waiting = c?.staffToVerify ?? 0;
       cards.push({
         label: 'Staff to verify',
         icon: 'badge',
-        value: value(d.staffToVerify),
+        value: value(c?.staffToVerify),
         link: '/staff',
         queryParams: { view: 'pending' },
         tone: waiting > 0 ? 'warning' : 'neutral',
@@ -315,7 +308,7 @@ export class Dashboard {
       cards.push({
         label: 'Staff inside',
         icon: 'how_to_reg',
-        value: value(d.staffInside),
+        value: value(c?.staffInside),
         link: '/gate/staff',
         tone: 'primary',
       });
@@ -324,27 +317,27 @@ export class Dashboard {
       cards.push({
         label: 'Vehicles to approve',
         icon: 'directions_car',
-        value: value(d.vehiclesToApprove),
+        value: value(c?.vehiclesToApprove),
         link: '/parking',
         queryParams: { tab: 'vehicles' },
-        tone: (d.vehiclesToApprove ?? 0) > 0 ? 'warning' : 'neutral',
+        tone: (c?.vehiclesToApprove ?? 0) > 0 ? 'warning' : 'neutral',
       });
     }
     if (this.parking('PARKING.VIOLATION.DECIDE')) {
       cards.push({
         label: 'Open parking reports',
         icon: 'report',
-        value: value(d.parkingReports),
+        value: value(c?.openParkingReports),
         link: '/parking',
         queryParams: { tab: 'reports' },
-        tone: (d.parkingReports ?? 0) > 0 ? 'warning' : 'neutral',
+        tone: (c?.openParkingReports ?? 0) > 0 ? 'warning' : 'neutral',
       });
     }
     if (this.can('USER.ACCOUNT.VIEW')) {
       cards.push({
         label: 'Users',
         icon: 'group',
-        value: value(d.users),
+        value: value(c?.users),
         link: '/users',
         tone: 'neutral',
       });
@@ -353,7 +346,7 @@ export class Dashboard {
       cards.push({
         label: 'Wings',
         icon: 'domain',
-        value: value(d.wings),
+        value: value(c?.wings),
         link: '/structure',
         tone: 'neutral',
       });
@@ -424,16 +417,15 @@ export class Dashboard {
       settle(this.visitorApi.list({ societyId, status, page: 0, size: MAX }, { silent: true }));
 
     const requests: { [K in keyof DashboardData]?: Observable<DashboardData[K]> } = {};
+    if (societyId != null) {
+      requests.counts = settle(this.reportingApi.dashboard(societyId));
+    }
     if (this.can('VISITOR.ENTRY.VIEW')) {
+      // A full page: the panel shows the longest waiting, the oldest of the newest-first page.
       requests.pending = visitors('PENDING');
-      requests.inside = visitors('ENTERED');
-      requests.recent = visitors();
-    }
-    if (this.can('USER.ACCOUNT.VIEW')) {
-      requests.users = settle(this.userApi.list(societyId).pipe(map((list) => list.length)));
-    }
-    if (this.can('FLAT.DIRECTORY.VIEW') && societyId != null) {
-      requests.wings = settle(this.structureApi.wings(societyId).pipe(map((list) => list.length)));
+      requests.recent = settle(
+        this.visitorApi.list({ societyId, page: 0, size: RECENT }, { silent: true }),
+      );
     }
     if (this.can('COMPLAINT.TICKET.VIEW') && societyId != null) {
       requests.openComplaints = settle(
@@ -443,7 +435,7 @@ export class Dashboard {
     if (this.can('NOTICE.POST.VIEW') && societyId != null) {
       requests.notices = settle(this.noticeApi.list(societyId, 0, NOTICES, { silent: true }));
     }
-    if (this.can('MAINTENANCE.BILL.VIEW') && societyId != null) {
+    if (this.can('MAINTENANCE.BILL.VIEW') && societyId != null && this.persona() === 'resident') {
       requests.dues = settle(this.maintenanceApi.dues(societyId, false, { silent: true }));
     }
     if (this.can('POLICY.ACKNOWLEDGEMENT.CREATE') && societyId != null) {
@@ -461,47 +453,12 @@ export class Dashboard {
           .pipe(map((list) => list.filter((m) => m.status === 'HELD'))),
       );
     }
-    if (this.can('POLICY.RULE.APPROVE') && societyId != null) {
-      requests.policiesToApprove = settle(
-        this.policyApi.list(societyId, { filter: 'awaiting-approval' }, { silent: true }),
-      );
-    }
-    if (this.can('STAFF.DIRECTORY.VIEW') && societyId != null) {
-      requests.staffToVerify = settle(
-        this.staffApi.directory(societyId, { status: 'PENDING' }, { silent: true }).pipe(map((list) => list.length)),
-      );
-    }
-    if (this.can('STAFF.ENTRY.VIEW') && societyId != null) {
-      requests.staffInside = settle(
-        this.staffApi.inside(societyId, { silent: true }).pipe(map((list) => list.length)),
-      );
-    }
-    if (this.parking('PARKING.VEHICLE.APPROVE') && societyId != null) {
-      requests.vehiclesToApprove = settle(
-        this.parkingApi.vehicles(societyId, { status: 'PENDING' }, { silent: true }).pipe(map((list) => list.length)),
-      );
-    }
-    if (this.parking('PARKING.VIOLATION.DECIDE') && societyId != null) {
-      requests.parkingReports = settle(
-        this.parkingApi.violations(societyId, 'OPEN', { silent: true }).pipe(map((list) => list.length)),
-      );
-    }
     return Object.keys(requests).length ? forkJoin(requests) : of({});
   }
 }
 
 function display(count: number | null | undefined): string {
-  if (count == null) return '—';
-  return count >= MAX ? `${MAX}+` : String(count);
-}
-
-function sum<T>(items: readonly T[] | null | undefined, value: (item: T) => number): number {
-  // Rounded to paise so float sums like 0.1 + 0.2 don't show stray digits.
-  return Math.round((items ?? []).reduce((total, item) => total + value(item), 0) * 100) / 100;
-}
-
-function isToday(iso: string | null): boolean {
-  return !!iso && new Date(iso).toDateString() === new Date().toDateString();
+  return count == null ? '—' : count.toLocaleString('en-IN');
 }
 
 function greetingFor(date: Date): string {

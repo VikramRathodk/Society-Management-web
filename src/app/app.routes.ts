@@ -55,6 +55,12 @@ export const routes: Routes = [
         loadComponent: () => import('./features/dashboard/dashboard').then((m) => m.Dashboard),
       },
       {
+        // Society-wide roles; each section hides itself when the user may not see it.
+        path: 'stats',
+        title: 'Stats',
+        loadComponent: () => import('./features/stats/stats-page').then((m) => m.StatsPage),
+      },
+      {
         path: 'profile',
         title: 'My profile',
         loadComponent: () => import('./features/profile/profile').then((m) => m.Profile),

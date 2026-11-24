@@ -23,6 +23,7 @@ import { canOpenMeetings } from '../features/governance/governance-ui';
 import { canOpenInvitations } from '../features/invitations/invitation-ui';
 import { canOpenMyStaff } from '../features/staff/staff-access';
 import { canOpenMyParking, canOpenParkingGate } from '../features/parking/parking-access';
+import { canOpenStats } from '../features/stats/stats-ui';
 import { PendingInvitations } from '../features/invitations/pending-invitations';
 import { SetupBanner } from '../features/onboarding/setup-banner';
 import { SubscriptionBanner } from '../features/subscription/subscription-banner';
@@ -67,6 +68,7 @@ interface NavSection {
 /** Add an entry here as each feature route lands. */
 const NAV_ITEMS: NavItem[] = [
   { label: 'Dashboard', icon: 'dashboard', link: '/dashboard' },
+  { label: 'Stats', icon: 'insights', link: '/stats', visible: canOpenStats },
   {
     label: 'Societies',
     icon: 'apartment',

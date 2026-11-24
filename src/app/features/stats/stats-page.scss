@@ -1,0 +1,28 @@
+// Two charts per row on wide screens, one on phones.
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr));
+  gap: 16px;
+  margin-bottom: 32px;
+}
+
+.group {
+  margin: 0 0 12px;
+  font-family: var(--app-font-display);
+  font-size: 1.2rem;
+  font-weight: 500;
+  color: var(--app-heading);
+}
+
+.group-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  margin-bottom: 12px;
+
+  .group {
+    margin: 0;
+  }
+}

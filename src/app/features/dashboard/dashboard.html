@@ -43,6 +43,10 @@
     <app-money-glance class="block" />
   }
 
+  @if (persona() === 'committee') {
+    <app-dashboard-trends class="block" />
+  }
+
   @if (cards().length) {
     <div class="stats">
       @for (card of cards(); track card.label) {
