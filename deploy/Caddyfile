@@ -1,0 +1,39 @@
+# Production web server. DOMAIN comes from the backend repo's deploy/.env; Caddy fetches and renews the
+# Let's Encrypt certificate for it automatically (ports 80 and 443 must be reachable).
+
+{$DOMAIN} {
+	encode zstd gzip
+
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		X-Frame-Options "DENY"
+		-Server
+	}
+
+	# The API. Visitor photos are up to 5 MB.
+	handle /api/* {
+		request_body {
+			max_size 6MB
+		}
+		reverse_proxy backend:8080
+	}
+
+	# Bare UP/DOWN for uptime monitors.
+	handle /actuator/health {
+		reverse_proxy backend:8080
+	}
+
+	# The Angular app. Hashed bundles never change, so cache them for a year; everything else
+	# (index.html, the push service worker, images in public/) is revalidated on every load.
+	handle {
+		root * /srv
+		@hashed path_regexp -[A-Z0-9]{8}\.(js|css)$
+		header @hashed Cache-Control "public, max-age=31536000, immutable"
+		@nothashed not path_regexp -[A-Z0-9]{8}\.(js|css)$
+		header @nothashed Cache-Control "no-cache"
+		try_files {path} {path}/index.html /index.html
+		file_server
+	}
+}

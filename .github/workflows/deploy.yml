@@ -1,0 +1,32 @@
+# Deploys to the Oracle server after every push to master (or by hand from the Actions tab).
+# Does nothing until the repository variable DEPLOY_HOST is set. Needs (Settings → Secrets and variables
+# → Actions): variable DEPLOY_HOST (server IP), variable DEPLOY_USER (usually ubuntu), secret DEPLOY_SSH_KEY
+# (a private key whose public half is in the server's ~/.ssh/authorized_keys). See the backend repo, docs/DEPLOY_ORACLE.md.
+name: Deploy
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: vars.DEPLOY_HOST != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Deploy over SSH
+        env:
+          HOST: ${{ vars.DEPLOY_HOST }}
+          USER: ${{ vars.DEPLOY_USER }}
+          KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "$HOST" >> ~/.ssh/known_hosts 2> /dev/null
+          ssh -i ~/.ssh/deploy_key "$USER@$HOST" 'bash ~/sahvasa/backend/deploy/deploy.sh'
