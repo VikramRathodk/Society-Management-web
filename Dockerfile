@@ -8,7 +8,9 @@ COPY package.json package-lock.json ./
 RUN npm ci --no-audit --no-fund
 COPY . .
 RUN test -f src/environments/firebase.ts || { echo "Missing src/environments/firebase.ts (copy it from your PC)"; exit 1; }
-RUN npx ng build --configuration production
+# The build takes about a minute. The time limit turns a hang into a failed deploy: identical inline styles
+# in two components of one file make Angular 21.2's build finish but never exit (see subscription-ui.ts).
+RUN timeout 900 npx ng build --configuration production || { echo "ng build failed or hung (over 15 minutes)"; exit 1; }
 
 FROM caddy:2-alpine
 COPY deploy/Caddyfile /etc/caddy/Caddyfile

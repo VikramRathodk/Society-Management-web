@@ -144,7 +144,10 @@ export interface ReasonDialogData {
       </mat-dialog-actions>
     </form>
   `,
+  // The selector comment keeps these styles distinct from app-adjourn-dialog's identical ones: duplicate
+  // inline styles in one file make `ng build` hang (see DIALOG_STYLES in subscription-ui.ts).
   styles: `
+    /* app-reason-dialog */
     mat-form-field {
       width: 100%;
     }

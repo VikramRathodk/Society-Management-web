@@ -217,6 +217,8 @@ export class RazorpayCheckout {
 
 // ---- Dialog styles ----
 
+// Each component prefixes these with its own selector comment. Identical inline styles in one file make
+// Angular 21.2's build leak an esbuild context per duplicate, and `ng build` then never exits.
 const DIALOG_STYLES = `
   mat-form-field {
     width: 100%;
@@ -368,7 +370,7 @@ function optionalNumber(value: number | string | null): number | null {
       </mat-dialog-actions>
     </form>
   `,
-  styles: DIALOG_STYLES,
+  styles: `/* app-plan-dialog */ ${DIALOG_STYLES}`,
 })
 export class PlanDialog {
   protected readonly data = inject<Plan | null>(MAT_DIALOG_DATA);
@@ -519,7 +521,7 @@ export interface ChoosePlanData<T> {
       </mat-dialog-actions>
     </form>
   `,
-  styles: DIALOG_STYLES,
+  styles: `/* app-choose-plan-dialog */ ${DIALOG_STYLES}`,
 })
 export class ChoosePlanDialog<T> {
   protected readonly data = inject<ChoosePlanData<T>>(MAT_DIALOG_DATA);
@@ -618,7 +620,7 @@ export function choosePlanDialog<T>(dialog: MatDialog, data: ChoosePlanData<T>):
       </mat-dialog-actions>
     </form>
   `,
-  styles: DIALOG_STYLES,
+  styles: `/* app-record-platform-payment-dialog */ ${DIALOG_STYLES}`,
 })
 export class RecordPlatformPaymentDialog {
   protected readonly data = inject<PlatformInvoice>(MAT_DIALOG_DATA);
@@ -734,7 +736,7 @@ export interface AmountDialogData<T> {
       </mat-dialog-actions>
     </form>
   `,
-  styles: DIALOG_STYLES,
+  styles: `/* app-amount-dialog */ ${DIALOG_STYLES}`,
 })
 export class AmountDialog<T> {
   protected readonly data = inject<AmountDialogData<T>>(MAT_DIALOG_DATA);
@@ -826,7 +828,7 @@ export interface BillingContactData<T> {
       </mat-dialog-actions>
     </form>
   `,
-  styles: DIALOG_STYLES,
+  styles: `/* app-billing-contact-dialog */ ${DIALOG_STYLES}`,
 })
 export class BillingContactDialog<T> {
   protected readonly data = inject<BillingContactData<T>>(MAT_DIALOG_DATA);
